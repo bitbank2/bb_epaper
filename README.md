@@ -1,15 +1,17 @@
-OneBitDisplay (1-bpp OLED/LCD library)<br>
------------------------------------
-Project started 3/23/2020<br>
-Copyright (c) 2020 BitBank Software, Inc.<br>
+bb_eink (BitBank eink library)<br>
+---------------------------------
+Project started 9/11/2024<br>
+Copyright (c) 2024 BitBank Software, Inc.<br>
 Written by Larry Bank<br>
 bitbank@pobox.com<br>
 <br>
-![OneBitDisplay](/demo.jpg?raw=true "OneBitDisplay")
+<b>What is it?</b><br>
+A frustration-free eink library suitable for Arduino, Linux, or random embedded systems with no OS.<br>
+<b>Why did you write it?</b><br>
+I've always had an interest in graphics and displays. After experimenting with eink, I looked around for code to control them. All I found was half-implemented demos and frustration. I wrote my own support for eink panels into my OneBitDisplay library, but it made it a bit unwieldy. Eink is in a class by itself, so I decided to create a unique library for working with these panels. The main goal was to reduce frustration and make an efficient set of functions that work with a large collection of panels in a consistent way.<br>
 <br>
-The purpose of this code is to easily control monochrome (1-bit per pixel) OLED and LCD displays. The displays can be connected to the traditional I2C or SPI bus, or you can use GPIO pins to bit bang the signals.<br>
-<br>
-On AVR microcontrollers, there is an optimized option to speed up access to the GPIO pins to allow speeds which match or exceed normal I2C speeds. The pins are numbered with the Port letter as the first digit followed by the bit number. For example, To use bit 0 of Port B, you would reference pin number 0xb0.<br>
+<b>What's special about it?</b><br>
+It's the first eink library I've ever seen which can drive the displays without needing a local copy of the image data. In other words, it allows you to create complex graphics without needing any RAM. I also created a very effective font compression scheme which allows you to fit large, beautiful fonts in a small amount of space. This allows tiny MCUs to do things that would normally require a more capable chip.<br>
 <br>
 Includes the unique feature that the I2C init function can optionally detect the display address (0x3C or 0x3D) and the controller type (SSD1306, SH1106 or SH1107).<br>
 <br>
