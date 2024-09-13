@@ -32,18 +32,20 @@ void delay(int);
 #else // Arduino
 
 #endif // _LINUX_
+
 #include "bb_eink.h"
 #include "bb_ei_io.inl" // I/O (non-portable) code is in here
 #include "bb_ei.inl" // All of the display interface code is in here
 #include "bb_ei_gfx.inl" // drawing code
+
 #ifdef __cplusplus
 //
 // C++ Class implementation
 //
-uint32_t BBEINK::getRefreshTime(void)
-{
-    return _bbei.iTimeout;
-}
+//uint32_t BBEINK::getRefreshTime(void)
+//{
+//    return _bbei.iTimeout;
+//}
 
 void BBEINK::setPosition(int x, int y, int w, int h)
 {
@@ -53,38 +55,41 @@ int BBEINK::setPanelType(int iPanel)
 {
     return bbeiSetPanelType(&_bbei, iPanel);
 }
-void BBEINK::initIO(int iCS, int iMOSI, int iSCLK, int iDC, int iReset, int iBusy, uint32_t u32Speed)
+void BBEINK::initIO(int iDC, int iReset, int iBusy, int iCS, int iMOSI, int iSCLK, uint32_t u32Speed)
 {
     _bbei.iCSPin = iCS;
     _bbei.iMOSIPin = iMOSI;
     _bbei.iCLKPin = iSCLK;
     _bbei.iDCPin = iDC;
     _bbei.iRSTPin = iReset;
-    _bbei.iBusyPin = iBusy;
+    _bbei.iBUSYPin = iBusy;
     bbeiInitIO(&_bbei, u32Speed);
 } /* initIO() */
 
-int BBEINK::getFlags(void)
+int BBEINK::writePlane(int iPlane)
 {
-    return _bbei.iFlags;
-}
+    return bbeiWritePlane(&_bbei, iPlane);
+} /* writePlane() */
 
-void BBEINK::setFlags(int iFlags)
+int BBEINK::refresh(int iMode, bool bWait)
 {
-    _bbei.iFlags = iFlags;
-    _bbei.invert = iFlags & OBD_INVERTED;
-    _bbei.flip = iFlags & OBD_FLIP180;
-}
+    int rc;
+    rc = bbeiRefresh(&_bbei, iMode);
+    if (rc == BBEI_SUCCESS && bWait) {
+        bbeiWaitBusy(&_bbei);
+    }
+    return rc;
+} /* refresh() */
 
-void BBEINK::setContrast(uint8_t ucContrast)
-{
-  obdSetContrast(&_bbei, ucContrast);
-}
+//int BBEINK::getFlags(void)
+//{
+//    return _bbei.iFlags;
+//}
 
-int BBEINK::I2Cbegin(int iType, int iAddr, int32_t iSpeed)
-{
-  return obdI2CInit(&_bbei, iType, iAddr, _bbei.flip, _bbei.invert, !_bbei.bBitBang, _bbei.iSDAPin, _bbei.iSCLPin, _bbei.iRSTPin, iSpeed);
-} /* I2Cbegin() */
+//void BBEINK::setFlags(int iFlags)
+//{
+//    _bbei.iFlags = iFlags;
+//}
 
 void BBEINK::setBuffer(uint8_t *pBuffer)
 {
@@ -93,22 +98,15 @@ void BBEINK::setBuffer(uint8_t *pBuffer)
 
 int BBEINK::allocBuffer(void)
 {
-    int iSize = _bbei.width * ((_bbei.height+7)>>3);
-    if (_bbei.iFlags & (OBD_3COLOR | OBD_4COLOR) || _bbei.chip_type == OBD_CHIP_UC8151)
-        iSize *= 2; // 2 bit planes
+    int iSize = ((_bbei.width+7)>>3) * _bbei.height;
+//    if (_bbei.iFlags & (BBEI_3COLOR | BBEI_4COLOR) || _bbei.chip_type == BBEI_CHIP_UC81xx)
+//        iSize *= 2; // 2 bit planes
     _bbei.ucScreen = (uint8_t *)malloc(iSize);
     if (_bbei.ucScreen != NULL) {
-        _bbei.render = false; // draw into RAM only
-        memset(_bbei.ucScreen, 0xff, iSize);
-        return OBD_SUCCESS;
+        return BBEI_SUCCESS;
     }
-    return OBD_ERROR_NO_MEMORY; // failed
+    return BBEI_ERROR_NO_MEMORY; // failed
 } /* allocBuffer() */
-
-uint32_t BBEINK::capabilities(void)
-{
-  return _bbei.iFlags;
-}
 
 void * BBEINK::getBuffer(void)
 {
@@ -123,29 +121,34 @@ void BBEINK::freeBuffer(void)
     }
 } /* freeBuffer() */
 
-void BBEINK::setScroll(bool bScroll)
+uint32_t BBEINK::capabilities(void)
 {
-    _bbei.bScroll = bScroll;
+  return _bbei.iFlags;
 }
 
 void BBEINK::setRotation(int iRotation)
 {
-    obdSetRotation(&_bbei, iRotation);
+//    obdSetRotation(&_bbei, iRotation);
 } /* setRotation() */
 
-void BBEINK::fillScreen(int iColor)
+int BBEINK::getRotation(void)
 {
-  obdFill(&_bbei, iColor, (_bbei.ucScreen == NULL));
+  return _bbei.iOrientation;
+}
+
+void BBEINK::fillScreen(int iColor, int iPlane)
+{
+  bbeiFill(&_bbei, iColor, iPlane);
 } /* fillScreen() */
 
 void BBEINK::drawRect(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t color)
 {
-    obdRectangle(&_bbei, x, y, x+w-1, y+h-1, color, 0);
+    bbeiRectangle(&_bbei, x, y, x+w-1, y+h-1, color, 0);
 } /* drawRect() */
 
 void BBEINK::fillRect(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t color)
 {
-    obdRectangle(&_bbei, x, y, x+w-1, y+h-1, color, 1);
+    bbeiRectangle(&_bbei, x, y, x+w-1, y+h-1, color, 1);
 } /* fillRect() */
 
 void BBEINK::setTextWrap(bool bWrap)
@@ -155,11 +158,11 @@ void BBEINK::setTextWrap(bool bWrap)
 
 void BBEINK::setTextColor(int iFG, int iBG)
 {
-    if (iFG > OBD_RED) iFG = OBD_BLACK;
-    if (iBG > OBD_RED) iBG = OBD_BLACK;
-    if ((_bbei.iFlags & (OBD_3COLOR | OBD_4COLOR)) == 0) {
-        if (iFG == OBD_RED) iFG = OBD_BLACK; // can't set red color
-        if (iBG == OBD_RED) iBG = OBD_BLACK;
+    if (iFG > BBEI_RED) iFG = BBEI_BLACK;
+    if (iBG > BBEI_RED) iBG = BBEI_BLACK;
+    if ((_bbei.iFlags & (BBEI_3COLOR | BBEI_4COLOR)) == 0) {
+        if (iFG == BBEI_RED) iFG = BBEI_BLACK; // can't set red color
+        if (iBG == BBEI_RED) iBG = BBEI_BLACK;
     }
     _bbei.iFG = iFG;
     _bbei.iBG = (iBG == -1) ? iFG : iBG;
@@ -175,77 +178,30 @@ void BBEINK::setCursor(int x, int y)
 
 int BBEINK::loadBMP(const uint8_t *pBMP, int x, int y, int iFG, int iBG)
 {
-    return obdLoadBMP(&_bbei, pBMP, x, y, iFG, iBG);
+    return bbeiLoadBMP(&_bbei, pBMP, x, y, iFG, iBG);
 } /* loadBMP() */
-
-int BBEINK::drawEPDGFX(int x, int y, int cx, int cy, uint8_t *pPlane0, uint8_t *pPlane1)
-{
-    return obdDrawEPDGFX(&_bbei, x, y, cx, cy, pPlane0, pPlane1);
-} /* drawEPDGFX() */
 
 int BBEINK::loadBMP3(const uint8_t *pBMP, int x, int y)
 {
-    return obdLoadBMP3(&_bbei, pBMP, x, y);
+    return bbeiLoadBMP3(&_bbei, pBMP, x, y);
 } /* loadBMP3() */
 
 void BBEINK::setFont(int iFont)
 {
     _bbei.iFont = iFont;
-    _bbei.pFreeFont = NULL;
+   // _bbei.pFreeFont = NULL;
 } /* setFont() */
 
-void BBEINK::setTextSize(uint8_t s)
-{
-    _bbei.u32FontScaleX = _bbei.u32FontScaleY = 256 * s;
-    _bbei.iFont = -1;
-    _bbei.pFreeFont = NULL;
-}
-void BBEINK::setTextSize(uint8_t sx, uint8_t sy)
-{
-    _bbei.u32FontScaleX = 256 * sx;
-    _bbei.u32FontScaleY = 256 * sy;
-    _bbei.iFont = -1;
-    _bbei.pFreeFont = NULL;
-}
-int BBEINK::scrollBuffer(int iStartCol, int iEndCol, int iStartRow, int iEndRow, int bUp)
-{
-    return obdScrollBuffer(&_bbei, iStartCol, iEndCol, iStartRow, iEndRow, bUp);
-} /* scrollBuffer() */
-
-void BBEINK::setFreeFont(const GFXfont *pFont)
-{
-    _bbei.pFreeFont = (GFXfont *)pFont;
-} /* setFreeFont() */
+//void BBEINK::setFreeFont(const GFXfont *pFont)
+//{
+//    _bbei.pFreeFont = (GFXfont *)pFont;
+//} /* setFreeFont() */
 
 void BBEINK::drawLine(int x1, int y1, int x2, int y2, int iColor)
 {
-    obdDrawLine(&_bbei, x1, y1, x2, y2, iColor, 1);
+    bbeiDrawLine(&_bbei, x1, y1, x2, y2, iColor);
 } /* drawLine() */
 
-inline GFXglyph *pgm_read_glyph_ptr(const GFXfont *gfxFont, uint8_t c) {
-#ifdef __AVR__
-  return &(((GFXglyph *)pgm_read_ptr(&gfxFont->glyph))[c]);
-#else
-  // expression in __AVR__ section may generate "dereferencing type-punned
-  // pointer will break strict-aliasing rules" warning In fact, on other
-  // platforms (such as STM32) there is no need to do this pointer magic as
-  // program memory may be read in a usual way So expression may be simplified
-  return gfxFont->glyph + c;
-#endif //__AVR__
-}
-
-void obdScroll1Line(OBDISP *pOBD, int iAmount)
-{
-int y, iLines;
-
-    if (pOBD == NULL || pOBD->ucScreen == NULL)
-        return;
-    iLines = (pOBD->height+7)>>3;
-    for (y=0; y<iLines-iAmount; y+=iAmount) {
-        memcpy(&pOBD->ucScreen[y*pOBD->width], &pOBD->ucScreen[(y+iAmount)*pOBD->width], pOBD->width*iAmount);
-    }
-    memset(&pOBD->ucScreen[(iLines-iAmount) * pOBD->width], (char)pOBD->iBG, pOBD->width*iAmount);
-} /* obdScroll1Line() */
 #ifdef _LINUX_
 void BBEINK::print(const string &str)
 {
@@ -349,6 +305,7 @@ char ucTemp[4];
 //
 #ifndef __AVR__
 size_t BBEINK::write(uint8_t c) {
+#ifdef FUTURE
 char szTemp[2]; // used to draw 1 character at a time to the C methods
 int w, h;
 
@@ -414,18 +371,19 @@ int w, h;
             _bbei.iCursorX = 0;
             _bbei.iCursorY += h;
           }
-            obdWriteStringCustom(&_bbei, _bbei.pFreeFont, -1, -1, szTemp, _bbei.iFG);
+            bbeiWriteStringCustom(&_bbei, _bbei.pFreeFont, -1, -1, szTemp, _bbei.iFG);
         }
       }
     }
   }
+#endif // FUTURE
   return 1;
 } /* write() */
 #endif // !__AVR__
 
-void BBEINK::drawPixel(int16_t x, int16_t y, uint16_t color)
+void BBEINK::drawPixel(int16_t x, int16_t y, uint8_t color)
 {
-    obdSetPixel(&_bbei, x, y, color, _bbei.render);
+    bbeiSetPixel(&_bbei, x, y, color);
 }
 int16_t BBEINK::getCursorX(void)
 {
@@ -435,33 +393,16 @@ int16_t BBEINK::getCursorY(void)
 {
   return _bbei.iCursorY;
 }
-uint8_t BBEINK::getRotation(void)
-{
-  return _bbei.iOrientation;
-}
-void BBEINK::wake(void)
-{
-    if (_bbei.type >= EPD42_400x300) {
-        EPDWakeUp(&_bbei, 1);
-    }
-}
-void BBEINK::sleep(int bDeep)
-{
-    if (_bbei.type >= EPD42_400x300) {
-        EPDSleep(&_bbei, bDeep);
-    }
-}
-
 void BBEINK::getTextBounds(const char *string, int16_t x, int16_t y, int16_t *x1, int16_t *y1, uint16_t *w, uint16_t *h)
 {
-    if (_bbei.pFreeFont) {
-        int width, top, bottom;
-        obdGetStringBox(_bbei.pFreeFont, (char *)string, &width, &top, &bottom);
-        *x1 = x;
-        *w = width;
-        *y1 = y + top;
-        *h = (bottom - top + 1);
-    }
+//    if (_bbei.pFreeFont) {
+//        int width, top, bottom;
+  //      obdGetStringBox(_bbei.pFreeFont, (char *)string, &width, &top, &bottom);
+//        *x1 = x;
+//        *w = width;
+//        *y1 = y + top;
+//        *h = (bottom - top + 1);
+//    }
 }
 void BBEINK::getTextBounds(const String &str, int16_t x, int16_t y, int16_t *x1, int16_t *y1, uint16_t *w, uint16_t *h)
 {
@@ -483,114 +424,29 @@ int16_t BBEINK::height(void)
 {
    return _bbei.height;
 }
-void BBEINK::drawSprite(uint8_t *pSprite, int cx, int cy, int iPitch, int x, int y, uint8_t iPriority)
-{
-    obdDrawSprite(&_bbei, pSprite, cx, cy, iPitch, x, y, iPriority);
-}
-int BBEINK::drawGFX(uint8_t *pSrc, int iSrcCol, int iSrcRow, int iDestCol, int iDestRow, int iWidth, int iHeight, int iSrcPitch)
-{
-    return obdDrawGFX(&_bbei, pSrc, iSrcCol, iSrcRow, iDestCol, iDestRow, iWidth, iHeight, iSrcPitch);
-} /* drawGFX() */
-
-void BBEINK::drawTile(const uint8_t *pTile, int x, int y, int iRotation, int bInvert, int bRender)
-{
-    obdDrawTile(&_bbei, pTile, x, y, iRotation, bInvert, bRender);
-}
 void BBEINK::drawCircle(int32_t x, int32_t y, int32_t r, uint32_t color)
 {
-  obdEllipse(&_bbei, x, y, r, r, color, 0);
+  bbeiEllipse(&_bbei, x, y, r, r, color, 0);
 }
 void BBEINK::fillCircle(int32_t x, int32_t y, int32_t r, uint32_t color)
 {
-    obdEllipse(&_bbei, x, y, r, r, color, 1);
+    bbeiEllipse(&_bbei, x, y, r, r, color, 1);
 }
 void BBEINK::drawEllipse(int16_t x, int16_t y, int32_t rx, int32_t ry, uint16_t color)
 {
-    obdEllipse(&_bbei, x, y, rx, ry, color, 0);
+    bbeiEllipse(&_bbei, x, y, rx, ry, color, 0);
 }
 void BBEINK::fillEllipse(int16_t x, int16_t y, int32_t rx, int32_t ry, uint16_t color)
 {
-    obdEllipse(&_bbei, x, y, rx, ry, color, 1);
-}
-void BBEINK::setPosition(int x, int y, int w, int h)
-{
-    if (_bbei.type >= EPD42_400x300)
-        EPDSetPosition(&_bbei, x, y, w, h);
-    else
-        obdSetPosition(&_bbei, x, y, 1);
-} /* setPosition() */
-void BBEINK::writeRaw(uint8_t *pData, int iLen)
-{
-   RawWrite(&_bbei, pData, iLen);
+    bbeiEllipse(&_bbei, x, y, rx, ry, color, 1);
 }
 
-void BBEINK::writeCommand(uint8_t ucCMD)
+void BBEINK::sleep(int bDeep)
 {
-   obdWriteCommand(&_bbei, ucCMD);
+    bbeiSleep(&_bbei, bDeep);
 }
-void BBEINK::pushPixels(uint8_t *pPixels, int iCount)
-{
-    RawWriteData(&_bbei, pPixels, iCount);
-} /* pushPixels() */
-
-void BBEINK::pushImage(int x, int y, int w, int h, uint16_t *pixels)
-{
-    // DEBUG
-    (void)x; (void)y; (void)w; (void)h; (void)pixels;
-}
-
-void BBEINK::displayLines(int iStartLine, int iLineCount)
-{
-    obdWriteLCDLines(&_bbei, iStartLine, iLineCount);
-} /* displayLines() */
-
-int BBEINK::display(bool bRefresh, bool bWait, bool bFast)
-{
-    return obdDumpBuffer(&_bbei, NULL, bRefresh, bWait, bFast);
-}
-
 void BBEINK::wait(bool bQuick)
 {
-    EPDWaitBusy(&_bbei, bQuick);
-}
-int BBEINK::displayPartial()
-{
-    if (_bbei.type >= EPD42_400x300 && (_bbei.iFlags & OBD_HAS_PARTIAL_UPDATE)) {
-        return EPDDumpPartial(&_bbei, NULL, 0, 0, _bbei.width, _bbei.height);
-    }
-    return OBD_ERROR_NOT_SUPPORTED;
-}
-int BBEINK::displayPartial(int x, int y, int w, int h, uint8_t *pBuffer)
-{
-    if (_bbei.type >= EPD42_400x300 && (_bbei.iFlags & OBD_HAS_PARTIAL_UPDATE)) {
-        return obdDumpPartial(&_bbei, x, y, w, h, pBuffer);
-    } else {
-        return OBD_ERROR_NOT_SUPPORTED;
-    }
-}
-void BBEINK::drawString(const char *pText, int x, int y)
-{
-    setCursor(x,y);
-    if (_bbei.pFreeFont != NULL)
-        obdWriteStringCustom(&_bbei, _bbei.pFreeFont, x, y, (char *)pText, _bbei.iFG);
-    else
-        obdWriteString(&_bbei, 0, x, y, (char *)pText, _bbei.iFont, _bbei.iFG, 1);
-} /* drawString() */
-void BBEINK::drawString(String text, int x, int y)
-{
-    drawString(text.c_str(), x, y);
-} /* drawString() */
-
-void BBEINK::backlight(int bOn)
-{
-    obdBacklight(&_bbei, bOn);
-}
-OBDISP * BBEINK::getOBD()
-{
-    return &_bbei;
-}
-void BBEINK::setRender(bool bRAMOnly)
-{
-    _bbei.render = !bRAMOnly;
+    bbeiWaitBusy(&_bbei);
 }
 #endif // __cplusplus
