@@ -18,7 +18,9 @@
 //
 #ifndef __BB_EI_GFX__
 #define __BB_EI_GFX__
-
+#include <Group5.h>
+#include "bb_font.h"
+G5DECIMAGE g5dec;
 // forward declarations
 void InvertBytes(uint8_t *pData, uint8_t bLen);
 
@@ -566,21 +568,129 @@ void bbeiSetTextWrap(BBEIDISP *pBBEI, int bWrap)
   pBBEI->wrap = bWrap;
 } /* bbeiSetTextWrap() */
 //
+// Draw a string of BB_FONT characters directly into the EPD framebuffer
+//
+void bbeiWriteStringCustom(BBEIDISP *pBBEI, BB_FONT *pFont, int x, int y, char *szMsg, int iColor, uint8_t iPlane)
+{
+int rc, i, h, w, end_y, dx, dy, ty, iSrcPitch, iPitch;
+unsigned int c;
+uint8_t *s;
+BB_GLYPH *pGlyph;
+uint8_t *pBits, u8CMD, u8EndMask;
+
+    if (x == -1)
+        x = pBBEI->iCursorX;
+    if (y == -1)
+        y = pBBEI->iCursorY;
+    if (x == CENTER_X) { // center the string on the e-paper
+        dx = i = 0;
+        while (szMsg[i]) {
+          c = szMsg[i++];
+          if (c < pFont->first || c > pFont->last) // undefined character
+             continue; // skip it
+          c -= pFont->first; // first char of font defined
+          pGlyph = &pFont->glyphs[c]; // glyph info for this character
+          dx += pGlyph->xAdvance;
+        }
+        x = (pBBEI->native_width - dx)/2;
+        if (x < 0) x = 0;
+    }
+    // Point to the start of the compressed data
+    pBits = (uint8_t *)pFont;
+    pBits += sizeof(BB_FONT);
+    pBits += (pFont->last - pFont->first + 1) * sizeof(BB_GLYPH);
+   i = 0;
+   while (szMsg[i] && x < pBBEI->native_width && y < pBBEI->native_height) {
+      c = szMsg[i++];
+      if (c < pFont->first || c > pFont->last) // undefined character
+         continue; // skip it
+      c -= pFont->first; // first char of font defined
+      pGlyph = &pFont->glyphs[c]; // glyph info for this character
+       if (pGlyph->width > 1) { // skip this if drawing a space
+           dx = x + pGlyph->xOffset; // offset from character UL to start drawing
+           dy = y + pGlyph->yOffset;
+           s = pBits + pGlyph->bitmapOffset; // start of compressed bitmap data
+           if (pFont->rotation == 0 || pFont->rotation == 180) {
+               h = pGlyph->height;
+               w = pGlyph->width;
+           } else { // rotated
+               w = pGlyph->height;
+               h = pGlyph->width;
+           }
+           if ((dy + h) > pBBEI->native_height) { // trim it
+               h = pBBEI->native_height - dy;
+           }
+           u8EndMask = 0xff;
+           if (w & 7) { // width ends on a partial byte
+               u8EndMask <<= (8-(w & 7));
+           }
+           end_y = dy + h;
+           ty = (pGlyph[1].bitmapOffset - (intptr_t)(s - pBits)); // compressed size
+           if (ty < 0 || ty > 4096) ty = 4096; // DEBUG
+           rc = g5_decode_init(&g5dec, w, h, s, ty);
+           if (rc != G5_SUCCESS) return; // corrupt data?
+           // set the memory window for this character
+           iSrcPitch = (w+7)/8;
+           w += (dx & 7); // add parital byte
+           bbeiSetPosition(pBBEI, dx, dy, w, h);
+           iPitch = (w+7)/8;
+           // start writing into the correct plane
+           if (pBBEI->chip_type == BBEI_CHIP_UC81xx) {
+               u8CMD = /*(iPlane) ? UC8151_DTM1 : */UC8151_DTM2;
+           } else {
+               u8CMD = /*(iPlane) ? SSD1608_WRITE_ALTRAM :*/ SSD1608_WRITE_RAM;
+           }
+        bbeiWriteCmd(pBBEI, u8CMD); // memory write command
+      for (ty=dy; ty<end_y && ty < pBBEI->native_height; ty++) {
+          g5_decode_line(&g5dec, u8Cache);
+          u8Cache[iSrcPitch-1] &= u8EndMask; // clean pixels beyond character width
+          u8Cache[iSrcPitch] = 0;
+          if (dx & 7) { // need to shift it over by 1-7 bits
+            uint8_t *s = u8Cache, uc1, uc0 = 0; // last shifted byte
+            uint8_t n = dx & 7; // shift amount
+            for (int j=0; j<w+7; j+= 8) {
+                uc1 = *s;
+                uc0 |= (uc1 >> n);
+                *s++ = uc0;
+                uc0 = uc1 << (8-n);
+            }
+            *s++ = uc0; // store final byte
+            *s++ = 0; // and a zero for good measure
+          }
+          if (iColor == BBEI_BLACK) InvertBytes(u8Cache, iPitch);
+          bbeiWriteData(pBBEI, u8Cache, iPitch); // write each row into the EPD framebuffer
+      } // for y
+      } // if not drawing a space
+      if (pFont->rotation == 0 || pFont->rotation == 180) {
+        x += pGlyph->xAdvance; // width of this character
+      } else {
+        y += pGlyph->xAdvance;
+      }
+   } // while drawing characters
+    pBBEI->iCursorX = x;
+    pBBEI->iCursorY = y;
+} /* EPDWriteStringDirect() *///
 // Draw a string of normal (8x8), small (6x8) or large (16x32) characters
 // At the given col+row
 //
-int bbeiWriteString(BBEIDISP *pBBEI, int iScroll, int x, int y, char *szMsg, int iSize, int iColor, int bRender)
+int bbeiWriteString(BBEIDISP *pBBEI, int x, int y, char *szMsg, int iSize, int iColor)
 {
-int i, iFontOff, iLen, iFontSkip;
-unsigned char c, *s;
+int i, iFontOff, iLen;
+uint8_t c, *s, ucCMD1, ucCMD2;
 int iOldFG; // old fg color to make sure red works
-    uint8_t u8Temp[128];
+uint8_t u8Temp[128];
     
   if (pBBEI == NULL) return BBEI_ERROR_BAD_PARAMETER;
+    if (pBBEI->chip_type == BBEI_CHIP_UC81xx) {
+        ucCMD1 = UC8151_DTM2;
+        ucCMD2 = UC8151_DTM1;
+    } else {
+        ucCMD1 = SSD1608_WRITE_RAM;
+        ucCMD2 = SSD1608_WRITE_ALTRAM;
+    }
 
-    // e-paper color is inverted compared to OLED/LCD. If we're in bufferless mode, we'll need to
-    // invert the requested color
-    if (pBBEI->type >= EPD42_400x300 && !pBBEI->ucScreen) {
+    // If we're in bufferless mode, we'll need to invert the requested color
+    if (!pBBEI->ucScreen) {
         iColor = 1 - iColor; // invert the color
     }
     if (x == -1 || y == -1) // use the cursor position
@@ -592,7 +702,6 @@ int iOldFG; // old fg color to make sure red works
     if (pBBEI->iCursorX >= pBBEI->width || pBBEI->iCursorY >= pBBEI->height)
        return BBEI_ERROR_BAD_PARAMETER; // can't draw off the display
 
-    bbeiSetPosition(pBBEI, pBBEI->iCursorX, pBBEI->iCursorY, 8, 16);
     iOldFG = pBBEI->iFG; // save old fg color
     if (iColor >= BBEI_YELLOW) {
        pBBEI->iFG = iColor;
@@ -600,106 +709,42 @@ int iOldFG; // old fg color to make sure red works
     if (iSize == FONT_8x8) // 8x8 font
     {
        i = 0;
-       iFontSkip = iScroll & 7; // number of columns to initially skip
+        if (!pBBEI->ucScreen) { // bufferless mode, rotate the coordinate system to fit the situation
+ //           bbeiSetPosition(pBBEI, √, pBBEI->iCursorX, 8, pBBEI->native_height-pBBEI->iCursorX);
+//            bbeiWriteCmd(pBBEI, ucCMD1); // write to "new" plane
+        }
        while (pBBEI->iCursorX < pBBEI->width && szMsg[i] != 0 && pBBEI->iCursorY < pBBEI->height)
        {
-         if (iScroll < 8) // only display visible characters
-         {
-             c = (unsigned char)szMsg[i];
-             iFontOff = (int)(c-32) * 7;
-             // we can't directly use the pointer to FLASH memory, so copy to a local buffer
-             u8Temp[0] = 0; // first column is blank
-             memcpy_P(&u8Temp[1], &ucFont[iFontOff], 7);
-             if (iColor == BBEI_WHITE) InvertBytes(u8Temp, 8);
-             iLen = 8 - iFontSkip;
-             if (pBBEI->iCursorX + iLen > pBBEI->width) // clip right edge
-                 iLen = pBBEI->width - pBBEI->iCursorX;
-             bbeiWriteData(pBBEI, &u8Temp[iFontSkip], iLen);
-//             obdWriteDataBlock(pBBEI, &ucTemp[iFontSkip], iLen, bRender); // write character pattern
-             pBBEI->iCursorX += iLen;
-             if (pBBEI->iCursorX >= pBBEI->width-7 && pBBEI->wrap) // word wrap enabled?
-             {
-               pBBEI->iCursorX = 0; // start at the beginning of the next line
-               pBBEI->iCursorY+=8;
-               bbeiSetPosition(pBBEI, pBBEI->iCursorX, pBBEI->iCursorY, 8, 8);
-             }
-             iFontSkip = 0;
+         c = (unsigned char)szMsg[i];
+         iFontOff = (int)(c-32) * 7;
+         // we can't directly use the pointer to FLASH memory, so copy to a local buffer
+         u8Temp[0] = 0; // first column is blank
+         memcpy_P(&u8Temp[1], &ucFont[iFontOff], 7); // only needed on AVR
+         if (iColor == BBEI_WHITE) InvertBytes(u8Temp, 8);
+         iLen = 8;
+           if (pBBEI->iCursorX + iLen > pBBEI->width) { // clip right edge
+               iLen = pBBEI->width - pBBEI->iCursorX;
+           }
+           if (!pBBEI->ucScreen) { // bufferless mode, rotate the coordinate system to fit the situation
+               bbeiSetPosition(pBBEI, pBBEI->native_width-8-pBBEI->iCursorY, pBBEI->iCursorX, 8, pBBEI->native_height-pBBEI->iCursorX);
+               bbeiWriteCmd(pBBEI, ucCMD1); // write to "new" plane
+               bbeiWriteData(pBBEI, u8Temp, iLen);
+           } else { // draw in memory
+               // DEBUG
+           }
+         pBBEI->iCursorX += iLen;
+        if (pBBEI->iCursorX >= pBBEI->width-7 && pBBEI->wrap) { // word wrap enabled?
+           pBBEI->iCursorX = 0; // start at the beginning of the next line
+           pBBEI->iCursorY+=8;
          }
-         iScroll -= 8;
          i++;
        } // while
        pBBEI->iFG = iOldFG; // restore color
        return BBEI_SUCCESS;
-    } // 8x8
-    else if (iSize == FONT_16x16) // 8x8 stretched to 16x16
-    {
+    } else if (iSize == FONT_12x16) { // 6x8 stretched to 12x16
       i = 0;
-      iFontSkip = iScroll & 15; // number of columns to initially skip
-      while (pBBEI->iCursorX < pBBEI->width && pBBEI->iCursorY < pBBEI->height && szMsg[i] != 0)
-      {
+        while (pBBEI->iCursorX < pBBEI->width && pBBEI->iCursorY < pBBEI->height && szMsg[i] != 0) {
 // stretch the 'normal' font instead of using the big font
-          if (iScroll < 16) // if characters are visible
-          {
-              int tx, ty;
-              c = szMsg[i] - 32;
-              unsigned char uc1, uc2, ucMask, *pDest;
-              s = (unsigned char *)&ucFont[(int)c*7];
-              u8Temp[0] = 0; // first column is blank
-              memcpy_P(&u8Temp[1], s, 7);
-              if (iColor == BBEI_WHITE)
-                  InvertBytes(u8Temp, 8);
-              // Stretch the font to double width + double height
-              memset(&u8Temp[8], 0, 32); // write 32 new bytes
-              for (tx=0; tx<8; tx++)
-              {
-                  ucMask = 3;
-                  pDest = &u8Temp[8+tx*2];
-                  uc1 = uc2 = 0;
-                  c = u8Temp[tx];
-                  for (ty=0; ty<4; ty++)
-                  {
-                      if (c & (1 << ty)) // a bit is set
-                          uc1 |= ucMask;
-                      if (c & (1 << (ty + 4)))
-                          uc2 |= ucMask;
-                      ucMask <<= 2;
-                  }
-                  pDest[0] = uc1;
-                  pDest[1] = uc1; // double width
-                  pDest[16] = uc2;
-                  pDest[17] = uc2;
-              }
-              iLen = 16 - iFontSkip;
-              if (pBBEI->iCursorX + iLen > pBBEI->width) // clip right edge
-                  iLen = pBBEI->width - pBBEI->iCursorX;
-              bbeiSetPosition(pBBEI, pBBEI->iCursorX, pBBEI->iCursorY, 8, iLen);
-              bbeiWriteData(pBBEI, &u8Temp[8+iFontSkip], iLen);
-              bbeiSetPosition(pBBEI, pBBEI->iCursorX, pBBEI->iCursorY+8, 8, iLen);
-              bbeiWriteData(pBBEI, &u8Temp[24+iFontSkip], iLen);
-              pBBEI->iCursorX += iLen;
-              if (pBBEI->iCursorX >= pBBEI->width-15 && pBBEI->wrap) // word wrap enabled?
-              {
-                pBBEI->iCursorX = 0; // start at the beginning of the next line
-                pBBEI->iCursorY += 16;
-                bbeiSetPosition(pBBEI, pBBEI->iCursorX, pBBEI->iCursorY, 8, 16);
-              }
-              iFontSkip = 0;
-          } // if characters are visible
-          iScroll -= 16;
-          i++;
-      } // while
-       pBBEI->iFG = iOldFG; // restore color
-       return BBEI_SUCCESS;
-    } // 16x16
-    else if (iSize == FONT_12x16) // 6x8 stretched to 12x16
-    {
-      i = 0;
-      iFontSkip = iScroll % 12; // number of columns to initially skip
-      while (pBBEI->iCursorX < pBBEI->width && pBBEI->iCursorY < pBBEI->height && szMsg[i] != 0)
-      {
-// stretch the 'normal' font instead of using the big font
-          if (iScroll < 12) // if characters are visible
-          {
               int tx, ty;
               c = szMsg[i] - 32;
               unsigned char uc1, uc2, ucMask, *pDest;
@@ -807,23 +852,25 @@ int iOldFG; // old fg color to make sure red works
                       ucMask <<= 1; ucMask2 <<= 1;
                   }
               }
-              iLen = 12 - iFontSkip;
+              iLen = 12;
               if (pBBEI->iCursorX + iLen > pBBEI->width) // clip right edge
                   iLen = pBBEI->width - pBBEI->iCursorX;
-              bbeiSetPosition(pBBEI, pBBEI->iCursorX, pBBEI->iCursorY, 8, iLen);
-              bbeiWriteData(pBBEI, &u8Temp[6+iFontSkip], iLen);
-              bbeiSetPosition(pBBEI, pBBEI->iCursorX, pBBEI->iCursorY+8, 8, iLen);
-              bbeiWriteData(pBBEI, &u8Temp[18+iFontSkip], iLen);
+            if (!pBBEI->ucScreen) { // bufferless mode
+                bbeiSetPosition(pBBEI, pBBEI->native_width-8-pBBEI->iCursorY, pBBEI->iCursorX, 8, iLen);
+                bbeiWriteCmd(pBBEI, ucCMD1); // write to "new" plane
+                bbeiWriteData(pBBEI, &u8Temp[6], iLen);
+                bbeiSetPosition(pBBEI, pBBEI->native_width-16-pBBEI->iCursorY, pBBEI->iCursorX, 8, iLen);
+                bbeiWriteCmd(pBBEI, ucCMD1); // write to "new" plane
+                bbeiWriteData(pBBEI, &u8Temp[18], iLen);
+            } else { // write to RAM
+                // DEBUG
+            }
               pBBEI->iCursorX += iLen;
               if (pBBEI->iCursorX >= pBBEI->width-11 && pBBEI->wrap) // word wrap enabled?
               {
                 pBBEI->iCursorX = 0; // start at the beginning of the next line
                 pBBEI->iCursorY += 16;
-                bbeiSetPosition(pBBEI, pBBEI->iCursorX, pBBEI->iCursorY, 8, 16);
               }
-              iFontSkip = 0;
-          } // if characters are visible
-          iScroll -= 12;
           i++;
       } // while
        pBBEI->iFG = iOldFG; // restore color
@@ -832,31 +879,29 @@ int iOldFG; // old fg color to make sure red works
     else if (iSize == FONT_6x8)
     {
        i = 0;
-       iFontSkip = iScroll % 6;
        while (pBBEI->iCursorX < pBBEI->width && pBBEI->iCursorY < pBBEI->height && szMsg[i] != 0)
        {
-           if (iScroll < 6) // if characters are visible
-           {
                c = szMsg[i] - 32;
                // we can't directly use the pointer to FLASH memory, so copy to a local buffer
                u8Temp[0] = 0; // first column is blank
                memcpy_P(&u8Temp[1], &ucSmallFont[(int)c*5], 5);
                if (iColor == BBEI_WHITE) InvertBytes(u8Temp, 6);
-               iLen = 6 - iFontSkip;
+               iLen = 6;
                if (pBBEI->iCursorX + iLen > pBBEI->width) // clip right edge
                    iLen = pBBEI->width - pBBEI->iCursorX;
-               bbeiWriteData(pBBEI, &u8Temp[iFontSkip], iLen);
-//               obdWriteDataBlock(pBBEI, &ucTemp[iFontSkip], iLen, bRender); // write character pattern
+           if (!pBBEI->ucScreen) { // bufferless mode
+               bbeiSetPosition(pBBEI, pBBEI->iCursorX, pBBEI->iCursorY, 8, iLen);
+               bbeiWriteCmd(pBBEI, ucCMD1); // write to "new" plane
+               bbeiWriteData(pBBEI, u8Temp, iLen);
+           } else { // write to RAM
+               // DEBUG
+           }
                pBBEI->iCursorX += iLen;
-               iFontSkip = 0;
                if (pBBEI->iCursorX >= pBBEI->width-5 && pBBEI->wrap) // word wrap enabled?
                {
                  pBBEI->iCursorX = 0; // start at the beginning of the next line
                  pBBEI->iCursorY +=8;
-                 bbeiSetPosition(pBBEI, pBBEI->iCursorX, pBBEI->iCursorY, 8, 16);
                }
-           } // if characters are visible
-         iScroll -= 6;
          i++;
        }
       pBBEI->iFG = iOldFG; // restore color
@@ -869,7 +914,7 @@ int iOldFG; // old fg color to make sure red works
 //
 // Get the width of text in a custom font
 //
-void bbeiGetStringBox(GFXfont *pFont, char *szMsg, int *width, int *top, int *bottom)
+void bbeiGetStringBox(BB_FONT *pFont, char *szMsg, int *width, int *top, int *bottom)
 {
 int cx = 0;
 unsigned int c, i = 0;

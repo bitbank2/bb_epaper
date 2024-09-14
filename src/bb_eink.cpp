@@ -37,7 +37,8 @@ void delay(int);
 #include "bb_ei_io.inl" // I/O (non-portable) code is in here
 #include "bb_ei.inl" // All of the display interface code is in here
 #include "bb_ei_gfx.inl" // drawing code
-
+#include "Group5.h" // Group5 data compression library
+#include "bb_font.h" // bitbank compressed font info
 #ifdef __cplusplus
 //
 // C++ Class implementation
@@ -64,6 +65,8 @@ void BBEINK::initIO(int iDC, int iReset, int iBusy, int iCS, int iMOSI, int iSCL
     _bbei.iRSTPin = iReset;
     _bbei.iBUSYPin = iBusy;
     bbeiInitIO(&_bbei, u32Speed);
+    bbeiWakeUp(&_bbei);
+    bbeiSendCMDSequence(&_bbei, _bbei.pInitFull);
 } /* initIO() */
 
 int BBEINK::writePlane(int iPlane)
@@ -98,9 +101,9 @@ void BBEINK::setBuffer(uint8_t *pBuffer)
 
 int BBEINK::allocBuffer(void)
 {
-    int iSize = ((_bbei.width+7)>>3) * _bbei.height;
-//    if (_bbei.iFlags & (BBEI_3COLOR | BBEI_4COLOR) || _bbei.chip_type == BBEI_CHIP_UC81xx)
-//        iSize *= 2; // 2 bit planes
+    int iSize = ((_bbei.native_width+7)>>3) * _bbei.native_height;
+    if (_bbei.iFlags & (BBEI_3COLOR | BBEI_4COLOR) || _bbei.chip_type == BBEI_CHIP_UC81xx)
+        iSize *= 2; // 2 bit planes
     _bbei.ucScreen = (uint8_t *)malloc(iSize);
     if (_bbei.ucScreen != NULL) {
         return BBEI_SUCCESS;
@@ -189,7 +192,13 @@ int BBEINK::loadBMP3(const uint8_t *pBMP, int x, int y)
 void BBEINK::setFont(int iFont)
 {
     _bbei.iFont = iFont;
-   // _bbei.pFreeFont = NULL;
+    _bbei.pFont = NULL;
+} /* setFont() */
+
+void BBEINK::setFont(const void *pFont)
+{
+    _bbei.iFont = -1;
+    _bbei.pFont = (void *)pFont;
 } /* setFont() */
 
 //void BBEINK::setFreeFont(const GFXfont *pFont)
@@ -449,4 +458,13 @@ void BBEINK::wait(bool bQuick)
 {
     bbeiWaitBusy(&_bbei);
 }
+void BBEINK::drawString(const char *pText, int x, int y)
+{
+    if (_bbei.pFont) {
+        bbeiWriteStringCustom(&_bbei, (BB_FONT *)_bbei.pFont, x, y, (char *)pText, _bbei.iFG, 0); // iPlane);
+    } else if (_bbei.iFont >= FONT_6x8 && _bbei.iFont < FONT_COUNT) {
+        bbeiWriteString(&_bbei, x, y, (char *)pText, _bbei.iFont, _bbei.iFG);
+    }
+} /* drawString() */
+
 #endif // __cplusplus

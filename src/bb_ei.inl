@@ -17,8 +17,6 @@
 // bb_ei.inl
 // display interfacing/control code for bb_eink library
 //
-// EPD command and LUT tables
-// 2.7" 176x264 LUTs
 #ifndef __BB_EI__
 #define __BB_EI__
 
@@ -131,7 +129,7 @@ const uint8_t epd42r_init_sequence[] PROGMEM = {
     0x03, 0x4f, 0x2b, 0x01, // RAM Y counter
     0x00
 };
-const uint8_t epd29r_init_sequence[] PROGMEM = {
+const uint8_t epd29r_init_sequence_full[] PROGMEM = {
     0x01, 0x12, // soft reset
     BUSY_WAIT,
     0x02, 0x74, 0x54, // set analog block control
@@ -141,7 +139,7 @@ const uint8_t epd29r_init_sequence[] PROGMEM = {
     0x04, 0x01, 0x27, 0x01, 0x00, // output control
     0x02, 0x11, 0x03, // data entry mode
     0x03, 0x44, 0x00, 0x0f, // RAM X start/end
-    0x05, 0x45, 0,0,0x27, 0x01, // RAM Y start/end
+    0x05, 0x45, 0x00, 0x00, 0x27, 0x01, // RAM Y start/end
     0x02, 0x3c, 0x01, // border (0=bk,1=wh,2=red)
     0x02, 0x18, 0x80, // temp sensor = internal
     0x02, 0x21, 0x00, // display update ctrl 1
@@ -154,7 +152,7 @@ const uint8_t epd29r_init_sequence[] PROGMEM = {
 };
 
 // for 152x152 BWR
-const uint8_t epd29r_init_sequence_152[] PROGMEM = {
+const uint8_t epd154r_init_sequence_full[] PROGMEM = {
     0x01, 0x12, // soft reset
     BUSY_WAIT,
     0x02, 0x74, 0x54, // set analog block control
@@ -164,7 +162,7 @@ const uint8_t epd29r_init_sequence_152[] PROGMEM = {
     0x04, 0x01, 0x97, 0x00, 0x00, // output control
     0x02, 0x11, 0x03, // data entry mode
     0x03, 0x44, 0x00, 0x12, // RAM X start/end
-    0x05, 0x45, 0,0,0x97, 0x00, // RAM Y start/end
+    0x05, 0x45, 0x00, 0x00, 0x97, 0x00, // RAM Y start/end
     0x02, 0x3c, 0x01, // border (0=bk,1=wh,2=red)
     0x02, 0x18, 0x80, // temp sensor = internal
     0x02, 0x21, 0x00, // display update ctrl 1
@@ -441,6 +439,57 @@ const uint8_t epd102_init_sequence_part[] PROGMEM =
   0
 };
 
+const uint8_t epd122_init_sequence_full[] PROGMEM =
+{
+    0x01, SSD1608_SW_RESET,
+    BUSY_WAIT,
+
+    0x04, 0x01, 0xaf, 0x00, 0x00, // driver output control
+    0x02, 0x11, 0x03, // data entry mode
+    0x03, 0x44, 0x00, 0x17, // ram start/end
+    0x05, 0x45, 0x00, 0x00, 0xbf, 0x00,
+    0x02, 0x3c, 0x05, // border waveform
+    0x02, 0x18, 0x80, // read built-in temp sensor
+
+    0x02, 0x4e, 0x00,
+    0x03, 0x4f, 0x00, 0x00,
+    BUSY_WAIT,
+    0x00 // end of table
+};
+
+const uint8_t epd122_init_sequence_fast[] PROGMEM =
+{
+    0x01, SSD1608_SW_RESET,
+    BUSY_WAIT,
+
+    0x02, 0x11, 0x03, // data entry mode
+    0x02, 0x18, 0x80, // read built-in temp sensor
+    0x02, 0x22, 0xb1, // load temp value
+    0x01, 0x20, // execute
+    BUSY_WAIT,
+    0x03, 0x1a, 0x64, 0x00, // write temp value
+    0x02, 0x22, 0x91, // load temp
+    0x01, 0x20, // execute
+    BUSY_WAIT,
+    0x03, 0x44, 0x00, 0x17, // ram start/end
+    0x05, 0x45, 0x00, 0x00, 0xaf, 0x00,
+    0x02, 0x4e, 0x00,
+    0x03, 0x4f, 0x00, 0x00,
+    BUSY_WAIT,
+    0x00 // end of table
+};
+
+const uint8_t epd122_init_sequence_part[] PROGMEM =
+{
+    0x02, 0x3c, 0x80, // border waveform
+    0x02, 0x11, 0x03, // data entry mode
+    0x03, 0x44, 0x00, 0x17, // ram start/end
+    0x05, 0x45, 0x00, 0x00, 0xaf, 0x00,
+    0x02, 0x4e, 0x00,
+    0x03, 0x4f, 0x00, 0x00,
+    BUSY_WAIT,
+    0x00 // end of table
+};
 const uint8_t epd293_init_sequence_full[] PROGMEM =
 {
     0x01, SSD1608_SW_RESET,
@@ -890,11 +939,12 @@ const uint8_t epd294_init_sequence_part[] =
 }; /* epd294_init_sequence_part */
 
 uint8_t u8Cache[128]; // buffer a single line of up to 1024 pixels
+//
 // Definitions for each supported panel
 // The order tracks that of the enumerated panel types
 // ** ONLY ADD NEW PANELS TO THE END OF THE LIST **
 //
-const EPD_PANEL panelDefs[] = {
+const EPD_PANEL panelDefs[] PROGMEM = {
     {0}, // undefined panel
     {400, 300, epd42_init_sequence_full, NULL, epd42_init_sequence_part, 0, BBEI_CHIP_UC81xx}, // EPD42_400x300
     {400, 300, epd42b_init_sequence_full, epd42b_init_sequence_fast, epd42b_init_sequence_part, 0, BBEI_CHIP_SSD16xx}, // EPD42B_400x300
@@ -905,6 +955,9 @@ const EPD_PANEL panelDefs[] = {
     {152, 296, epd266_init_sequence_full, NULL, epd266_init_sequence_part, 0, BBEI_CHIP_SSD16xx}, // EPD266_152x296
     {80, 128, epd102_init_sequence_full, NULL, epd102_init_sequence_part, 0, BBEI_CHIP_UC81xx}, // EPD102_80x128
     {176, 264, epd27_init_sequence_full, NULL, epd27_init_sequence_part, 0, BBEI_CHIP_SSD16xx}, // EPD27B_176x264
+    {128, 296, epd29r_init_sequence_full, NULL, NULL, BBEI_3COLOR, BBEI_CHIP_SSD16xx}, // EPD29R_128x296
+    {192, 176, epd122_init_sequence_full, epd122_init_sequence_fast, epd122_init_sequence_part, 0, BBEI_CHIP_SSD16xx}, // EPD122_192x176
+    {152, 152, epd154r_init_sequence_full, NULL, NULL, BBEI_3COLOR, BBEI_CHIP_SSD16xx}, // EPD154R_152x152
 };
 int bbeiSetPanelType(BBEIDISP *pBBEI, int iPanel)
 {
@@ -919,6 +972,7 @@ int bbeiSetPanelType(BBEIDISP *pBBEI, int iPanel)
     pBBEI->pInitFull = panelDefs[iPanel].pInitFull;
     pBBEI->pInitFast = panelDefs[iPanel].pInitFast;
     pBBEI->pInitPart = panelDefs[iPanel].pInitPart;
+    pBBEI->type = iPanel;
     return BBEI_SUCCESS;
 } /* bbeiSetPanelType() */
 
@@ -926,7 +980,7 @@ void bbeiSetPosition(BBEIDISP *pBBEI, int x, int y, int cx, int cy)
 {
     uint8_t uc[12];
     int i, tx, ty;
-
+    
     tx = x/8; // round down to next lower byte
     ty = y;
     cx = (cx + 7) & 0xfff8; // make width an even number of bytes
@@ -957,23 +1011,26 @@ void bbeiSetPosition(BBEIDISP *pBBEI, int x, int y, int cx, int cy)
         bbeiWriteData(pBBEI, uc, i);
         //       EPDWriteCmd(UC8151_PTOU); // partial out
     } else { // SSD16xx
+//        bbeiCMD2(pBBEI, SSD1608_DATA_MODE, 0x3);
         bbeiWriteCmd(pBBEI, SSD1608_SET_RAMXPOS);
         uc[0] = tx; // start x (byte boundary)
         uc[1] = tx+((cx-1)>>3); // end x
         bbeiWriteData(pBBEI, uc, 2);
+
         bbeiWriteCmd(pBBEI, SSD1608_SET_RAMYPOS);
         uc[0] = (uint8_t)ty; // start y
         uc[1] = (uint8_t)(ty>>8);
         uc[2] = (uint8_t)(ty+cy-1); // end y
         uc[3] = (uint8_t)((ty+cy-1)>>8);
         bbeiWriteData(pBBEI, uc, 4);
+
         // set ram counter to start of this region
         bbeiCMD2(pBBEI, SSD1608_SET_RAMXCOUNT, tx);
         uc[0] = ty;
         uc[1] = (ty>>8);
         bbeiWriteCmd(pBBEI, SSD1608_SET_RAMYCOUNT);
         bbeiWriteData(pBBEI, uc, 2);
-        //    EPD_CMD2(SSD1608_DATA_MODE, 0x3);
+//        bbeiCMD2(pBBEI, SSD1608_DATA_MODE, 0x3);
     }
 } /* bbeiSetPosition() */
 //
@@ -983,6 +1040,8 @@ void bbeiSendCMDSequence(BBEIDISP *pBBEI, const uint8_t *pSeq)
 {
 int iLen;
 uint8_t *s;
+    
+    if (pBBEI == NULL || pSeq == NULL) return;
     
     s = (uint8_t *)pSeq;
     while (s[0] != 0) {
@@ -1004,6 +1063,7 @@ int bbeiRefresh(BBEIDISP *pBBEI, int iMode)
 {
     if (iMode != REFRESH_FULL && iMode != REFRESH_FAST && iMode != REFRESH_PARTIAL)
         return BBEI_ERROR_BAD_PARAMETER;
+    
     bbeiWakeUp(pBBEI); // tickle the reset line
     switch (iMode) {
         case REFRESH_FULL:
@@ -1027,6 +1087,9 @@ int bbeiRefresh(BBEIDISP *pBBEI, int iMode)
         bbeiWriteCmd(pBBEI, UC8151_DRF);
     } else {
         const uint8_t u8CMD[3] = {0xf7, 0xc7, 0xff}; // normal, fast, partial
+        if (pBBEI->iFlags & BBEI_3COLOR) {
+            iMode = REFRESH_FAST;
+        } // 3-color = 0xc7
         bbeiCMD2(pBBEI, SSD1608_DISP_CTRL2, u8CMD[iMode]);
         bbeiWriteCmd(pBBEI, SSD1608_MASTER_ACTIVATE); // refresh
     }

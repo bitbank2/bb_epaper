@@ -69,13 +69,11 @@ enum {
    FONT_6x8 = 0,
    FONT_8x8,
    FONT_12x16,
-   FONT_16x16,
-   FONT_16x32,
-   FONT_CUSTOM0,
-   FONT_CUSTOM1,
-   FONT_CUSTOM2,
    FONT_COUNT
 };
+// Centering coordinates to pass to the character drawing functions
+#define CENTER_X 9998
+#define CENTER_Y 9999
 
 typedef struct epd_panel {
     uint16_t width;
@@ -99,6 +97,9 @@ enum {
     EPD266_152x296, // GDEY0266T90
     EPD102_80x128, // GDEW0102T4
     EPD27B_176x264, // GDEY027T91
+    EPD29R_128x296,
+    EPD122_192x176, // GDEM0122T61
+    EPD154R_152x152,
     EPD_PANEL_COUNT
 };
 #ifdef FUTURE
@@ -106,7 +107,6 @@ enum {
   EPD42Y_400x300, // DEPG0420YN
   EPD29_128x296,
   EPD29B_128x296,
-  EPD29R_128x296,
   EPD29Y_128x296, // DEPG0290YN
   EPD42R_400x300,
   EPD42R2_400x300, // GDEQ042Z21
@@ -254,6 +254,7 @@ int width, height, native_width, native_height;
 int iScreenOffset, iOrientation;
 int iFG, iBG; //current color
 int iFont, iFlags;
+void *pFont;
 int iDataTime, iOpTime; // time in milliseconds for data transmission and operation
 uint32_t iSpeed;
 uint32_t iTimeout; // for e-ink panels
@@ -301,6 +302,7 @@ class BBEINK
     int loadBMP(const uint8_t *pBMP, int x, int y, int iFG, int iBG);
     int loadBMP3(const uint8_t *pBMP, int x, int y);
     void setFont(int iFont);
+    void setFont(const void *pFont);
     void drawLine(int x1, int y1, int x2, int y2, int iColor);
     void drawPixel(int16_t x, int16_t y, uint8_t color);
     int16_t getCursorX(void);
@@ -317,6 +319,7 @@ class BBEINK
     void fillEllipse(int16_t x, int16_t y, int32_t rx, int32_t ry, uint16_t color);
     void sleep(int bDeep);
     void wait(bool bQuick = false);
+    void drawString(const char *pText, int x, int y);
 
 #ifdef FUTURE
     void setPlane(int iPlane);
@@ -328,7 +331,6 @@ class BBEINK
     void writeCommand(uint8_t ucCMD);
     void writeRaw(uint8_t *pData, int iLen);
     void pushImage(int x, int y, int w, int h, uint16_t *pixels);
-    void drawString(const char *pText, int x, int y);
     void drawString(String text, int x, int y);
 #endif // FUTURE
     

@@ -1,5 +1,5 @@
 //
-// bb_eink I/O functions
+// bb_eink I/O wrapper functions for Arduino
 // Copyright (c) 2024 BitBank Software, Inc.
 // Written by Larry Bank (bitbank@pobox.com)
 // Project started 9/11/2024
@@ -14,12 +14,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+// Adapt these functions to whatever target platform you're using
+// and the rest of the code can remain unchanged
+//
 #ifndef __BB_EI_IO__
 #define __BB_EI_IO__
 #ifdef ARDUINO
 #include <Arduino.h>
 #include <SPI.h>
-
+//
+// Initialize the GPIO pins and SPI for use by bb_eink
+//
 void bbeiInitIO(BBEIDISP *pBBEI, uint32_t u32Speed)
 {
     pinMode(pBBEI->iDCPin, OUTPUT);
@@ -42,7 +47,9 @@ void bbeiInitIO(BBEIDISP *pBBEI, uint32_t u32Speed)
     SPI.beginTransaction(SPISettings(u32Speed, MSBFIRST, SPI_MODE0));
     SPI.endTransaction(); // N.B. - if you call beginTransaction() again without a matching endTransaction(), it will hang on ESP32
 } /* bbeiInitIO() */
-
+//
+// Toggle the reset line to wake up the eink from deep sleep
+//
 void bbeiWakeUp(BBEIDISP *pBBEI)
 {
     digitalWrite(pBBEI->iRSTPin, LOW);
@@ -50,15 +57,23 @@ void bbeiWakeUp(BBEIDISP *pBBEI)
     digitalWrite(pBBEI->iRSTPin, HIGH);
     delay(10);
 } /* bbeiWakeUp() */
-
+//
+// Wait for the busy status line to show idle
+// The polarity of the busy signal is reversed on the UC81xx compared
+// to the SSD16xx controllers
+//
 void bbeiWaitBusy(BBEIDISP *pBBEI)
 {
     uint8_t busy_idle =  (pBBEI->chip_type == BBEI_CHIP_UC81xx) ? HIGH : LOW;
+    delay(1); // some panels need a short delay before testing the BUSY line
     while (1) {
         if (digitalRead(pBBEI->iBUSYPin) == busy_idle) break;
     }
 } /* bbeiWaitBusy() */
-
+//
+// Convenience function to write a command byte along with a data
+// byte (it's single parameter)
+//
 void bbeiCMD2(BBEIDISP *pBBEI, uint8_t cmd1, uint8_t cmd2)
 {
     digitalWrite(pBBEI->iDCPin, LOW);
@@ -66,14 +81,16 @@ void bbeiCMD2(BBEIDISP *pBBEI, uint8_t cmd1, uint8_t cmd2)
     digitalWrite(pBBEI->iCSPin, LOW);
 #endif
     SPI.transfer(cmd1);
-    SPI.transfer(cmd2);
-    digitalWrite(pBBEI->iDCPin, HIGH); // leave data mode as the default
+    digitalWrite(pBBEI->iDCPin, HIGH);
+    SPI.transfer(cmd2); // second byte is data
 #ifndef ARDUINO_ARCH_ESP32
     digitalWrite(pBBEI->iCSPin, HIGH);
 #endif
-
+//    digitalWrite(pBBEI->iDCPin, HIGH); // leave data mode as the default
 } /* bbeiCMD2() */
-
+//
+// Write a single byte as a COMMAND (D/C set low)
+//
 void bbeiWriteCmd(BBEIDISP *pBBEI, uint8_t cmd)
 {
     digitalWrite(pBBEI->iDCPin, LOW);
@@ -81,12 +98,14 @@ void bbeiWriteCmd(BBEIDISP *pBBEI, uint8_t cmd)
     digitalWrite(pBBEI->iCSPin, LOW);
 #endif
     SPI.transfer(cmd);
-    digitalWrite(pBBEI->iDCPin, HIGH); // leave data mode as the default
 #ifndef ARDUINO_ARCH_ESP32
     digitalWrite(pBBEI->iCSPin, HIGH);
 #endif
+    digitalWrite(pBBEI->iDCPin, HIGH); // leave data mode as the default
 } /* bbeiWriteCmd() */
-
+//
+// Put the eink into light or deep sleep
+//
 void bbeiSleep(BBEIDISP *pBBEI, int bDeep)
 {
     if (pBBEI->chip_type == BBEI_CHIP_UC81xx) {
@@ -101,10 +120,12 @@ void bbeiSleep(BBEIDISP *pBBEI, int bDeep)
         return;
     }
 } /* bbeiSleep() */
-
-
+//
+// Write 1 or more bytes as DATA (D/C set high)
+//
 void bbeiWriteData(BBEIDISP *pBBEI, uint8_t *pData, int iLen)
 {
+//    digitalWrite(pBBEI->iDCPin, HIGH);
 #ifdef ARDUINO_ARCH_ESP32
     SPI.transferBytes(pData, NULL, iLen);
 #else
