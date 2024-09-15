@@ -378,14 +378,14 @@ int16_t BBEINK::getCursorY(void)
 }
 void BBEINK::getTextBounds(const char *string, int16_t x, int16_t y, int16_t *x1, int16_t *y1, uint16_t *w, uint16_t *h)
 {
-//    if (_bbei.pFreeFont) {
-//        int width, top, bottom;
-  //      obdGetStringBox(_bbei.pFreeFont, (char *)string, &width, &top, &bottom);
-//        *x1 = x;
-//        *w = width;
-//        *y1 = y + top;
-//        *h = (bottom - top + 1);
-//    }
+    if (_bbei.pFont) {
+        int width, top, bottom;
+        bbeiGetStringBox((BB_FONT *)_bbei.pFont, string, &width, &top, &bottom);
+        *x1 = x;
+        *w = width;
+        *y1 = y + top;
+        *h = (bottom - top + 1);
+    }
 }
 void BBEINK::getTextBounds(const String &str, int16_t x, int16_t y, int16_t *x1, int16_t *y1, uint16_t *w, uint16_t *h)
 {
@@ -454,8 +454,8 @@ int BBEINK::getChip(void)
 {
     return _bbei.chip_type;
 }
-void BBEINK::getStringBox(const char *szMsg, int *width, int *top, int *bottom)
+void BBEINK::drawSprite(const uint8_t *pSprite, int cx, int cy, int iPitch, int x, int y, uint8_t iColor)
 {
-    bbeiGetStringBox((BB_FONT *)_bbei.pFont, szMsg, width, top, bottom);
+    bbeiDrawSprite(&_bbei, pSprite, cx, cy, iPitch, x, y, iColor);
 }
 #endif // __cplusplus

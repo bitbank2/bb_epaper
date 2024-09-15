@@ -321,11 +321,8 @@ class BBEINK
     void setPlane(int iPlane);
     int getPlane(void);
     int getChip(void);
-    void getStringBox(const char *szMsg, int *width, int *top, int *bottom);
+    void drawSprite(const uint8_t *pSprite, int cx, int cy, int iPitch, int x, int y, uint8_t iColor);
 #ifdef FUTURE
-    void setPlane(int iPlane);
-    void drawSprite(uint8_t *pSprite, int cx, int cy, int iPitch, int x, int y, uint8_t iPriority);
-    void drawTile(const uint8_t *pTile, int x, int y, int iRotation, int bInvert, int bRender);
 //    int drawGFX(int x, int y, int cx, int cy, uint8_t *pPlane0, uint8_t *pPlane1);
 //    void setFreeFont(const BB_FONT *pFont);
     void pushBytes(uint8_t *pByte, int iCount);

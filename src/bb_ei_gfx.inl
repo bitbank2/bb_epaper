@@ -181,7 +181,7 @@ const uint8_t ucSmallFont[] PROGMEM = {
 // The priority color (0 or 1) determines which color is painted
 // when a 1 is encountered in the source image.
 //
-void bbeiDrawSprite(BBEIDISP *pBBEI, uint8_t *pSprite, int cx, int cy, int iPitch, int x, int y, uint8_t iPriority)
+void bbeiDrawSprite(BBEIDISP *pBBEI, const uint8_t *pSprite, int cx, int cy, int iPitch, int x, int y, uint8_t iColor)
 {
     int tx, ty, dx, dy, iStartX;
     uint8_t *s, *d, uc, pix, ucSrcMask, ucDstMask;
@@ -189,8 +189,8 @@ void bbeiDrawSprite(BBEIDISP *pBBEI, uint8_t *pSprite, int cx, int cy, int iPitc
     iLocalPitch = pBBEI->width;
 
     if (pBBEI == NULL) return;
-    if (x+cx < 0 || y+cy < 0 || x >= pBBEI->width || y >= pBBEI->height || pBBEI->ucScreen == NULL)
-        return; // no backbuffer or out of bounds
+    if (x+cx < 0 || y+cy < 0 || x >= pBBEI->native_width || y >= pBBEI->native_height)
+        return; // out of bounds
     dy = y; // destination y
     if (y < 0) // skip the invisible parts
     {
@@ -199,61 +199,103 @@ void bbeiDrawSprite(BBEIDISP *pBBEI, uint8_t *pSprite, int cx, int cy, int iPitc
         pSprite += (y * iPitch);
         dy = 0;
     }
-    if (y + cy > pBBEI->height)
-        cy = pBBEI->height - y;
-    iStartX = 0;
-    dx = x;
-    if (x < 0)
-    {
-        cx += x;
-        x = -x;
-        iStartX = x;
-        dx = 0;
+    if (dy + cy > pBBEI->native_height)
+        cy = pBBEI->native_height - y;
+    if (pBBEI->ucScreen == NULL) { // no backbuffer, draw it direct to EPD
+        uint8_t u8CMD, u8CMD1, u8CMD2, bInvert = 0;
+        int iDestPitch;
+        // start writing into the correct plane
+        if (pBBEI->chip_type == BBEI_CHIP_UC81xx) {
+            u8CMD1 = UC8151_DTM2;
+            u8CMD2 = UC8151_DTM1;
+        } else {
+            u8CMD1 = SSD1608_WRITE_RAM;
+            u8CMD2 = SSD1608_WRITE_ALTRAM;
+        }
+        u8CMD = u8CMD1;
+        if (iColor == BBEI_BLACK) bInvert = 1;
+        else if (iColor == BBEI_RED && (pBBEI->iFlags & BBEI_3COLOR)) {
+            u8CMD = u8CMD2; // second plane is red (inverted)
+        }
+        s = (uint8_t *)pSprite;
+        // set the memory window for this character
+        cx += (x & 7); // add parital byte
+        bbeiSetPosition(pBBEI, x, y, cx, cy);
+        iDestPitch = (cx+7)/8;
+        bbeiWriteCmd(pBBEI, u8CMD); // memory write command
+       for (int ty=dy; ty<dy+cy; ty++) {
+           memcpy(u8Cache, s, iPitch);
+           s += iPitch;
+           if (x & 7) { // need to shift it over by 1-7 bits
+             uint8_t *s = u8Cache, uc1, uc0 = 0; // last shifted byte
+             uint8_t n = x & 7; // shift amount
+             for (int j=0; j<cx+7; j+= 8) {
+                 uc1 = *s;
+                 uc0 |= (uc1 >> n);
+                 *s++ = uc0;
+                 uc0 = uc1 << (8-n);
+             }
+             *s++ = uc0; // store final byte
+             *s++ = 0; // and a zero for good measure
+           }
+           if (bInvert) InvertBytes(u8Cache, iDestPitch);
+           bbeiWriteData(pBBEI, u8Cache, iDestPitch); // write each row into the EPD framebuffer
+       } // for y
+    } else {
+        iStartX = 0;
+        dx = x;
+        if (x < 0)
+        {
+            cx += x;
+            x = -x;
+            iStartX = x;
+            dx = 0;
+        }
+        if (x + cx > pBBEI->native_width)
+            cx = pBBEI->native_width - x;
+        for (ty=0; ty<cy; ty++)
+        {
+            s = (uint8_t *)&pSprite[(iStartX >> 3)];
+            d = &pBBEI->ucScreen[(dy>>3) * iLocalPitch + dx];
+            ucSrcMask = 0x80 >> (iStartX & 7);
+            pix = *s++;
+            ucDstMask = 1 << (dy & 7);
+            if (iColor) // priority color is 1
+            {
+                for (tx=0; tx<cx; tx++)
+                {
+                    uc = d[0];
+                    if (pix & ucSrcMask) // set pixel in source, set it in dest
+                        d[0] = (uc | ucDstMask);
+                    d++; // next pixel column
+                    ucSrcMask >>= 1;
+                    if (ucSrcMask == 0) // read next byte
+                    {
+                        ucSrcMask = 0x80;
+                        pix = *s++;
+                    }
+                } // for tx
+            } // priorty color 1
+            else
+            {
+                for (tx=0; tx<cx; tx++)
+                {
+                    uc = d[0];
+                    if (pix & ucSrcMask) // clr pixel in source, clr it in dest
+                        d[0] = (uc & ~ucDstMask);
+                    d++; // next pixel column
+                    ucSrcMask >>= 1;
+                    if (ucSrcMask == 0) // read next byte
+                    {
+                        ucSrcMask = 0x80;
+                        pix = *s++;
+                    }
+                } // for tx
+            } // priority color 0
+            dy++;
+            pSprite += iPitch;
+        } // for ty
     }
-    if (x + cx > pBBEI->width)
-        cx = pBBEI->width - x;
-    for (ty=0; ty<cy; ty++)
-    {
-        s = &pSprite[(iStartX >> 3)];
-        d = &pBBEI->ucScreen[(dy>>3) * iLocalPitch + dx];
-        ucSrcMask = 0x80 >> (iStartX & 7);
-        pix = *s++;
-        ucDstMask = 1 << (dy & 7);
-        if (iPriority) // priority color is 1
-        {
-          for (tx=0; tx<cx; tx++)
-          {
-            uc = d[0];
-            if (pix & ucSrcMask) // set pixel in source, set it in dest
-              d[0] = (uc | ucDstMask);
-            d++; // next pixel column
-            ucSrcMask >>= 1;
-            if (ucSrcMask == 0) // read next byte
-            {
-                ucSrcMask = 0x80;
-                pix = *s++;
-            }
-          } // for tx
-        } // priorty color 1
-        else
-        {
-          for (tx=0; tx<cx; tx++)
-          {
-            uc = d[0];
-            if (pix & ucSrcMask) // clr pixel in source, clr it in dest
-              d[0] = (uc & ~ucDstMask);
-            d++; // next pixel column
-            ucSrcMask >>= 1;
-            if (ucSrcMask == 0) // read next byte
-            {
-                ucSrcMask = 0x80;
-                pix = *s++;
-            }
-          } // for tx
-        } // priority color 0
-        dy++;
-        pSprite += iPitch;
-    } // for ty
 } /* bbeiDrawSprite() */
 
 // Set (or clear) an individual pixel
