@@ -27,32 +27,23 @@ Features:<br>
 - Optimized Bresenham outline and filled ellipse drawing<br>
 - Optimized outline and filled rectangle drawing<br>
 <br>
-This code depends on the Group5 data compression library. You can download it here:<br>
+This code depends on my Group5 data compression library. You can download it here:<br>
 https://github.com/bitbank2/Group5
 <br>
 See the Wiki for help getting started<br>
 https://github.com/bitbank2/bb_eink/wiki <br>
 <br>
 
-![Fonts](/fonts_opt.jpg?raw=true "fonts")
 A few words about fonts<br>
 -----------------------<br>
 
-The library includes 3 fixed fonts (6x8, 8x8 and 16x32). The 16x32 font is disabled when compiling for AVR targets (e.g. Arduino Uno) to save FLASH program space. The other 2 fonts offer 2x stretched versions (12x16 from 6x8 and 16x16 from 8x8). A simple smoothing algorithm is applied to the stretched 6x8 font to make it look better. In the photo above are the first 4 font sizes shown on a 128x64 yellow OLED display. Only 96 ASCII characters are defined per font to save space. To use more elaborate fonts with more extensive character support, use Adafruit_GFX format bitmap fonts with the `obdWriteStringCustom()` function.<br>
+The library includes 3 fixed fonts (6x8, 8x8 and 12x16). The 12x16 is really a stretched+smoothed version of the 6x8 to save FLASH space. To use more elaborate fonts with more extensive character support, use my BB_FONT format compressed bitmap fonts. This functionality is part of my Group5 compression library.<br>
 
-![Sharp Memory LCD](/sharp_lcd.jpg?raw=true "Sharp_LCD")
-Sharp Memory LCD Support<br>
+Black & White (& Red)<br>
 ------------------------<br>
-New - support for the Sharp 144x168 and 400x240 memory LCDs. These are a different type of LCD that have a high refresh rate and low power usage. They cost quite a bit more than normal LCDs. They require a memory back buffer to use the drawing functions due to the way data is written to them one line at a time. I've also added a specific function if you would like to skip the back buffer - `obdWriteLCDLine()`. It allows you to write a single line of pixels without needing any additional memory. Please see the Wiki for more details.<br>
-
-Instructions for use:<br>
----------------------<br>
-Start by initializing the library. Either using hardware I2C, bit-banged I2C or SPI to talk to the display. For I2C, the
-address of the display will be detected automatically (either 0x3c or 0x3d) or you can specify it. The typical MCU only allows setting the I2C speed up to 400Khz, but the SSD1306 displays can handle a much faster signal. With the bit-bang code, you can usually specify a stable 800Khz clock and with Cortex-M0 targets, the hardware I2C can be told to be almost any speed, but the displays I've tested tend to stop working beyond 1.6Mhz.<br>
+The current code supports 1-bit black and white eink displays as well as the B/W/R models. At the time of this writing, the BWR models can only do a full refresh (no fast nor partial). This may change in a future version.<br>
 <br>
-After initializing the display you can begin drawing text or graphics on it. The final parameter of all of the drawing functions is a render flag. When true, the graphics will be sent to the internal backing buffer (when available) and sent to the display. You optionally pass the library a backing buffer (if your MCU has enough RAM) with the obdSetBackBuffer() function. When the render flag is false, the graphics will only be drawn into the internal buffer. Once you're ready to send the pixels to the display, call obdDumpBuffer(NULL) and it will copy the internal buffer in its entirety to the display.<br>
-<br>
-The text drawing function now has a scroll offset parameter. This tells it how many pixels of the text to skip before drawing the text at the given destination coordinates. For example, if you pass a value of 20 for the scroll offset and are using an 8-pixel wide font (FONT_8x8), the first two and a half characters will not be drawn; the second half of the third and subsequent characters will be drawn starting at the x/y you specified. This allows you to create a scrolling text effect by repeatedly calling the oledWriteString() function with progressively larger scroll offset values to make the text scroll from right to left.<br> 
+See WiKi and example code for how to use the library.<br> 
 <br>
 
 If you find this code useful, please consider sending a donation or becomming a Github sponsor.
