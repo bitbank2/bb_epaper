@@ -314,78 +314,52 @@ char ucTemp[4];
 //
 #ifndef __AVR__
 size_t BBEINK::write(uint8_t c) {
-#ifdef FUTURE
 char szTemp[2]; // used to draw 1 character at a time to the C methods
 int w, h;
 
   szTemp[0] = c; szTemp[1] = 0;
-   if (_bbei.pFreeFont == NULL) { // use built-in fonts
-       if (_bbei.iFont == -1) { // scaled 5x7 font
-           h = (int)(_bbei.u32FontScaleY >> 8) * 8;
-           w = (int)(_bbei.u32FontScaleX >> 8) * 6;
-       } else if (_bbei.iFont == FONT_8x8 || _bbei.iFont == FONT_6x8) {
+   if (_bbei.pFont == NULL) { // use built-in fonts
+      if (_bbei.iFont == FONT_8x8 || _bbei.iFont == FONT_6x8) {
         h = 8;
         w = (_bbei.iFont == FONT_8x8) ? 8 : 6;
-      } else if (_bbei.iFont == FONT_12x16 || _bbei.iFont == FONT_16x16) {
+      } else if (_bbei.iFont == FONT_12x16) {
         h = 16;
-        w = (_bbei.iFont == FONT_12x16) ? 12 : 16;
-      } else { w = 16; h = 32; }
+        w = 12;
+      }
 
     if (c == '\n') {              // Newline?
       _bbei.iCursorX = 0;          // Reset x to zero,
       _bbei.iCursorY += h; // advance y one line
-        // should we scroll the screen up 1 line?
-        if (_bbei.iCursorY >= _bbei.height && _bbei.ucScreen && _bbei.bScroll) {
-            obdScroll1Line(&_bbei, h/8);
-            if (_bbei.render) {
-                obdDumpBuffer(&_bbei, NULL, false, false, false);
-            }
-            _bbei.iCursorY -= h;
-        }
     } else if (c != '\r') {       // Ignore carriage returns
-      if (_bbei.wrap && ((_bbei.iCursorX + w) > _bbei.width)) { // Off right?
-        _bbei.iCursorX = 0;               // Reset x to zero,
-        _bbei.iCursorY += h; // advance y one line
-          // should we scroll the screen up 1 line?
-          if (_bbei.iCursorY >= _bbei.height && _bbei.ucScreen && _bbei.bScroll) {
-              obdScroll1Line(&_bbei, h/8);
-              if (_bbei.render) {
-                  obdDumpBuffer(&_bbei, NULL, false, false, false);
-              }
-              _bbei.iCursorY -= h;
-          }
-      }
-        if (_bbei.iFont == -1) { // scaled drawing
-            obdScaledString(&_bbei, _bbei.iCursorX, _bbei.iCursorY, szTemp, FONT_6x8, _bbei.iFG, _bbei.u32FontScaleX, _bbei.u32FontScaleY, 0);
-            _bbei.iCursorX += w;
-        } else {
-            obdWriteString(&_bbei, 0, -1, -1, szTemp, _bbei.iFont, _bbei.iFG, _bbei.render);
+        if (_bbei.wrap && ((_bbei.iCursorX + w) > _bbei.width)) { // Off right?
+            _bbei.iCursorX = 0;               // Reset x to zero,
+            _bbei.iCursorY += h; // advance y one line
         }
+        bbeiWriteString(&_bbei, -1, -1, szTemp, _bbei.iFont, _bbei.iFG);
     }
   } else { // Custom font
+      BB_FONT *pBBF = (BB_FONT *)_bbei.pFont;
     if (c == '\n') {
       _bbei.iCursorX = 0;
-      _bbei.iCursorY += (uint8_t)pgm_read_byte(&_bbei.pFreeFont->yAdvance);
+      _bbei.iCursorY += pBBF->height;
     } else if (c != '\r') {
-      uint8_t first = pgm_read_word((const uint8_t*)&_bbei.pFreeFont->first);
-      if ((c >= first) && (c <= (uint8_t)pgm_read_word((const uint8_t*)&_bbei.pFreeFont->last))) {
-        GFXglyph *glyph = pgm_read_glyph_ptr(_bbei.pFreeFont, c - first);
-        w = pgm_read_byte(&glyph->width);
-        h = pgm_read_byte(&glyph->height);
+      if (c >= pBBF->first && c <= pBBF->last) {
+          BB_GLYPH *pBBG = &pBBF->glyphs[c-pBBF->first];
+        w = pBBG->width;
+        h = pBBG->height;
         if ((w > 0) && (h > 0)) { // Is there an associated bitmap?
-          int16_t xo = (int8_t)pgm_read_word((const uint8_t*)&glyph->xOffset);
+          int16_t xo = pBBG->xOffset;
           w += xo; // xadvance
-          h = (uint8_t)pgm_read_byte(&_bbei.pFreeFont->yAdvance);
+          h = pBBF->height;
           if (_bbei.wrap && ((_bbei.iCursorX + w) > _bbei.width)) {
             _bbei.iCursorX = 0;
             _bbei.iCursorY += h;
           }
-            bbeiWriteStringCustom(&_bbei, _bbei.pFreeFont, -1, -1, szTemp, _bbei.iFG);
+            bbeiWriteStringCustom(&_bbei, (BB_FONT *)_bbei.pFont, -1, -1, szTemp, _bbei.iFG, _bbei.iPlane);
         }
       }
     }
   }
-#endif // FUTURE
   return 1;
 } /* write() */
 #endif // !__AVR__
@@ -467,4 +441,21 @@ void BBEINK::drawString(const char *pText, int x, int y)
     }
 } /* drawString() */
 
+void BBEINK::setPlane(int iPlane)
+{
+    _bbei.iPlane = iPlane;
+}
+int BBEINK::getPlane(void)
+{
+    return _bbei.iPlane;
+}
+
+int BBEINK::getChip(void)
+{
+    return _bbei.chip_type;
+}
+void BBEINK::getStringBox(const char *szMsg, int *width, int *top, int *bottom)
+{
+    bbeiGetStringBox((BB_FONT *)_bbei.pFont, szMsg, width, top, bottom);
+}
 #endif // __cplusplus

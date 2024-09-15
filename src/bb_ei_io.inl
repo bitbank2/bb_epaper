@@ -76,6 +76,11 @@ void bbeiWaitBusy(BBEIDISP *pBBEI)
 //
 void bbeiCMD2(BBEIDISP *pBBEI, uint8_t cmd1, uint8_t cmd2)
 {
+    if (!pBBEI->is_awake) {
+        // if it's asleep, it can't receive commands
+        bbeiWakeUp(pBBEI);
+        pBBEI->is_awake = 1;
+    }
     digitalWrite(pBBEI->iDCPin, LOW);
 #ifndef ARDUINO_ARCH_ESP32
     digitalWrite(pBBEI->iCSPin, LOW);
@@ -93,6 +98,11 @@ void bbeiCMD2(BBEIDISP *pBBEI, uint8_t cmd1, uint8_t cmd2)
 //
 void bbeiWriteCmd(BBEIDISP *pBBEI, uint8_t cmd)
 {
+    if (!pBBEI->is_awake) {
+        // if it's asleep, it can't receive commands
+        bbeiWakeUp(pBBEI);
+        pBBEI->is_awake = 1;
+    }
     digitalWrite(pBBEI->iDCPin, LOW);
 #ifndef ARDUINO_ARCH_ESP32
     digitalWrite(pBBEI->iCSPin, LOW);
@@ -117,8 +127,8 @@ void bbeiSleep(BBEIDISP *pBBEI, int bDeep)
         }
     } else {
         bbeiCMD2(pBBEI, SSD1608_DEEP_SLEEP, (bDeep) ? 0x02 : 0x01); // deep sleep mode 1 keeps RAM, mode 2 loses RAM
-        return;
     }
+    pBBEI->is_awake = 0;
 } /* bbeiSleep() */
 //
 // Write 1 or more bytes as DATA (D/C set high)

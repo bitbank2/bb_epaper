@@ -574,9 +574,9 @@ void bbeiWriteStringCustom(BBEIDISP *pBBEI, BB_FONT *pFont, int x, int y, char *
 {
 int rc, i, h, w, end_y, dx, dy, ty, iSrcPitch, iPitch;
 unsigned int c;
-uint8_t *s;
+uint8_t *s, bInvert = 0;
 BB_GLYPH *pGlyph;
-uint8_t *pBits, u8CMD, u8EndMask;
+uint8_t *pBits, u8CMD1, u8CMD2, u8CMD, u8EndMask;
 
     if (x == -1)
         x = pBBEI->iCursorX;
@@ -636,9 +636,16 @@ uint8_t *pBits, u8CMD, u8EndMask;
            iPitch = (w+7)/8;
            // start writing into the correct plane
            if (pBBEI->chip_type == BBEI_CHIP_UC81xx) {
-               u8CMD = /*(iPlane) ? UC8151_DTM1 : */UC8151_DTM2;
+               u8CMD1 = UC8151_DTM2;
+               u8CMD2 = UC8151_DTM1;
            } else {
-               u8CMD = /*(iPlane) ? SSD1608_WRITE_ALTRAM :*/ SSD1608_WRITE_RAM;
+               u8CMD1 = SSD1608_WRITE_RAM;
+               u8CMD2 = SSD1608_WRITE_ALTRAM;
+           }
+           u8CMD = u8CMD1;
+           if (iColor == BBEI_BLACK) bInvert = 1;
+           else if (iColor == BBEI_RED && (pBBEI->iFlags & BBEI_3COLOR)) {
+               u8CMD = u8CMD2; // second plane is red (inverted)
            }
         bbeiWriteCmd(pBBEI, u8CMD); // memory write command
       for (ty=dy; ty<end_y && ty < pBBEI->native_height; ty++) {
@@ -657,7 +664,7 @@ uint8_t *pBits, u8CMD, u8EndMask;
             *s++ = uc0; // store final byte
             *s++ = 0; // and a zero for good measure
           }
-          if (iColor == BBEI_BLACK) InvertBytes(u8Cache, iPitch);
+          if (bInvert) InvertBytes(u8Cache, iPitch);
           bbeiWriteData(pBBEI, u8Cache, iPitch); // write each row into the EPD framebuffer
       } // for y
       } // if not drawing a space
@@ -669,14 +676,15 @@ uint8_t *pBits, u8CMD, u8EndMask;
    } // while drawing characters
     pBBEI->iCursorX = x;
     pBBEI->iCursorY = y;
-} /* EPDWriteStringDirect() *///
+} /* EPDWriteStringCustom() */
+//
 // Draw a string of normal (8x8), small (6x8) or large (16x32) characters
 // At the given col+row
 //
 int bbeiWriteString(BBEIDISP *pBBEI, int x, int y, char *szMsg, int iSize, int iColor)
 {
 int i, iFontOff, iLen;
-uint8_t c, *s, ucCMD1, ucCMD2;
+    uint8_t c, *s, ucCMD, ucCMD1, ucCMD2;
 int iOldFG; // old fg color to make sure red works
 uint8_t u8Temp[128];
     
@@ -688,10 +696,9 @@ uint8_t u8Temp[128];
         ucCMD1 = SSD1608_WRITE_RAM;
         ucCMD2 = SSD1608_WRITE_ALTRAM;
     }
-
-    // If we're in bufferless mode, we'll need to invert the requested color
-    if (!pBBEI->ucScreen) {
-        iColor = 1 - iColor; // invert the color
+    ucCMD = ucCMD1;
+    if ((pBBEI->iFlags & BBEI_3COLOR) && iColor == BBEI_RED || pBBEI->iPlane == 1) {
+        ucCMD = ucCMD2; // write to second plane for red
     }
     if (x == -1 || y == -1) // use the cursor position
     {
@@ -720,14 +727,14 @@ uint8_t u8Temp[128];
          // we can't directly use the pointer to FLASH memory, so copy to a local buffer
          u8Temp[0] = 0; // first column is blank
          memcpy_P(&u8Temp[1], &ucFont[iFontOff], 7); // only needed on AVR
-         if (iColor == BBEI_WHITE) InvertBytes(u8Temp, 8);
+         if (iColor == BBEI_BLACK) InvertBytes(u8Temp, 8);
          iLen = 8;
            if (pBBEI->iCursorX + iLen > pBBEI->width) { // clip right edge
                iLen = pBBEI->width - pBBEI->iCursorX;
            }
            if (!pBBEI->ucScreen) { // bufferless mode, rotate the coordinate system to fit the situation
                bbeiSetPosition(pBBEI, pBBEI->native_width-8-pBBEI->iCursorY, pBBEI->iCursorX, 8, pBBEI->native_height-pBBEI->iCursorX);
-               bbeiWriteCmd(pBBEI, ucCMD1); // write to "new" plane
+               bbeiWriteCmd(pBBEI, ucCMD); // write to "new" plane
                bbeiWriteData(pBBEI, u8Temp, iLen);
            } else { // draw in memory
                // DEBUG
@@ -751,7 +758,7 @@ uint8_t u8Temp[128];
               s = (unsigned char *)&ucSmallFont[(int)c*5];
               u8Temp[0] = 0; // first column is blank
               memcpy_P(&u8Temp[1], s, 6);
-              if (iColor == BBEI_WHITE)
+              if (iColor == BBEI_BLACK)
                   InvertBytes(u8Temp, 6);
               // Stretch the font to double width + double height
               memset(&u8Temp[6], 0, 24); // write 24 new bytes
@@ -789,7 +796,7 @@ uint8_t u8Temp[128];
                       {
                           if (ty < 3) // top half
                           {
-                              if (iColor == BBEI_WHITE) {
+                              if (iColor == BBEI_BLACK) {
                                 pDest[1] &= ~(1 << ((ty * 2)+1));
                                 pDest[2] &= ~(1 << ((ty * 2)+1));
                                 pDest[1] &= ~(1 << ((ty+1) * 2));
@@ -803,7 +810,7 @@ uint8_t u8Temp[128];
                           }
                           else if (ty == 3) // on the border
                           {
-                              if (iColor == BBEI_WHITE) {
+                              if (iColor == BBEI_BLACK) {
                                 pDest[1] &= ~0x80; pDest[2] &= ~0x80;
                                 pDest[13] &= ~1; pDest[14] &= ~1;
                               } else {
@@ -813,7 +820,7 @@ uint8_t u8Temp[128];
                           }
                           else // bottom half
                           {
-                              if (iColor == BBEI_WHITE) {
+                              if (iColor == BBEI_BLACK) {
                                 pDest[13] &= ~(1 << (2*(ty-4)+1));
                                 pDest[14] &= ~(1 << (2*(ty-4)+1));
                                 pDest[13] &= ~(1 << ((ty-3) * 2));
@@ -830,7 +837,7 @@ uint8_t u8Temp[128];
                       {
                           if (ty < 4) // top half
                           {
-                              if (iColor == BBEI_WHITE) {
+                              if (iColor == BBEI_BLACK) {
                                 pDest[1] &= ~(1 << ((ty * 2)+1));
                                 pDest[2] &= ~(1 << ((ty+1) * 2));
                               } else {
@@ -840,7 +847,7 @@ uint8_t u8Temp[128];
                           }
                           else
                           {
-                              if (iColor == BBEI_WHITE) {
+                              if (iColor == BBEI_BLACK) {
                                 pDest[13] &= ~(1 << (2*(ty-4)+1));
                                 pDest[14] &= ~(1 << ((ty-3) * 2));
                               } else {
@@ -857,10 +864,10 @@ uint8_t u8Temp[128];
                   iLen = pBBEI->width - pBBEI->iCursorX;
             if (!pBBEI->ucScreen) { // bufferless mode
                 bbeiSetPosition(pBBEI, pBBEI->native_width-8-pBBEI->iCursorY, pBBEI->iCursorX, 8, iLen);
-                bbeiWriteCmd(pBBEI, ucCMD1); // write to "new" plane
+                bbeiWriteCmd(pBBEI, ucCMD); // write to "new" plane
                 bbeiWriteData(pBBEI, &u8Temp[6], iLen);
                 bbeiSetPosition(pBBEI, pBBEI->native_width-16-pBBEI->iCursorY, pBBEI->iCursorX, 8, iLen);
-                bbeiWriteCmd(pBBEI, ucCMD1); // write to "new" plane
+                bbeiWriteCmd(pBBEI, ucCMD); // write to "new" plane
                 bbeiWriteData(pBBEI, &u8Temp[18], iLen);
             } else { // write to RAM
                 // DEBUG
@@ -885,13 +892,13 @@ uint8_t u8Temp[128];
                // we can't directly use the pointer to FLASH memory, so copy to a local buffer
                u8Temp[0] = 0; // first column is blank
                memcpy_P(&u8Temp[1], &ucSmallFont[(int)c*5], 5);
-               if (iColor == BBEI_WHITE) InvertBytes(u8Temp, 6);
+               if (iColor == BBEI_BLACK) InvertBytes(u8Temp, 6);
                iLen = 6;
                if (pBBEI->iCursorX + iLen > pBBEI->width) // clip right edge
                    iLen = pBBEI->width - pBBEI->iCursorX;
            if (!pBBEI->ucScreen) { // bufferless mode
                bbeiSetPosition(pBBEI, pBBEI->iCursorX, pBBEI->iCursorY, 8, iLen);
-               bbeiWriteCmd(pBBEI, ucCMD1); // write to "new" plane
+               bbeiWriteCmd(pBBEI, ucCMD); // write to "new" plane
                bbeiWriteData(pBBEI, u8Temp, iLen);
            } else { // write to RAM
                // DEBUG
@@ -910,185 +917,32 @@ uint8_t u8Temp[128];
   pBBEI->iFG = iOldFG; // restore color
   return BBEI_ERROR_BAD_PARAMETER; // invalid size
 } /* bbeiWriteString() */
-#ifdef FUTURE
 //
 // Get the width of text in a custom font
 //
-void bbeiGetStringBox(BB_FONT *pFont, char *szMsg, int *width, int *top, int *bottom)
+void bbeiGetStringBox(BB_FONT *pFont, const char *szMsg, int *width, int *top, int *bottom)
 {
 int cx = 0;
 unsigned int c, i = 0;
-GFXglyph *pGlyph;
+BB_GLYPH *pBBG;
 int miny, maxy;
 
    if (width == NULL || top == NULL || bottom == NULL || pFont == NULL || szMsg == NULL) return; // bad pointers
-   miny = 100; maxy = 0;
+   miny = 1000; maxy = 0;
    while (szMsg[i]) {
       c = szMsg[i++];
       if (c < pFont->first || c > pFont->last) // undefined character
          continue; // skip it
       c -= pFont->first; // first char of font defined
-      pGlyph = &pFont->glyph[c];
-      cx += pGlyph->xAdvance;
-      if (pGlyph->yOffset < miny) miny = pGlyph->yOffset;
-      if (pGlyph->height+pGlyph->yOffset > maxy) maxy = pGlyph->height+pGlyph->yOffset;
+      pBBG = &pFont->glyphs[c];
+      cx += pBBG->xAdvance;
+      if (pBBG->yOffset < miny) miny = pBBG->yOffset;
+      if (pBBG->height+pBBG->yOffset > maxy) maxy = pBBG->height+pBBG->yOffset;
    }
    *width = cx;
    *top = miny;
    *bottom = maxy;
 } /* bbeiGetStringBox() */
-
-//
-// Draw a string of characters in a custom font
-// A back buffer must be defined
-//
-int bbeiWriteStringCustom(BBEIDISP *pBBEI, GFXfont *pFont, int x, int y, char *szMsg, uint8_t ucColor)
-{
-int i, end_y, dx, dy, tx, ty, iBitOff;
-unsigned int c;
-uint8_t *s, *d, bits, ucFill=0, ucMask, uc;
-GFXfont font;
-GFXglyph glyph, *pGlyph;
-int iPitch, iRedOffset = 0;
- 
-   if (pBBEI == NULL || pFont == NULL)
-      return BBEI_ERROR_BAD_PARAMETER;
-    if (pBBEI->ucScreen == NULL && pBBEI->type >= EPD42_400x300) {
-        // EPD direct draw mode; colors are inverted
-        if (ucColor == BBEI_BLACK)
-            ucColor = 1-ucColor;
-        ucFill = 0xff;
-    }
-    if (x == -1)
-        x = pBBEI->iCursorX;
-    if (y == -1)
-        y = pBBEI->iCursorY;
-    if (ucColor >= BBEI_YELLOW && pBBEI->iFlags & (BBEI_3COLOR | BBEI_4COLOR)) {
-        // use the second half of the image buffer
-        iRedOffset = pBBEI->width * ((pBBEI->height+7)/8);
-        ucFill = 0x00;
-        ucColor = BBEI_BLACK;
-    }
-   iPitch = pBBEI->width;
-   // in case of running on Harvard architecture, get copy of data from FLASH
-   memcpy_P(&font, pFont, sizeof(font));
-   pGlyph = &glyph;
-
-   i = 0;
-   while (szMsg[i] && x < pBBEI->width)
-   {
-      c = szMsg[i++];
-      if (c < font.first || c > font.last) // undefined character
-         continue; // skip it
-      c -= font.first; // first char of font defined
-      memcpy_P(&glyph, &font.glyph[c], sizeof(glyph));
-      dx = x + pGlyph->xOffset; // offset from character UL to start drawing
-      dy = y + pGlyph->yOffset;
-      s = font.bitmap + pGlyph->bitmapOffset; // start of bitmap data
-      // Bitmap drawing loop. Image is MSB first and each pixel is packed next
-      // to the next (continuing on to the next character line)
-      iBitOff = 0; // bitmap offset (in bits)
-      bits = uc = 0; // bits left in this font byte
-      end_y = dy + pGlyph->height;
-      if (dy < 0) { // skip these lines
-          iBitOff += (pGlyph->width * (-dy));
-          dy = 0;
-      }
-       if (!pBBEI->ucScreen) {
-           memset(u8Cache, ucFill, sizeof(u8Cache));
-       }
-      for (ty=dy; ty<end_y && ty < pBBEI->height; ty++) {
-          ucMask = 1<<(ty & 7); // destination bit number for this line
-          if (pBBEI->ucScreen) {
-              d = &pBBEI->ucScreen[iRedOffset + (ty >> 3) * iPitch + dx]; // internal buffer dest
-          } else {
-              d = u8Cache; // no ram; buffer 8 lines at a time
-          }
-         for (tx=0; tx<pGlyph->width; tx++) {
-            if (bits == 0) { // need to read more font data
-               uc = pgm_read_byte(&s[iBitOff>>3]); // get more font bitmap data
-               bits = 8 - (iBitOff & 7); // we might not be on a byte boundary
-               iBitOff += bits; // because of a clipped line
-               uc <<= (8-bits);
-            } // if we ran out of bits
-            if ((dx+tx) < pBBEI->width) { // foreground pixel
-                if (uc & 0x80) {
-                   if (ucColor == BBEI_BLACK)
-                      d[tx] |= ucMask;
-                   else
-                      d[tx] &= ~ucMask;
-                } else {
-                    if (ucColor == BBEI_BLACK)
-                       d[tx] &= ~ucMask;
-                    else
-                       d[tx] |= ucMask;
-                }
-            }
-            bits--; // next bit
-            uc <<= 1;
-         } // for x
-          if (!pBBEI->ucScreen && (ucMask == 0x80 || ty == end_y-1)) { // dump this line
-              bbeiSetPosition(pBBEI, dx, (ty & 0xfff8), pGlyph->width*8, 1);
-              bbeiWriteData(pBBEI, u8Cache, pGlyph->width);
-              memset(u8Cache, ucFill, sizeof(u8Cache)); // NB: assume no DMA
-          }
-      } // for y
-      x += pGlyph->xAdvance; // width of this character
-   } // while drawing characters
-    pBBEI->iCursorX = x;
-    pBBEI->iCursorY = y;
-   return BBEI_SUCCESS;
-} /* bbeiWriteStringCustom() */
-#endif // FUTURE
-//
-// Fill the display with a color or byte pattern
-// e.g. all black (0x00) or all white (0xff)
-// if there is no backing buffer, write directly to
-// the EPD's framebuffer
-//
-void bbeiFill(BBEIDISP *pBBEI, unsigned char ucData, int iPlane)
-{
-uint8_t uc;
-int y, iSize, iPitch;
-uint8_t ucCMD1, ucCMD2;
-    
-    if (pBBEI == NULL) return;
-    
-    pBBEI->iCursorX = pBBEI->iCursorY = 0;
-    iPitch = ((pBBEI->native_width+7)/8);
-    iSize = pBBEI->native_height * iPitch;
-    uc = ucData;
-    if (ucData == BBEI_WHITE) uc = 0xff;
-    else if (ucData == BBEI_BLACK) uc = 0;
-    if (pBBEI->ucScreen) { // there's a local framebuffer, use it
-        memset(pBBEI->ucScreen, uc, iSize);
-    } else { // write directly to the EPD's framebuffer
-        if (pBBEI->chip_type == BBEI_CHIP_UC81xx) {
-            ucCMD1 = UC8151_DTM1;
-            ucCMD2 = UC8151_DTM2;
-        } else {
-            ucCMD1 = SSD1608_WRITE_RAM;
-            ucCMD2 = SSD1608_WRITE_ALTRAM;
-        }
-        // Write one or both memory planes to the EPD
-        if (iPlane == PLANE_0 || iPlane == PLANE_DUPLICATE) { // write to first plane
-            bbeiSetPosition(pBBEI, 0,0, pBBEI->native_width, pBBEI->native_height);
-            bbeiWriteCmd(pBBEI, ucCMD1);
-            for (y=0; y<pBBEI->native_height; y++) {
-                memset(u8Cache, uc, iPitch); // the data is overwritten after each write
-                bbeiWriteData(pBBEI, u8Cache, iPitch);
-            } // for y
-        }
-        if (iPlane == PLANE_1 || iPlane == PLANE_DUPLICATE) { // write to first plane
-            bbeiSetPosition(pBBEI, 0,0, pBBEI->native_width, pBBEI->native_height);
-            bbeiWriteCmd(pBBEI, ucCMD2);
-            for (y=0; y<pBBEI->native_height; y++) {
-                memset(u8Cache, uc, iPitch); // the data is overwritten after each write
-                bbeiWriteData(pBBEI, u8Cache, iPitch);
-            } // for y
-        }
-    }
-} /* bbeiFill() */
 
 void bbeiAllocBuffer(BBEIDISP *pBBEI)
 {

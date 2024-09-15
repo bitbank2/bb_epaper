@@ -44,11 +44,10 @@ enum {
 #define DEEP_SLEEP 1
 
 // Display refresh modes
-enum {
-    REFRESH_FULL=0,
-    REFRESH_FAST,
-    REFRESH_PARTIAL
-};
+#define REFRESH_FULL 0
+#define REFRESH_FAST 1
+#define REFRESH_PARTIAL 2
+
 // controller chip types
 enum {
     BBEI_CHIP_NOT_DEFINED = 0,
@@ -90,7 +89,8 @@ enum {
     EPD_PANEL_UNDEFINED=0,
     EPD42_400x300, // WFT0420CZ15
     EPD42B_400x300, // DEPG0420BN / GDEY042T81
-    EPD213B_104x212,
+    EPD213_122x250, // waveshare
+    EPD213B_122x250, // GDEY0213B74
     EPD293_128x296,
     EPD294_128x296, // Waveshare newer 2.9" 1-bit 128x296
     EPD295_128x296, // harvested from Solum 2.9" BW ESLs
@@ -100,6 +100,9 @@ enum {
     EPD29R_128x296,
     EPD122_192x176, // GDEM0122T61
     EPD154R_152x152,
+    EPD42R_400x300,
+    EPD42R2_400x300, // GDEQ042Z21
+    EPD37_240x416, // GDEY037T03
     EPD_PANEL_COUNT
 };
 #ifdef FUTURE
@@ -108,14 +111,10 @@ enum {
   EPD29_128x296,
   EPD29B_128x296,
   EPD29Y_128x296, // DEPG0290YN
-  EPD42R_400x300,
-  EPD42R2_400x300, // GDEQ042Z21
   EPD213R_104x212,
   EPD213R2_122x250, // DEPG0213RW
   EPD213R_104x212_d,
   EPD213_104x212,
-  EPD213_122x250, // waveshare
-  EPD213B_122x250, // GDEY0213B74
   EPD154_152x152, // GDEW0154M10
   EPD154R_152x152,
   EPD154Y_152x152, // DEPG0154YN
@@ -126,7 +125,6 @@ enum {
   EPD266Y_152x296, // DEPG0266YN
   EPD31R_168x296, // DEPG0310RW
   EPD37Y_240x416, // DEPG0370YN
-  EPD37_240x416, // GDEY037T03
   EPD579_792x272, // GDEY0579T93
   EPD583R_600x448,
   EPD75_800x480, // GDEY075T7
@@ -260,7 +258,7 @@ uint32_t iSpeed;
 uint32_t iTimeout; // for e-ink panels
 uint8_t iDCPin, iMOSIPin, iCLKPin, iCSPin, iRSTPin, iBUSYPin;
 uint8_t x_offset, y_offset; // memory offsets
-uint8_t bBitBang, iPlane;
+uint8_t is_awake, iPlane;
 const uint8_t *pInitFull; // full update init sequence
 const uint8_t *pInitFast; // fast update init sequence
 const uint8_t *pInitPart; // partial update init sequence
@@ -320,7 +318,10 @@ class BBEINK
     void sleep(int bDeep);
     void wait(bool bQuick = false);
     void drawString(const char *pText, int x, int y);
-
+    void setPlane(int iPlane);
+    int getPlane(void);
+    int getChip(void);
+    void getStringBox(const char *szMsg, int *width, int *top, int *bottom);
 #ifdef FUTURE
     void setPlane(int iPlane);
     void drawSprite(uint8_t *pSprite, int cx, int cy, int iPitch, int x, int y, uint8_t iPriority);
@@ -344,8 +345,10 @@ class BBEINK
     size_t write(uint8_t ucChar);
     void delayMicroseconds(int iTime);
 #else
+#ifndef __AVR__
     using Print::write;
     virtual size_t write(uint8_t);
+#endif // __AVR__
 #endif // _LINUX_
 
   private:

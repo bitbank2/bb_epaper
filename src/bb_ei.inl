@@ -108,7 +108,7 @@ const uint8_t epd29_init_sequence_full[] PROGMEM = {
     0x00 // end of table
 };
 
-const uint8_t epd42r_init_sequence[] PROGMEM = {
+const uint8_t epd42r_init_sequence_full[] PROGMEM = {
     0x01, 0x12, // soft reset
     BUSY_WAIT,
     0x02, 0x74, 0x54, // set analog block control
@@ -948,6 +948,7 @@ const EPD_PANEL panelDefs[] PROGMEM = {
     {0}, // undefined panel
     {400, 300, epd42_init_sequence_full, NULL, epd42_init_sequence_part, 0, BBEI_CHIP_UC81xx}, // EPD42_400x300
     {400, 300, epd42b_init_sequence_full, epd42b_init_sequence_fast, epd42b_init_sequence_part, 0, BBEI_CHIP_SSD16xx}, // EPD42B_400x300
+    {122, 250, epd213_122x250_init_sequence_full, NULL, epd213_122x250_init_sequence_part, 0, BBEI_CHIP_SSD16xx}, // EPD213_122x250 WaveShare
     {122, 250, epd213b_init_sequence_full, NULL, epd213b_init_sequence_part, 0, BBEI_CHIP_SSD16xx}, // EPD213B_122x250
     {128, 296, epd293_init_sequence_full, epd293_init_sequence_fast, epd293_init_sequence_part, 0, BBEI_CHIP_SSD16xx}, // EPD293_128x296
     {128, 296, epd294_init_sequence_full, NULL, NULL, 0, BBEI_CHIP_SSD16xx}, // EPD294_128x296
@@ -958,6 +959,9 @@ const EPD_PANEL panelDefs[] PROGMEM = {
     {128, 296, epd29r_init_sequence_full, NULL, NULL, BBEI_3COLOR, BBEI_CHIP_SSD16xx}, // EPD29R_128x296
     {192, 176, epd122_init_sequence_full, epd122_init_sequence_fast, epd122_init_sequence_part, 0, BBEI_CHIP_SSD16xx}, // EPD122_192x176
     {152, 152, epd154r_init_sequence_full, NULL, NULL, BBEI_3COLOR, BBEI_CHIP_SSD16xx}, // EPD154R_152x152
+    {400, 300, epd42r_init_sequence_full, NULL, NULL, BBEI_3COLOR, BBEI_CHIP_SSD16xx}, // EPD42R_400x300
+    {400, 300, epd42r2_init_sequence_full, NULL, NULL, BBEI_3COLOR, BBEI_CHIP_UC81xx}, // EPD42R2_400x300
+    {240, 416, epd37_init_sequence_full, NULL, epd37_init_sequence_part, 0, BBEI_CHIP_UC81xx}, // EPD37_240x416
 };
 int bbeiSetPanelType(BBEIDISP *pBBEI, int iPanel)
 {
@@ -1059,12 +1063,73 @@ uint8_t *s;
     } // while more commands to send
 } /* bbeiSendCMDSequence() */
 
+//
+// Fill the display with a color or byte pattern
+// e.g. all black (0x00) or all white (0xff)
+// if there is no backing buffer, write directly to
+// the EPD's framebuffer
+//
+void bbeiFill(BBEIDISP *pBBEI, unsigned char ucData, int iPlane)
+{
+uint8_t uc1, uc2;
+int y, iSize, iPitch;
+uint8_t ucCMD1, ucCMD2;
+    
+    if (pBBEI == NULL) return;
+    
+    pBBEI->iCursorX = pBBEI->iCursorY = 0;
+    iPitch = ((pBBEI->native_width+7)/8);
+    iSize = pBBEI->native_height * iPitch;
+    if (pBBEI->ucScreen) { // there's a local framebuffer, use it
+        if (ucData == BBEI_WHITE) ucData = 0xff;
+        else if (ucData == BBEI_BLACK) ucData = 0;
+        memset(pBBEI->ucScreen, ucData, iSize);
+    } else { // write directly to the EPD's framebuffer
+        if (pBBEI->iFlags & BBEI_3COLOR) {
+            if (ucData == BBEI_WHITE) {
+                uc1 = 0xff; uc2 = 0x00; // red plane has priority
+            } else if (ucData == BBEI_BLACK) {
+                uc1 = 0x00; uc2 = 0x00;
+            } else if (ucData == BBEI_RED) {
+                uc1 = 0x00; uc2 = 0xff;
+            }
+        } else { // for B/W, both planes get the same data
+            if (ucData == BBEI_WHITE) ucData = 0xff;
+            else if (ucData == BBEI_BLACK) ucData = 0;
+            uc1 = uc2 = ucData;
+        }
+        if (pBBEI->chip_type == BBEI_CHIP_UC81xx) {
+            ucCMD1 = UC8151_DTM2;
+            ucCMD2 = UC8151_DTM1;
+        } else {
+            ucCMD1 = SSD1608_WRITE_RAM;
+            ucCMD2 = SSD1608_WRITE_ALTRAM;
+        }
+        // Write one or both memory planes to the EPD
+        if (iPlane == PLANE_0 || iPlane == PLANE_DUPLICATE) { // write to first plane
+            bbeiSetPosition(pBBEI, 0,0, pBBEI->native_width, pBBEI->native_height);
+            bbeiWriteCmd(pBBEI, ucCMD1);
+            for (y=0; y<pBBEI->native_height; y++) {
+                memset(u8Cache, uc1, iPitch); // the data is overwritten after each write
+                bbeiWriteData(pBBEI, u8Cache, iPitch);
+            } // for y
+        }
+        if (iPlane == PLANE_1 || iPlane == PLANE_DUPLICATE) { // write to first plane
+            bbeiSetPosition(pBBEI, 0,0, pBBEI->native_width, pBBEI->native_height);
+            bbeiWriteCmd(pBBEI, ucCMD2);
+            for (y=0; y<pBBEI->native_height; y++) {
+                memset(u8Cache, uc2, iPitch); // the data is overwritten after each write
+                bbeiWriteData(pBBEI, u8Cache, iPitch);
+            } // for y
+        }
+    }
+} /* bbeiFill() */
+
 int bbeiRefresh(BBEIDISP *pBBEI, int iMode)
 {
     if (iMode != REFRESH_FULL && iMode != REFRESH_FAST && iMode != REFRESH_PARTIAL)
         return BBEI_ERROR_BAD_PARAMETER;
     
-    bbeiWakeUp(pBBEI); // tickle the reset line
     switch (iMode) {
         case REFRESH_FULL:
             bbeiSendCMDSequence(pBBEI, pBBEI->pInitFull);
