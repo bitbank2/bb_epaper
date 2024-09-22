@@ -9,7 +9,7 @@
 #include <bb_epaper.h>
 #include "bart_80x128.h" // a pre-compressed image made with the Linux CLI tool in this repo
 
-BBEPAPER bbep;
+BBEPAPER bbep(EPD102_80x128);
 G5DECODER g5dec;
 #define IMAGE_WIDTH 80
 #define IMAGE_HEIGHT 128
@@ -26,7 +26,6 @@ void setup()
 uint8_t u8Line[16]; // current decoded line
 int rc, y;
 
-  bbep.setPanelType(EPD102_80x128);
   bbep.initIO(PIN_DC, PIN_RST, PIN_BUSY, PIN_CS, PIN_MOSI, PIN_SCK, 4000000);
   bbep.setAddrWindow(0, 0, IMAGE_WIDTH, IMAGE_HEIGHT); // set memory window to whole display
   bbep.startWrite(PLANE_0); // write the data to plane 0
