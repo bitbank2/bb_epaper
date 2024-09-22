@@ -278,9 +278,8 @@ class BBEPAPER
 #endif // _LINUX_
 {
   public:
-    BBEPAPER() { memset(&_bbep, 0, sizeof(_bbep)); _bbep.iFG = BBEP_BLACK; _bbep.type = EPD_PANEL_UNDEFINED;}
+    BBEPAPER(int iPanel);
     void setAddrWindow(int x, int y, int w, int h);
-    int setPanelType(int iPanel);
     void initIO(int iDC, int iReset, int iBusy, int iCS = SS, int iMOSI = MOSI, int iSCLK = SCK, uint32_t u32Speed = 8000000);
     int writePlane(int iPlane = PLANE_DUPLICATE);
     void startWrite(int iPlane);

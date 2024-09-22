@@ -47,14 +47,18 @@ void delay(int);
 //    return _bbep.iTimeout;
 //}
 
+BBEPAPER::BBEPAPER(int iPanel)
+{
+    memset(&_bbep, 0, sizeof(_bbep));
+    _bbep.iFG = BBEP_BLACK;
+    bbepSetPanelType(&_bbep, iPanel);
+}
+
 void BBEPAPER::setAddrWindow(int x, int y, int w, int h)
 {
     bbepSetAddrWindow(&_bbep, x, y, w, h);
 }
-int BBEPAPER::setPanelType(int iPanel)
-{
-    return bbepSetPanelType(&_bbep, iPanel);
-}
+
 void BBEPAPER::initIO(int iDC, int iReset, int iBusy, int iCS, int iMOSI, int iSCLK, uint32_t u32Speed)
 {
     _bbep.iCSPin = iCS;
