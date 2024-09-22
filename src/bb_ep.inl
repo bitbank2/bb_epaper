@@ -1,5 +1,5 @@
 //
-// bb_eink
+// bb_epaper
 // Copyright (c) 2024 BitBank Software, Inc.
 // Written by Larry Bank (bitbank@pobox.com)
 // Project started 9/11/2024
@@ -14,11 +14,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-// bb_ei.inl
+// bb_ep.inl
 // display interfacing/control code for bb_eink library
 //
-#ifndef __BB_EI__
-#define __BB_EI__
+#ifndef __BB_EP__
+#define __BB_EP__
 
 const uint8_t epd35r_init_sequence_full[] PROGMEM = {
     0x01, 0x12, // SW RESET
@@ -946,41 +946,41 @@ uint8_t u8Cache[128]; // buffer a single line of up to 1024 pixels
 //
 const EPD_PANEL panelDefs[] PROGMEM = {
     {0}, // undefined panel
-    {400, 300, epd42_init_sequence_full, NULL, epd42_init_sequence_part, 0, BBEI_CHIP_UC81xx}, // EPD42_400x300
-    {400, 300, epd42b_init_sequence_full, epd42b_init_sequence_fast, epd42b_init_sequence_part, 0, BBEI_CHIP_SSD16xx}, // EPD42B_400x300
-    {122, 250, epd213_122x250_init_sequence_full, NULL, epd213_122x250_init_sequence_part, 0, BBEI_CHIP_SSD16xx}, // EPD213_122x250 WaveShare
-    {122, 250, epd213b_init_sequence_full, NULL, epd213b_init_sequence_part, 0, BBEI_CHIP_SSD16xx}, // EPD213B_122x250
-    {128, 296, epd293_init_sequence_full, epd293_init_sequence_fast, epd293_init_sequence_part, 0, BBEI_CHIP_SSD16xx}, // EPD293_128x296
-    {128, 296, epd294_init_sequence_full, NULL, NULL, 0, BBEI_CHIP_SSD16xx}, // EPD294_128x296
-    {128, 296, epd293_init_sequence_full, epd293_init_sequence_fast, epd295_init_sequence_part, 0, BBEI_CHIP_SSD16xx}, // EPD295_128x296
-    {152, 296, epd266_init_sequence_full, NULL, epd266_init_sequence_part, 0, BBEI_CHIP_SSD16xx}, // EPD266_152x296
-    {80, 128, epd102_init_sequence_full, NULL, epd102_init_sequence_part, 0, BBEI_CHIP_UC81xx}, // EPD102_80x128
-    {176, 264, epd27_init_sequence_full, NULL, epd27_init_sequence_part, 0, BBEI_CHIP_SSD16xx}, // EPD27B_176x264
-    {128, 296, epd29r_init_sequence_full, NULL, NULL, BBEI_3COLOR, BBEI_CHIP_SSD16xx}, // EPD29R_128x296
-    {192, 176, epd122_init_sequence_full, epd122_init_sequence_fast, epd122_init_sequence_part, 0, BBEI_CHIP_SSD16xx}, // EPD122_192x176
-    {152, 152, epd154r_init_sequence_full, NULL, NULL, BBEI_3COLOR, BBEI_CHIP_SSD16xx}, // EPD154R_152x152
-    {400, 300, epd42r_init_sequence_full, NULL, NULL, BBEI_3COLOR, BBEI_CHIP_SSD16xx}, // EPD42R_400x300
-    {400, 300, epd42r2_init_sequence_full, NULL, NULL, BBEI_3COLOR, BBEI_CHIP_UC81xx}, // EPD42R2_400x300
-    {240, 416, epd37_init_sequence_full, NULL, epd37_init_sequence_part, 0, BBEI_CHIP_UC81xx}, // EPD37_240x416
+    {400, 300, epd42_init_sequence_full, NULL, epd42_init_sequence_part, 0, BBEP_CHIP_UC81xx}, // EPD42_400x300
+    {400, 300, epd42b_init_sequence_full, epd42b_init_sequence_fast, epd42b_init_sequence_part, 0, BBEP_CHIP_SSD16xx}, // EPD42B_400x300
+    {122, 250, epd213_122x250_init_sequence_full, NULL, epd213_122x250_init_sequence_part, 0, BBEP_CHIP_SSD16xx}, // EPD213_122x250 WaveShare
+    {122, 250, epd213b_init_sequence_full, NULL, epd213b_init_sequence_part, 0, BBEP_CHIP_SSD16xx}, // EPD213B_122x250
+    {128, 296, epd293_init_sequence_full, epd293_init_sequence_fast, epd293_init_sequence_part, 0, BBEP_CHIP_SSD16xx}, // EPD293_128x296
+    {128, 296, epd294_init_sequence_full, NULL, NULL, 0, BBEP_CHIP_SSD16xx}, // EPD294_128x296
+    {128, 296, epd293_init_sequence_full, epd293_init_sequence_fast, epd295_init_sequence_part, 0, BBEP_CHIP_SSD16xx}, // EPD295_128x296
+    {152, 296, epd266_init_sequence_full, NULL, epd266_init_sequence_part, 0, BBEP_CHIP_SSD16xx}, // EPD266_152x296
+    {80, 128, epd102_init_sequence_full, NULL, epd102_init_sequence_part, 0, BBEP_CHIP_UC81xx}, // EPD102_80x128
+    {176, 264, epd27_init_sequence_full, NULL, epd27_init_sequence_part, 0, BBEP_CHIP_SSD16xx}, // EPD27B_176x264
+    {128, 296, epd29r_init_sequence_full, NULL, NULL, BBEP_3COLOR, BBEP_CHIP_SSD16xx}, // EPD29R_128x296
+    {192, 176, epd122_init_sequence_full, epd122_init_sequence_fast, epd122_init_sequence_part, 0, BBEP_CHIP_SSD16xx}, // EPD122_192x176
+    {152, 152, epd154r_init_sequence_full, NULL, NULL, BBEP_3COLOR, BBEP_CHIP_SSD16xx}, // EPD154R_152x152
+    {400, 300, epd42r_init_sequence_full, NULL, NULL, BBEP_3COLOR, BBEP_CHIP_SSD16xx}, // EPD42R_400x300
+    {400, 300, epd42r2_init_sequence_full, NULL, NULL, BBEP_3COLOR, BBEP_CHIP_UC81xx}, // EPD42R2_400x300
+    {240, 416, epd37_init_sequence_full, NULL, epd37_init_sequence_part, 0, BBEP_CHIP_UC81xx}, // EPD37_240x416
 };
-int bbeiSetPanelType(BBEIDISP *pBBEI, int iPanel)
+int bbepSetPanelType(BBEPDISP *pBBEP, int iPanel)
 {
-    if (pBBEI == NULL || iPanel <= EPD_PANEL_UNDEFINED || iPanel >= EPD_PANEL_COUNT)
-        return BBEI_ERROR_BAD_PARAMETER;
+    if (pBBEP == NULL || iPanel <= EPD_PANEL_UNDEFINED || iPanel >= EPD_PANEL_COUNT)
+        return BBEP_ERROR_BAD_PARAMETER;
     
-    memset(pBBEI, 0, sizeof(BBEIDISP));
-    pBBEI->native_width = pBBEI->width = panelDefs[iPanel].width;
-    pBBEI->native_height = pBBEI->height = panelDefs[iPanel].height;
-    pBBEI->chip_type = panelDefs[iPanel].chip_type;
-    pBBEI->iFlags = panelDefs[iPanel].flags;
-    pBBEI->pInitFull = panelDefs[iPanel].pInitFull;
-    pBBEI->pInitFast = panelDefs[iPanel].pInitFast;
-    pBBEI->pInitPart = panelDefs[iPanel].pInitPart;
-    pBBEI->type = iPanel;
-    return BBEI_SUCCESS;
-} /* bbeiSetPanelType() */
+    memset(pBBEP, 0, sizeof(BBEPDISP));
+    pBBEP->native_width = pBBEP->width = panelDefs[iPanel].width;
+    pBBEP->native_height = pBBEP->height = panelDefs[iPanel].height;
+    pBBEP->chip_type = panelDefs[iPanel].chip_type;
+    pBBEP->iFlags = panelDefs[iPanel].flags;
+    pBBEP->pInitFull = panelDefs[iPanel].pInitFull;
+    pBBEP->pInitFast = panelDefs[iPanel].pInitFast;
+    pBBEP->pInitPart = panelDefs[iPanel].pInitPart;
+    pBBEP->type = iPanel;
+    return BBEP_SUCCESS;
+} /* bbepSetPanelType() */
 
-void bbeiSetPosition(BBEIDISP *pBBEI, int x, int y, int cx, int cy)
+void bbepSetPosition(BBEPDISP *pBBEP, int x, int y, int cx, int cy)
 {
     uint8_t uc[12];
     int i, tx, ty;
@@ -988,12 +988,12 @@ void bbeiSetPosition(BBEIDISP *pBBEI, int x, int y, int cx, int cy)
     tx = x/8; // round down to next lower byte
     ty = y;
     cx = (cx + 7) & 0xfff8; // make width an even number of bytes
-    if (pBBEI->chip_type == BBEI_CHIP_UC81xx) {
-        bbeiWriteCmd(pBBEI, UC8151_PTIN); // partial in
-        bbeiWriteCmd(pBBEI, UC8151_PTL); // partial window
+    if (pBBEP->chip_type == BBEP_CHIP_UC81xx) {
+        bbepWriteCmd(pBBEP, UC8151_PTIN); // partial in
+        bbepWriteCmd(pBBEP, UC8151_PTL); // partial window
         i = 0;
         tx *= 8;
-        if (pBBEI->native_width >= 256) { // need 2 bytes per x
+        if (pBBEP->native_width >= 256) { // need 2 bytes per x
             uc[i++] = (uint8_t)(tx>>8); // start x
             uc[i++] = (uint8_t)tx;
             uc[i++] = (uint8_t)((tx+cx-1)>>8); // end x
@@ -1002,7 +1002,7 @@ void bbeiSetPosition(BBEIDISP *pBBEI, int x, int y, int cx, int cy)
             uc[i++] = tx; // start x
             uc[i++] = (tx+cx-1) | 7; // end x
         }
-        if (pBBEI->native_height >= 256) {
+        if (pBBEP->native_height >= 256) {
             uc[i++] = (uint8_t)(ty>>8); // start y
             uc[i++] = (uint8_t)ty;
             uc[i++] = (uint8_t)((ty+cy-1)>>8); // end y
@@ -1012,74 +1012,74 @@ void bbeiSetPosition(BBEIDISP *pBBEI, int x, int y, int cx, int cy)
             uc[i++] = (uint8_t)(ty+cy-1);
         }
         uc[i++] = 1; // refresh whole screen (0=refresh partial window only)
-        bbeiWriteData(pBBEI, uc, i);
+        bbepWriteData(pBBEP, uc, i);
         //       EPDWriteCmd(UC8151_PTOU); // partial out
     } else { // SSD16xx
-//        bbeiCMD2(pBBEI, SSD1608_DATA_MODE, 0x3);
-        bbeiWriteCmd(pBBEI, SSD1608_SET_RAMXPOS);
+//        bbepCMD2(pBBEP, SSD1608_DATA_MODE, 0x3);
+        bbepWriteCmd(pBBEP, SSD1608_SET_RAMXPOS);
         uc[0] = tx; // start x (byte boundary)
         uc[1] = tx+((cx-1)>>3); // end x
-        bbeiWriteData(pBBEI, uc, 2);
+        bbepWriteData(pBBEP, uc, 2);
 
-        bbeiWriteCmd(pBBEI, SSD1608_SET_RAMYPOS);
+        bbepWriteCmd(pBBEP, SSD1608_SET_RAMYPOS);
         uc[0] = (uint8_t)ty; // start y
         uc[1] = (uint8_t)(ty>>8);
         uc[2] = (uint8_t)(ty+cy-1); // end y
         uc[3] = (uint8_t)((ty+cy-1)>>8);
-        bbeiWriteData(pBBEI, uc, 4);
+        bbepWriteData(pBBEP, uc, 4);
 
         // set ram counter to start of this region
-        bbeiCMD2(pBBEI, SSD1608_SET_RAMXCOUNT, tx);
+        bbepCMD2(pBBEP, SSD1608_SET_RAMXCOUNT, tx);
         uc[0] = ty;
         uc[1] = (ty>>8);
-        bbeiWriteCmd(pBBEI, SSD1608_SET_RAMYCOUNT);
-        bbeiWriteData(pBBEI, uc, 2);
-//        bbeiCMD2(pBBEI, SSD1608_DATA_MODE, 0x3);
+        bbepWriteCmd(pBBEP, SSD1608_SET_RAMYCOUNT);
+        bbepWriteData(pBBEP, uc, 2);
+//        bbepCMD2(pBBEP, SSD1608_DATA_MODE, 0x3);
     }
-} /* bbeiSetPosition() */
+} /* bbepSetPosition() */
 //    
 // Put the eink into light or deep sleep
 // 
-void bbeiSleep(BBEIDISP *pBBEI, int bDeep) 
+void bbepSleep(BBEPDISP *pBBEP, int bDeep) 
 {
-    if (pBBEI->chip_type == BBEI_CHIP_UC81xx) {
-        bbeiCMD2(pBBEI, UC8151_CDI, 0x17); // border floating
-        bbeiWriteCmd(pBBEI, UC8151_POFF); // power off
-        bbeiWaitBusy(pBBEI);
+    if (pBBEP->chip_type == BBEP_CHIP_UC81xx) {
+        bbepCMD2(pBBEP, UC8151_CDI, 0x17); // border floating
+        bbepWriteCmd(pBBEP, UC8151_POFF); // power off
+        bbepWaitBusy(pBBEP);
         if (bDeep) {
-            bbeiCMD2(pBBEI, UC8151_DSLP, 0xa5); // deep sleep
+            bbepCMD2(pBBEP, UC8151_DSLP, 0xa5); // deep sleep
         }
     } else {
-        bbeiCMD2(pBBEI, SSD1608_DEEP_SLEEP, 0x01); // deep sleep mode 1 keeps RAM,only uses about 1uA
+        bbepCMD2(pBBEP, SSD1608_DEEP_SLEEP, 0x01); // deep sleep mode 1 keeps RAM,only uses about 1uA
     }
-    pBBEI->is_awake = 0;
-} /* bbeiSleep() */
+    pBBEP->is_awake = 0;
+} /* bbepSleep() */
 
 //
 // More efficient means of sending commands, data and busy-pauses
 //
-void bbeiSendCMDSequence(BBEIDISP *pBBEI, const uint8_t *pSeq)
+void bbepSendCMDSequence(BBEPDISP *pBBEP, const uint8_t *pSeq)
 {
 int iLen;
 uint8_t *s;
     
-    if (pBBEI == NULL || pSeq == NULL) return;
+    if (pBBEP == NULL || pSeq == NULL) return;
     
     s = (uint8_t *)pSeq;
     while (s[0] != 0) {
         iLen = *s++;
         if (iLen == BUSY_WAIT) {
-            bbeiWaitBusy(pBBEI);
+            bbepWaitBusy(pBBEP);
         } else {
-            bbeiWriteCmd(pBBEI, s[0]);
+            bbepWriteCmd(pBBEP, s[0]);
             s++;
             if (iLen > 1) {
-               bbeiWriteData(pBBEI, s, iLen-1);
+               bbepWriteData(pBBEP, s, iLen-1);
                s += (iLen-1);
             }
         }
     } // while more commands to send
-} /* bbeiSendCMDSequence() */
+} /* bbepSendCMDSequence() */
 
 //
 // Fill the display with a color or byte pattern
@@ -1087,36 +1087,36 @@ uint8_t *s;
 // if there is no backing buffer, write directly to
 // the EPD's framebuffer
 //
-void bbeiFill(BBEIDISP *pBBEI, unsigned char ucData, int iPlane)
+void bbepFill(BBEPDISP *pBBEP, unsigned char ucData, int iPlane)
 {
 uint8_t uc1, uc2;
 int y, iSize, iPitch;
 uint8_t ucCMD1, ucCMD2;
     
-    if (pBBEI == NULL) return;
+    if (pBBEP == NULL) return;
     
-    pBBEI->iCursorX = pBBEI->iCursorY = 0;
-    iPitch = ((pBBEI->native_width+7)/8);
-    iSize = pBBEI->native_height * iPitch;
-    if (pBBEI->ucScreen) { // there's a local framebuffer, use it
-        if (ucData == BBEI_WHITE) ucData = 0xff;
-        else if (ucData == BBEI_BLACK) ucData = 0;
-        memset(pBBEI->ucScreen, ucData, iSize);
+    pBBEP->iCursorX = pBBEP->iCursorY = 0;
+    iPitch = ((pBBEP->native_width+7)/8);
+    iSize = pBBEP->native_height * iPitch;
+    if (pBBEP->ucScreen) { // there's a local framebuffer, use it
+        if (ucData == BBEP_WHITE) ucData = 0xff;
+        else if (ucData == BBEP_BLACK) ucData = 0;
+        memset(pBBEP->ucScreen, ucData, iSize);
     } else { // write directly to the EPD's framebuffer
-        if (pBBEI->iFlags & BBEI_3COLOR) {
-            if (ucData == BBEI_WHITE) {
+        if (pBBEP->iFlags & BBEP_3COLOR) {
+            if (ucData == BBEP_WHITE) {
                 uc1 = 0xff; uc2 = 0x00; // red plane has priority
-            } else if (ucData == BBEI_BLACK) {
+            } else if (ucData == BBEP_BLACK) {
                 uc1 = 0x00; uc2 = 0x00;
-            } else if (ucData == BBEI_RED) {
+            } else if (ucData == BBEP_RED) {
                 uc1 = 0x00; uc2 = 0xff;
             }
         } else { // for B/W, both planes get the same data
-            if (ucData == BBEI_WHITE) ucData = 0xff;
-            else if (ucData == BBEI_BLACK) ucData = 0;
+            if (ucData == BBEP_WHITE) ucData = 0xff;
+            else if (ucData == BBEP_BLACK) ucData = 0;
             uc1 = uc2 = ucData;
         }
-        if (pBBEI->chip_type == BBEI_CHIP_UC81xx) {
+        if (pBBEP->chip_type == BBEP_CHIP_UC81xx) {
             ucCMD1 = UC8151_DTM2;
             ucCMD2 = UC8151_DTM1;
         } else {
@@ -1125,90 +1125,90 @@ uint8_t ucCMD1, ucCMD2;
         }
         // Write one or both memory planes to the EPD
         if (iPlane == PLANE_0 || iPlane == PLANE_DUPLICATE) { // write to first plane
-            bbeiSetPosition(pBBEI, 0,0, pBBEI->native_width, pBBEI->native_height);
-            bbeiWriteCmd(pBBEI, ucCMD1);
-            for (y=0; y<pBBEI->native_height; y++) {
+            bbepSetPosition(pBBEP, 0,0, pBBEP->native_width, pBBEP->native_height);
+            bbepWriteCmd(pBBEP, ucCMD1);
+            for (y=0; y<pBBEP->native_height; y++) {
                 memset(u8Cache, uc1, iPitch); // the data is overwritten after each write
-                bbeiWriteData(pBBEI, u8Cache, iPitch);
+                bbepWriteData(pBBEP, u8Cache, iPitch);
             } // for y
         }
         if (iPlane == PLANE_1 || iPlane == PLANE_DUPLICATE) { // write to first plane
-            bbeiSetPosition(pBBEI, 0,0, pBBEI->native_width, pBBEI->native_height);
-            bbeiWriteCmd(pBBEI, ucCMD2);
-            for (y=0; y<pBBEI->native_height; y++) {
+            bbepSetPosition(pBBEP, 0,0, pBBEP->native_width, pBBEP->native_height);
+            bbepWriteCmd(pBBEP, ucCMD2);
+            for (y=0; y<pBBEP->native_height; y++) {
                 memset(u8Cache, uc2, iPitch); // the data is overwritten after each write
-                bbeiWriteData(pBBEI, u8Cache, iPitch);
+                bbepWriteData(pBBEP, u8Cache, iPitch);
             } // for y
         }
     }
-} /* bbeiFill() */
+} /* bbepFill() */
 
-int bbeiRefresh(BBEIDISP *pBBEI, int iMode)
+int bbepRefresh(BBEPDISP *pBBEP, int iMode)
 {
     if (iMode != REFRESH_FULL && iMode != REFRESH_FAST && iMode != REFRESH_PARTIAL)
-        return BBEI_ERROR_BAD_PARAMETER;
+        return BBEP_ERROR_BAD_PARAMETER;
     
     switch (iMode) {
         case REFRESH_FULL:
-            bbeiSendCMDSequence(pBBEI, pBBEI->pInitFull);
+            bbepSendCMDSequence(pBBEP, pBBEP->pInitFull);
             break;
         case REFRESH_FAST:
-            if (!pBBEI->pInitFast)
-                return BBEI_ERROR_BAD_PARAMETER;
-            bbeiSendCMDSequence(pBBEI, pBBEI->pInitFast);
+            if (!pBBEP->pInitFast)
+                return BBEP_ERROR_BAD_PARAMETER;
+            bbepSendCMDSequence(pBBEP, pBBEP->pInitFast);
             break;
         case REFRESH_PARTIAL:
-            if (!pBBEI->pInitPart)
-                return BBEI_ERROR_BAD_PARAMETER;
-            bbeiSendCMDSequence(pBBEI, pBBEI->pInitPart);
+            if (!pBBEP->pInitPart)
+                return BBEP_ERROR_BAD_PARAMETER;
+            bbepSendCMDSequence(pBBEP, pBBEP->pInitPart);
             break;
         default:
-            return BBEI_ERROR_BAD_PARAMETER;
+            return BBEP_ERROR_BAD_PARAMETER;
     } // switch on mode
-    if (pBBEI->chip_type == BBEI_CHIP_UC81xx) {
-        bbeiWriteCmd(pBBEI, UC8151_PTOU); // partial out (update the entire panel, not just the last memory window)
-        bbeiWriteCmd(pBBEI, UC8151_DRF);
+    if (pBBEP->chip_type == BBEP_CHIP_UC81xx) {
+        bbepWriteCmd(pBBEP, UC8151_PTOU); // partial out (update the entire panel, not just the last memory window)
+        bbepWriteCmd(pBBEP, UC8151_DRF);
     } else {
         const uint8_t u8CMD[3] = {0xf7, 0xc7, 0xff}; // normal, fast, partial
-        if (pBBEI->iFlags & BBEI_3COLOR) {
+        if (pBBEP->iFlags & BBEP_3COLOR) {
             iMode = REFRESH_FAST;
         } // 3-color = 0xc7
-        bbeiCMD2(pBBEI, SSD1608_DISP_CTRL2, u8CMD[iMode]);
-        bbeiWriteCmd(pBBEI, SSD1608_MASTER_ACTIVATE); // refresh
+        bbepCMD2(pBBEP, SSD1608_DISP_CTRL2, u8CMD[iMode]);
+        bbepWriteCmd(pBBEP, SSD1608_MASTER_ACTIVATE); // refresh
     }
-    return BBEI_SUCCESS;
-} /* bbeiRefresh() */
+    return BBEP_SUCCESS;
+} /* bbepRefresh() */
 
-void bbeiSetRotation(BBEIDISP *pBBEI, int iRotation)
+void bbepSetRotation(BBEPDISP *pBBEP, int iRotation)
 {
-    pBBEI->iScreenOffset = 0;
-    pBBEI->iOrientation = iRotation;
+    pBBEP->iScreenOffset = 0;
+    pBBEP->iOrientation = iRotation;
 
     switch (iRotation) {
         default: return;
         case 0:
-            pBBEI->width = pBBEI->native_width;
-            pBBEI->height = pBBEI->native_height;
+            pBBEP->width = pBBEP->native_width;
+            pBBEP->height = pBBEP->native_height;
             break;
         case 90:
-            pBBEI->width = pBBEI->native_height;
-            pBBEI->height = pBBEI->native_width;
+            pBBEP->width = pBBEP->native_height;
+            pBBEP->height = pBBEP->native_width;
             break;
         case 180:
-            pBBEI->width = pBBEI->native_width;
-            pBBEI->height = pBBEI->native_height;
+            pBBEP->width = pBBEP->native_width;
+            pBBEP->height = pBBEP->native_height;
             break;
         case 270:
-            pBBEI->width = pBBEI->native_height;
-            pBBEI->height = pBBEI->native_width;
+            pBBEP->width = pBBEP->native_height;
+            pBBEP->height = pBBEP->native_width;
             break;
   }
-} /* bbeiSetRotation() */
+} /* bbepSetRotation() */
 
 //
 // Write EPD Image data
 //
-static void bbeiWriteImage(BBEIDISP *pBBEI, uint8_t ucCMD, uint8_t *pBits, int x, int y, int w, int h, int bInvert)
+static void bbepWriteImage(BBEPDISP *pBBEP, uint8_t ucCMD, uint8_t *pBits, int x, int y, int w, int h, int bInvert)
 {
 int tx, ty;
 uint8_t *s, *d, ucSrcMask, ucDstMask, uc;
@@ -1216,23 +1216,23 @@ uint8_t *pBuffer, ucInvert = 0;
 int iPitch;
     
     if (pBits == NULL) { // use back buffer
-        pBuffer = pBBEI->ucScreen;
-        iPitch = pBBEI->width;
+        pBuffer = pBBEP->ucScreen;
+        iPitch = pBBEP->width;
     } else {
         // assume the passed buffer is only the size and width of the requested write
         pBuffer = pBits;
         iPitch = w;
     }
     if (bInvert) {// use second bit plane
-        //pBuffer += pBBEI->width * ((pBBEI->height+7)/8);
+        //pBuffer += pBBEP->width * ((pBBEP->height+7)/8);
         ucInvert = 0xff; // red logic is inverted
     }
     if (ucCMD) {
-        bbeiWriteCmd(pBBEI, ucCMD); // start write
+        bbepWriteCmd(pBBEP, ucCMD); // start write
     }
   // Convert the bit direction and write the data to the EPD
   u8Cache[0] = u8Cache[1] = 0; // prefix for IT8951
-  if (pBBEI->iOrientation == 180) {
+  if (pBBEP->iOrientation == 180) {
       for (ty=y+h-1; ty>=y; ty--) {
      ucSrcMask = 1 << (ty & 7);
      ucDstMask = 0x80;
@@ -1250,9 +1250,9 @@ int iPitch;
         }
      } // for tx
      *d++ = uc; // store final partial byte
-      bbeiWriteData(pBBEI, u8Cache+2, (w+7)/8);
+      bbepWriteData(pBBEP, u8Cache+2, (w+7)/8);
       } // for ty
-  } else if (pBBEI->iOrientation == 0) {
+  } else if (pBBEP->iOrientation == 0) {
       for (ty=y; ty<y+h; ty++) {
          ucSrcMask = 1 << (ty & 7);
          ucDstMask = 0x80;
@@ -1270,9 +1270,9 @@ int iPitch;
             }
          } // for tx
         *d++ = (uc ^ ucInvert); // store final partial byte
-         bbeiWriteData(pBBEI, u8Cache+2, (w+7)/8);
+         bbepWriteData(pBBEP, u8Cache+2, (w+7)/8);
       } // for ty
-  } else if (pBBEI->iOrientation == 90) {
+  } else if (pBBEP->iOrientation == 90) {
       for (tx=x; tx<x+w; tx++) {
          d = u8Cache+2;
      // need to pick up and reassemble every pixel
@@ -1293,9 +1293,9 @@ int iPitch;
            ucSrcMask = 0x80; // bottom up
      } // for ty
       *d++ = (uc ^ ucInvert); // store final partial byte
-          bbeiWriteData(pBBEI, u8Cache+2, (h+7)/8);
+          bbepWriteData(pBBEP, u8Cache+2, (h+7)/8);
       } // for tx
-  } else if (pBBEI->iOrientation == 270) {
+  } else if (pBBEP->iOrientation == 270) {
       for (tx=x+w-1; tx>=x; tx--) {
       d = u8Cache+2;
       // reassemble every pixel
@@ -1316,46 +1316,46 @@ int iPitch;
          ucSrcMask = 1;
       } // for ty
       *d++ = (uc ^ ucInvert); // store final partial byte
-      bbeiWriteData(pBBEI, u8Cache+2, (h+7)/8);
+      bbepWriteData(pBBEP, u8Cache+2, (h+7)/8);
       } // for x
   } // 270
-} /* bbeiWriteImage() */
+} /* bbepWriteImage() */
 //
 // Write the local copy of the memory plane(s) to the eink's internal framebuffer
 //
-int bbeiWritePlane(BBEIDISP *pBBEI, int iPlane)
+int bbepWritePlane(BBEPDISP *pBBEP, int iPlane)
 {
     uint8_t ucCMD1, ucCMD2;
     int iOffset;
     
-    if (pBBEI == NULL || iPlane < PLANE_0 || iPlane > PLANE_DUPLICATE)
-        return BBEI_ERROR_BAD_PARAMETER;
-    if (pBBEI->chip_type == BBEI_CHIP_UC81xx) {
+    if (pBBEP == NULL || iPlane < PLANE_0 || iPlane > PLANE_DUPLICATE)
+        return BBEP_ERROR_BAD_PARAMETER;
+    if (pBBEP->chip_type == BBEP_CHIP_UC81xx) {
         ucCMD1 = UC8151_DTM1;
         ucCMD2 = UC8151_DTM2;
     } else {
         ucCMD1 = SSD1608_WRITE_RAM;
         ucCMD2 = SSD1608_WRITE_ALTRAM;
     }
-    iOffset = ((pBBEI->native_width+7)>>3) * pBBEI->native_height;
+    iOffset = ((pBBEP->native_width+7)>>3) * pBBEP->native_height;
     
     switch (iPlane) {
         case PLANE_0:
-            bbeiWriteImage(pBBEI, ucCMD1, pBBEI->ucScreen, 0, 0, pBBEI->width, pBBEI->height, 0);
+            bbepWriteImage(pBBEP, ucCMD1, pBBEP->ucScreen, 0, 0, pBBEP->width, pBBEP->height, 0);
             break;
         case PLANE_1:
-            bbeiWriteImage(pBBEI, ucCMD2, &pBBEI->ucScreen[iOffset], 0, 0, pBBEI->width, pBBEI->height, 0);
+            bbepWriteImage(pBBEP, ucCMD2, &pBBEP->ucScreen[iOffset], 0, 0, pBBEP->width, pBBEP->height, 0);
             break;
         case PLANE_BOTH:
-            bbeiWriteImage(pBBEI, ucCMD1, pBBEI->ucScreen, 0, 0, pBBEI->width, pBBEI->height, 0);
-            bbeiWriteImage(pBBEI, ucCMD2, &pBBEI->ucScreen[iOffset], 0, 0, pBBEI->width, pBBEI->height, 0);
+            bbepWriteImage(pBBEP, ucCMD1, pBBEP->ucScreen, 0, 0, pBBEP->width, pBBEP->height, 0);
+            bbepWriteImage(pBBEP, ucCMD2, &pBBEP->ucScreen[iOffset], 0, 0, pBBEP->width, pBBEP->height, 0);
             break;
         case PLANE_DUPLICATE:
-            bbeiWriteImage(pBBEI, ucCMD1, pBBEI->ucScreen, 0, 0, pBBEI->width, pBBEI->height, 0);
-            bbeiWriteImage(pBBEI, ucCMD2, pBBEI->ucScreen, 0, 0, pBBEI->width, pBBEI->height, 0);
+            bbepWriteImage(pBBEP, ucCMD1, pBBEP->ucScreen, 0, 0, pBBEP->width, pBBEP->height, 0);
+            bbepWriteImage(pBBEP, ucCMD2, pBBEP->ucScreen, 0, 0, pBBEP->width, pBBEP->height, 0);
             break;
     }
-    return BBEI_SUCCESS;
-} /* bbeiWritePlane() */
+    return BBEP_SUCCESS;
+} /* bbepWritePlane() */
 
-#endif // __BB_EI__
+#endif // __BB_EP__

@@ -1,5 +1,5 @@
 //
-// bb_eink
+// bb_epaper
 // Copyright (c) 2024 BitBank Software, Inc.
 // Written by Larry Bank (bitbank@pobox.com)
 // Project started 9/11/2024
@@ -13,8 +13,8 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-#ifndef __BB_EINK__
-#define __BB_EINK__
+#ifndef __BB_EPAPER__
+#define __BB_EPAPER__
 
 #ifdef ARDUINO
 #include <Arduino.h>
@@ -32,12 +32,12 @@
 
 // error messages
 enum {
-    BBEI_SUCCESS,
-    BBEI_ERROR_BAD_PARAMETER,
-    BBEI_ERROR_BAD_DATA,
-    BBEI_ERROR_NOT_SUPPORTED,
-    BBEI_ERROR_NO_MEMORY,
-    BBEI_ERROR_COUNT
+    BBEP_SUCCESS,
+    BBEP_ERROR_BAD_PARAMETER,
+    BBEP_ERROR_BAD_DATA,
+    BBEP_ERROR_NOT_SUPPORTED,
+    BBEP_ERROR_NO_MEMORY,
+    BBEP_ERROR_COUNT
 };
 
 #define LIGHT_SLEEP 0
@@ -50,10 +50,10 @@ enum {
 
 // controller chip types
 enum {
-    BBEI_CHIP_NOT_DEFINED = 0,
-    BBEI_CHIP_SSD16xx,
-    BBEI_CHIP_UC81xx,
-    BBEI_CHIP_COUNT
+    BBEP_CHIP_NOT_DEFINED = 0,
+    BBEP_CHIP_SSD16xx,
+    BBEP_CHIP_UC81xx,
+    BBEP_CHIP_COUNT
 };
 
 // enum for writing local framebuffer to EPD memory plane(s)
@@ -142,23 +142,23 @@ enum {
 };
 #endif // FUTURE
 // flag bits
-#define BBEI_INVERTED 0x0001
-#define BBEI_BITBANG  0x0002
-#define BBEI_3COLOR   0x0004
-#define BBEI_4COLOR   0x0008
-#define BBEI_4GRAY    0x0010
-#define BBEI_CS_EVERY_BYTE 0x0020
+#define BBEP_INVERTED 0x0001
+#define BBEP_BITBANG  0x0002
+#define BBEP_3COLOR   0x0004
+#define BBEP_4COLOR   0x0008
+#define BBEP_4GRAY    0x0010
+#define BBEP_CS_EVERY_BYTE 0x0020
 
-#define BBEI_WHITE 0
-#define BBEI_BLACK 1
-#define BBEI_YELLOW 2
-#define BBEI_RED 3
+#define BBEP_WHITE 0
+#define BBEP_BLACK 1
+#define BBEP_YELLOW 2
+#define BBEP_RED 3
 
 // 4 gray levels
-#define BBEI_GRAY0 0
-#define BBEI_GRAY1 1
-#define BBEI_GRAY2 2
-#define BBEI_GRAY3 3
+#define BBEP_GRAY0 0
+#define BBEP_GRAY1 1
+#define BBEP_GRAY2 2
+#define BBEP_GRAY3 3
 
 // (UC81xx commands)
 enum {
@@ -243,7 +243,7 @@ enum {
 
 #define BUSY_WAIT 0xff
 
-typedef struct bbeistruct
+typedef struct bbepstruct
 {
 uint8_t wrap, type, chip_type;
 uint8_t *ucScreen;
@@ -255,30 +255,30 @@ int iFont, iFlags;
 void *pFont;
 int iDataTime, iOpTime; // time in milliseconds for data transmission and operation
 uint32_t iSpeed;
-uint32_t iTimeout; // for e-ink panels
+uint32_t iTimeout; // for e-paper panels
 uint8_t iDCPin, iMOSIPin, iCLKPin, iCSPin, iRSTPin, iBUSYPin;
 uint8_t x_offset, y_offset; // memory offsets
 uint8_t is_awake, iPlane;
 const uint8_t *pInitFull; // full update init sequence
 const uint8_t *pInitFast; // fast update init sequence
 const uint8_t *pInitPart; // partial update init sequence
-} BBEIDISP;
+} BBEPDISP;
 
 #ifdef __cplusplus
 #ifdef _LINUX_
 #include <string>
 using namespace std;
-class BBEINK
+class BBEPAPER
 #else // Arduino
 #ifndef __AVR__
-class BBEINK : public Print
+class BBEPAPER : public Print
 #else
-class BBEINK
+class BBEPAPER
 #endif // !__AVR__
 #endif // _LINUX_
 {
   public:
-    BBEINK() { memset(&_bbei, 0, sizeof(_bbei)); _bbei.iFG = BBEI_BLACK; _bbei.type = EPD_PANEL_UNDEFINED;}
+    BBEPAPER() { memset(&_bbep, 0, sizeof(_bbep)); _bbep.iFG = BBEP_BLACK; _bbep.type = EPD_PANEL_UNDEFINED;}
     void setPosition(int x, int y, int w, int h);
     int setPanelType(int iPanel);
     void initIO(int iDC, int iReset, int iBusy, int iCS = SS, int iMOSI = MOSI, int iSCLK = SCK, uint32_t u32Speed = 8000000);
@@ -349,8 +349,8 @@ class BBEINK
 #endif // _LINUX_
 
   private:
-    BBEIDISP _bbei;
-}; // class BBEINK
+    BBEPDISP _bbep;
+}; // class BBEPAPER
 #endif // __cplusplus
 
 #if !defined(BITBANK_LCD_MODES)
@@ -362,5 +362,5 @@ typedef enum
 } DC_MODE;
 #endif
 
-#endif // __BB_EINK__
+#endif // __BB_EPAPER__
 

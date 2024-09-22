@@ -1,18 +1,18 @@
-bb_eink (BitBank eink library)<br>
----------------------------------
+bb_epaper (BitBank epaper library)<br>
+----------------------------------
 Project started 9/11/2024<br>
 Copyright (c) 2024 BitBank Software, Inc.<br>
 Written by Larry Bank<br>
 bitbank@pobox.com<br>
 <br>
 <b>What is it?</b><br>
-A frustration-free eink library suitable for Arduino, Linux, or random embedded systems with no OS.<br>
+A frustration-free e-paper library suitable for Arduino, Linux, or random embedded systems with no OS.<br>
 <br>
 <b>Why did you write it?</b><br>
-I've always had an interest in graphics and displays. After experimenting with eink, I looked around for code to control them. All I found was half-implemented demos and frustration. I wrote my own support for eink panels into my OneBitDisplay library, but it made it a bit unwieldy. Eink is in a class by itself, so I decided to create a unique library for working with these panels. The main goal was to reduce frustration and make an efficient set of functions that work with a large collection of panels in a consistent way.<br>
+I've always had an interest in graphics and displays. After experimenting with epaper, I looked around for code to control them. All I found was half-implemented demos and frustration. I wrote my own support for epaper panels into my OneBitDisplay library, but it made it a bit unwieldy. E-paper is in a class by itself, so I decided to create a unique library for working with these panels. The main goal was to reduce frustration and make an efficient set of functions that work with a large collection of panels in a consistent way.<br>
 <br>
 <b>What's special about it?</b><br>
-It's the first eink library I've ever seen which can draw text and graphics without needing a local copy of the image data. There are some limitations to working that way, but it opens the possibility to control large displays on MCUs with nearly no memory. It also supports keeping a local copy of the graphics in RAM (the normal way to work with eink). By offering both options, this library is unique.<br>
+It's the first epaper library I've ever seen which can draw text and graphics without needing a local copy of the image data. There are some limitations to working that way, but it opens the possibility to control large displays on MCUs with nearly no memory. It also supports keeping a local copy of the graphics in RAM (the normal way to work with epaper). By offering both options, this library is unique.<br>
 <br>
 
 Features:<br>
@@ -31,7 +31,7 @@ This code depends on my Group5 data compression library. You can download it her
 https://github.com/bitbank2/Group5
 <br>
 See the Wiki for help getting started<br>
-https://github.com/bitbank2/bb_eink/wiki <br>
+https://github.com/bitbank2/bb_epaper/wiki <br>
 <br>
 
 A few words about fonts<br>
@@ -41,7 +41,7 @@ The library includes 3 fixed fonts (6x8, 8x8 and 12x16). The 12x16 is really a s
 
 Black & White (& Red)<br>
 ------------------------<br>
-The current code supports 1-bit black and white eink displays as well as the B/W/R models. At the time of this writing, the BWR models can only do a full refresh (no fast nor partial). This may change in a future version.<br>
+The current code supports 1-bit black and white epaper displays as well as the B/W/R models. At the time of this writing, the BWR models can only do a full refresh (no fast nor partial). This may change in a future version.<br>
 <br>
 See WiKi and example code for how to use the library.<br> 
 <br>
