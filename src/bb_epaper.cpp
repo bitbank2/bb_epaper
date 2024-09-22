@@ -20,10 +20,9 @@
 #include <stdio.h>
 #include <string.h>
 #include <fcntl.h>
-// convert wire library constants into ArmbianIO values
-#define OUTPUT GPIO_OUT
-#define INPUT GPIO_IN
-#define INPUT_PULLUP GPIO_IN_PULLUP
+#define OUTPUT 0
+#define INPUT  1
+#define INPUT_PULLUP 2
 #define HIGH 1
 #define LOW 0
 void delay(int);
@@ -32,7 +31,11 @@ void delay(int);
 #endif // _LINUX_
 
 #include "bb_epaper.h"
+#ifdef _LINUX_
+#include "rpi_io.inl"
+#else
 #include "arduino_io.inl" // I/O (non-portable) code is in here
+#endif
 #include "bb_ep.inl" // All of the display interface code is in here
 #include "bb_ep_gfx.inl" // drawing code
 #include "bb_font.h" // bitbank compressed font info
@@ -57,6 +60,7 @@ void BBEPAPER::setAddrWindow(int x, int y, int w, int h)
     bbepSetAddrWindow(&_bbep, x, y, w, h);
 }
 
+#ifdef ARDUINO
 void BBEPAPER::initIO(int iDC, int iReset, int iBusy, int iCS, int iMOSI, int iSCLK, uint32_t u32Speed)
 {
     _bbep.iCSPin = iCS;
@@ -69,7 +73,19 @@ void BBEPAPER::initIO(int iDC, int iReset, int iBusy, int iCS, int iMOSI, int iS
     bbepWakeUp(&_bbep);
     bbepSendCMDSequence(&_bbep, _bbep.pInitFull);
 } /* initIO() */
-
+#else // Linux
+void BBEPAPER::initIO(int iDC, int iReset, int iBusy, int iCS, int iSPIChannel, uint32_t u32Speed)
+{
+	_bbep.iCSPin = iCS;
+	_bbep.iDCPin = iDC;
+	_bbep.iBUSYPin = iBusy;
+	_bbep.iRSTPin = iReset;
+	_bbep.iMOSIPin = iSPIChannel;
+	bbepInitIO(&_bbep, u32Speed);
+	bbepWakeUp(&_bbep);
+	bbepSendCMDSequence(&_bbep, _bbep.pInitFull);
+} /* initIO() */
+#endif
 int BBEPAPER::writePlane(int iPlane)
 {
     return bbepWritePlane(&_bbep, iPlane);
@@ -388,10 +404,12 @@ void BBEPAPER::getTextBounds(const char *string, int16_t x, int16_t y, int16_t *
         *h = (bottom - top + 1);
     }
 }
+#ifdef ARDUINO
 void BBEPAPER::getTextBounds(const String &str, int16_t x, int16_t y, int16_t *x1, int16_t *y1, uint16_t *w, uint16_t *h)
 {
     getTextBounds(str.c_str(), x, y, x1, y1, w, h);
 }
+#endif
 int BBEPAPER::dataTime(void)
 {
     return _bbep.iDataTime;

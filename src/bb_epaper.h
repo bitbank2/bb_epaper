@@ -24,6 +24,7 @@
 #define OCT 8
 #define BIN 2
 #define PROGMEM
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -102,6 +103,7 @@ enum {
     EPD42R_400x300,
     EPD42R2_400x300, // GDEQ042Z21
     EPD37_240x416, // GDEY037T03
+    EPD27_176x264, // Waveshare 2.7" e-paper HAT
     EPD_PANEL_COUNT
 };
 #ifdef FUTURE
@@ -119,7 +121,6 @@ enum {
   EPD154Y_152x152, // DEPG0154YN
   EPD154_200x200, // waveshare
   EPD154B_200x200, // DEPG01540BN
-  EPD27_176x264, // waveshare
   EPD266B_152x296, // DEPG0266BN
   EPD266Y_152x296, // DEPG0266YN
   EPD31R_168x296, // DEPG0310RW
@@ -279,7 +280,11 @@ class BBEPAPER
   public:
     BBEPAPER(int iPanel);
     void setAddrWindow(int x, int y, int w, int h);
+#ifdef ARDUINO
     void initIO(int iDC, int iReset, int iBusy, int iCS = SS, int iMOSI = MOSI, int iSCLK = SCK, uint32_t u32Speed = 8000000);
+#else
+    void initIO(int iDC, int iReset, int iBusy, int iCS, int iSPIChannel, uint32_t u32Speed = 8000000);
+#endif
     int writePlane(int iPlane = PLANE_DUPLICATE);
     void startWrite(int iPlane);
     void writeData(uint8_t *pData, int iLen);
@@ -307,7 +312,9 @@ class BBEPAPER
     int16_t getCursorX(void);
     int16_t getCursorY(void);
     void getTextBounds(const char *string, int16_t x, int16_t y, int16_t *x1, int16_t *y1, uint16_t *w, uint16_t *h);
+#ifdef ARDUINO
     void getTextBounds(const String &str, int16_t x, int16_t y, int16_t *x1, int16_t *y1, uint16_t *w, uint16_t *h);
+#endif
     int dataTime();
     int opTime();
     int16_t height(void);

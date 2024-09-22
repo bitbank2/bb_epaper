@@ -16,7 +16,7 @@
 //
 #ifndef __BB_EP_GFX__
 #define __BB_EP_GFX__
-#include <Group5.h>
+#include "Group5.h"
 #include "g5dec.inl"
 #include "bb_font.h"
 static G5DECIMAGE g5dec;

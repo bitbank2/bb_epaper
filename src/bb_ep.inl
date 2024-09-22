@@ -587,6 +587,15 @@ const uint8_t epd266_init_sequence_full[] PROGMEM =
     0x00 // end of table
 }; /* epd266_init_sequence_full[] */
 
+const uint8_t epd27_ws_init_sequence_full[] = {
+    1, UC8151_PON,
+    BUSY_WAIT,
+    3, 0x00, 0x1f, 0x0b, // panel setting
+    5, UC8151_TRES, 0x01, 0x08, 0x00, 0xb0,
+    2, 0x50, 0x97, // VCOM
+    0
+};
+
 const uint8_t epd266_init_sequence_part[] PROGMEM =
 {
     0x02, 0x11, 0x03,
@@ -960,6 +969,7 @@ const EPD_PANEL panelDefs[] PROGMEM = {
     {400, 300, epd42r_init_sequence_full, NULL, NULL, BBEP_3COLOR, BBEP_CHIP_SSD16xx}, // EPD42R_400x300
     {400, 300, epd42r2_init_sequence_full, NULL, NULL, BBEP_3COLOR, BBEP_CHIP_UC81xx}, // EPD42R2_400x300
     {240, 416, epd37_init_sequence_full, NULL, epd37_init_sequence_part, 0, BBEP_CHIP_UC81xx}, // EPD37_240x416
+    {176, 264, epd27_ws_init_sequence_full, NULL, NULL, BBEP_CS_EVERY_BYTE, BBEP_CHIP_UC81xx}, // EPD27_176x264 Waveshare 2.7" e-paper HAT
 };
 int bbepSetPanelType(BBEPDISP *pBBEP, int iPanel)
 {

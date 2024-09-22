@@ -17,8 +17,8 @@
 // Adapt these functions to whatever target platform you're using
 // and the rest of the code can remain unchanged
 //
-#ifndef __BB_EI_IO__
-#define __BB_EI_IO__
+#ifndef __BB_EP_IO__
+#define __BB_EP_IO__
 
 #include <stdint.h>
 #include <stdlib.h>
@@ -31,17 +31,22 @@
 #include <linux/spi/spidev.h>
 #include <gpiod.h>
 #include <math.h>
+#ifndef CONSUMER
+#define CONSUMER "Consumer"
+#endif
+#define pgm_read_byte(a) *(uint8_t *)a
+#define memcpy_P memcpy
 struct gpiod_chip *chip = NULL;
 struct gpiod_line *lines[64];
 static int spi_fd; // SPI handle
 
-void SPI_transfer(BBEIDISP *pBBEI, uint8_t *pBuf, int iLen)
+void SPI_transfer(BBEPDISP *pBBEP, uint8_t *pBuf, int iLen)
 {
 struct spi_ioc_transfer spi;
    memset(&spi, 0, sizeof(spi));
    spi.tx_buf = (unsigned long)pBuf;
    spi.len = iLen;
-   spi.speed_hz = pBBEI->iSpeed;
+   spi.speed_hz = pBBEP->iSpeed;
    spi.bits_per_word = 8;
    ioctl(spi_fd, SPI_IOC_MESSAGE(1), &spi);
 } /* SPI_transfer() */
@@ -71,7 +76,7 @@ void pinMode(int iPin, int iMode)
    }
 } /* pinMode() */
 
-static void delay(int iMS)
+void delay(int iMS)
 {
   usleep(iMS * 1000);
 } /* delay() */
@@ -84,105 +89,92 @@ static void delayMicroseconds(int iMS)
 //
 // Initialize the GPIO pins and SPI for use by bb_eink
 //
-void bbeiInitIO(BBEIDISP *pBBEI, uint32_t u32Speed)
+void bbepInitIO(BBEPDISP *pBBEP, uint32_t u32Speed)
 {
-    pinMode(pBBEI->iDCPin, OUTPUT);
-    pinMode(pBBEI->iRSTPin, OUTPUT);
-    digitalWrite(pBBEI->iRSTPin, LOW);
+char szName[32];
+
+    pinMode(pBBEP->iDCPin, OUTPUT);
+    pinMode(pBBEP->iRSTPin, OUTPUT);
+    digitalWrite(pBBEP->iRSTPin, LOW);
     delay(100);
-    digitalWrite(pBBEI->iRSTPin, HIGH);
+    digitalWrite(pBBEP->iRSTPin, HIGH);
     delay(100);
-    if (pBBEI->iBUSYPin != 0xff) {
-        pinMode(pBBEI->iBUSYPin, INPUT);
+    if (pBBEP->iBUSYPin != 0xff) {
+        pinMode(pBBEP->iBUSYPin, INPUT);
     }
-    pBBEI->iSpeed = u32Speed;
-    pinMode(pBBEI->iCSPin, OUTPUT);
-    digitalWrite(pBBEI->iCSPin, HIGH); // we have to manually control the CS pin
-    spi_fd = open("/dev/spidev0.1", O_RDWR); // DEBUG - open SPI channel 0
-} /* bbeiInitIO() */
+    pBBEP->iSpeed = u32Speed;
+    pinMode(pBBEP->iCSPin, OUTPUT);
+    digitalWrite(pBBEP->iCSPin, HIGH); // we have to manually control the CS pin
+    sprintf(szName, "/dev/spidev%d.0", pBBEP->iMOSIPin); // SPI channel #
+    spi_fd = open(szName, O_RDWR);
+    //spi_fd = open("/dev/spidev0.1", O_RDWR); // DEBUG - open SPI channel 0
+} /* bbepInitIO() */
 //
 // Toggle the reset line to wake up the eink from deep sleep
 //
-void bbeiWakeUp(BBEIDISP *pBBEI)
+void bbepWakeUp(BBEPDISP *pBBEP)
 {
-    digitalWrite(pBBEI->iRSTPin, LOW);
+    digitalWrite(pBBEP->iRSTPin, LOW);
     delay(10);
-    digitalWrite(pBBEI->iRSTPin, HIGH);
+    digitalWrite(pBBEP->iRSTPin, HIGH);
     delay(10);
-} /* bbeiWakeUp() */
+} /* bbepWakeUp() */
 //
 // Wait for the busy status line to show idle
 // The polarity of the busy signal is reversed on the UC81xx compared
 // to the SSD16xx controllers
 //
-void bbeiWaitBusy(BBEIDISP *pBBEI)
+void bbepWaitBusy(BBEPDISP *pBBEP)
 {
-    uint8_t busy_idle =  (pBBEI->chip_type == BBEI_CHIP_UC81xx) ? HIGH : LOW;
+    uint8_t busy_idle =  (pBBEP->chip_type == BBEP_CHIP_UC81xx) ? HIGH : LOW;
     delay(1); // some panels need a short delay before testing the BUSY line
     while (1) {
-        if (digitalRead(pBBEI->iBUSYPin) == busy_idle) break;
+        if (digitalRead(pBBEP->iBUSYPin) == busy_idle) break;
     }
-} /* bbeiWaitBusy() */
+} /* bbepWaitBusy() */
 //
 // Convenience function to write a command byte along with a data
 // byte (it's single parameter)
 //
-void bbeiCMD2(BBEIDISP *pBBEI, uint8_t cmd1, uint8_t cmd2)
+void bbepCMD2(BBEPDISP *pBBEP, uint8_t cmd1, uint8_t cmd2)
 {
-    if (!pBBEI->is_awake) {
+    if (!pBBEP->is_awake) {
         // if it's asleep, it can't receive commands
-        bbeiWakeUp(pBBEI);
-        pBBEI->is_awake = 1;
+        bbepWakeUp(pBBEP);
+        pBBEP->is_awake = 1;
     }
-    digitalWrite(pBBEI->iDCPin, LOW);
-    digitalWrite(pBBEI->iCSPin, LOW);
-    SPI_transfer(pBBEI, &cmd1, 1);
-    digitalWrite(pBBEI->iDCPin, HIGH);
-    SPI_transfer(pBBEI, &cmd2, 1); // second byte is data
-    digitalWrite(pBBEI->iCSPin, HIGH);
-    digitalWrite(pBBEI->iDCPin, HIGH); // leave data mode as the default
-} /* bbeiCMD2() */
+    digitalWrite(pBBEP->iDCPin, LOW);
+    digitalWrite(pBBEP->iCSPin, LOW);
+    SPI_transfer(pBBEP, &cmd1, 1);
+    digitalWrite(pBBEP->iDCPin, HIGH);
+    SPI_transfer(pBBEP, &cmd2, 1); // second byte is data
+    digitalWrite(pBBEP->iCSPin, HIGH);
+    digitalWrite(pBBEP->iDCPin, HIGH); // leave data mode as the default
+} /* bbepCMD2() */
 //
 // Write a single byte as a COMMAND (D/C set low)
 //
-void bbeiWriteCmd(BBEIDISP *pBBEI, uint8_t cmd)
+void bbepWriteCmd(BBEPDISP *pBBEP, uint8_t cmd)
 {
-    if (!pBBEI->is_awake) {
+    if (!pBBEP->is_awake) {
         // if it's asleep, it can't receive commands
-        bbeiWakeUp(pBBEI);
-        pBBEI->is_awake = 1;
+        bbepWakeUp(pBBEP);
+        pBBEP->is_awake = 1;
     }
-    digitalWrite(pBBEI->iDCPin, LOW);
-    digitalWrite(pBBEI->iCSPin, LOW);
-    SPI_transfer(pBBEI, &cmd, 1);
-    digitalWrite(pBBEI->iCSPin, HIGH);
-    digitalWrite(pBBEI->iDCPin, HIGH); // leave data mode as the default
-} /* bbeiWriteCmd() */
-//
-// Put the eink into light or deep sleep
-//
-void bbeiSleep(BBEIDISP *pBBEI, int bDeep)
-{
-    if (pBBEI->chip_type == BBEI_CHIP_UC81xx) {
-        bbeiCMD2(pBBEI, UC8151_CDI, 0x17); // border floating
-        bbeiWriteCmd(pBBEI, UC8151_POFF); // power off
-        bbeiWaitBusy(pBBEI);
-        if (bDeep) {
-            bbeiCMD2(pBBEI, UC8151_DSLP, 0xa5); // deep sleep
-        }
-    } else {
-        bbeiCMD2(pBBEI, SSD1608_DEEP_SLEEP, (bDeep) ? 0x02 : 0x01); // deep sleep mode 1 keeps RAM, mode 2 loses RAM
-    }
-    pBBEI->is_awake = 0;
-} /* bbeiSleep() */
+    digitalWrite(pBBEP->iDCPin, LOW);
+    digitalWrite(pBBEP->iCSPin, LOW);
+    SPI_transfer(pBBEP, &cmd, 1);
+    digitalWrite(pBBEP->iCSPin, HIGH);
+    digitalWrite(pBBEP->iDCPin, HIGH); // leave data mode as the default
+} /* bbepWriteCmd() */
 //
 // Write 1 or more bytes as DATA (D/C set high)
 //
-void bbeiWriteData(BBEIDISP *pBBEI, uint8_t *pData, int iLen)
+void bbepWriteData(BBEPDISP *pBBEP, uint8_t *pData, int iLen)
 {
-    digitalWrite(pBBEI->iCSPin, LOW);
-    SPI_transfer(pBBEI, pData, iLen);
-    digitalWrite(pBBEI->iCSPin, HIGH);
-} /* bbeiWriteData() */
+    digitalWrite(pBBEP->iCSPin, LOW);
+    SPI_transfer(pBBEP, pData, iLen);
+    digitalWrite(pBBEP->iCSPin, HIGH);
+} /* bbepWriteData() */
 
-#endif // __BB_EI_IO__
+#endif // __BB_EP_IO__
