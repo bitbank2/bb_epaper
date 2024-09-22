@@ -6,7 +6,7 @@ all: g5_demo
 g5_demo: main.o
 	$(CC) main.o -o g5_demo 
 
-main.o: main.c ../src/Group5.h ../src/g5dec.h ../src/g5enc.h
+main.o: main.c ../../../src/Group5.h ../../../src/g5enc.inl
 	$(CC) $(CFLAGS) -c main.c
 
 clean:

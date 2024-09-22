@@ -141,13 +141,6 @@ class G5DECODER
   private:
     G5DECIMAGE _g5dec;
 };
-#else
-// C function definitions
-int g5_decode_init(G5DECIMAGE *pImage, int iWidth, int iHeight, uint8_t *pData, int iDataSize);
-int g5_decode_line(G5DECIMAGE *pImage, uint8_t *pOut);
-int g5_encode_init(G5ENCIMAGE *pImage, int iWidth, int iHeight, uint8_t *pOut, int iOutSize);
-int g5_encode_encodeLine(G5ENCIMAGE *pImage, uint8_t *pPixels);
-int g5_encode_getOutSize(G5ENCIMAGE *pImage);
 #endif // __cplusplus
 
 #endif // __GROUP5__

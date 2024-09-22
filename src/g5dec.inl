@@ -44,7 +44,7 @@ static const uint8_t code_table[128]  =
          0x11, 3, 0x11, 3, 0x11, 3, 0x11, 3,
          0x11, 3, 0x11, 3, 0x11, 3, 0x11, 3};
 
-int g5_decode_init(G5DECIMAGE *pImage, int iWidth, int iHeight, uint8_t *pData, int iDataSize)
+static int g5_decode_init(G5DECIMAGE *pImage, int iWidth, int iHeight, uint8_t *pData, int iDataSize)
 {
     if (pImage == NULL || iWidth < 1 || iHeight < 1 || pData == NULL || iDataSize < 1)
         return G5_INVALID_PARAMETER;
@@ -303,7 +303,7 @@ pilreadg5z:
 //
 // Decompress the VLC data
 //
-int g5_decode_line(G5DECIMAGE *pPage, uint8_t *pOut)
+static int g5_decode_line(G5DECIMAGE *pPage, uint8_t *pOut)
 {
     int rc;
     uint8_t *pBufEnd;

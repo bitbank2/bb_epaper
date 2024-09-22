@@ -22,7 +22,7 @@
 #include FT_MODULE_H
 #include FT_TRUETYPE_DRIVER_H
 #include "../src/bb_font.h" // BitBank font structures
-#include "../src/g5enc.h" // Group5 image compression library
+#include "../src/g5enc.inl" // Group5 image compression library
 G5ENCIMAGE g5enc; // Group5 encoder state
 
 #define DPI 141 // Approximate resolution of common displays

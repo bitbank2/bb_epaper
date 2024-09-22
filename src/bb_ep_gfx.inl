@@ -19,8 +19,9 @@
 #ifndef __BB_EP_GFX__
 #define __BB_EP_GFX__
 #include <Group5.h>
+#include "g5dec.inl"
 #include "bb_font.h"
-G5DECIMAGE g5dec;
+static G5DECIMAGE g5dec;
 // forward declarations
 void InvertBytes(uint8_t *pData, uint8_t bLen);
 
@@ -220,7 +221,7 @@ void bbepDrawSprite(BBEPDISP *pBBEP, const uint8_t *pSprite, int cx, int cy, int
         s = (uint8_t *)pSprite;
         // set the memory window for this character
         cx += (x & 7); // add parital byte
-        bbepSetPosition(pBBEP, x, y, cx, cy);
+        bbepSetAddrWindow(pBBEP, x, y, cx, cy);
         iDestPitch = (cx+7)/8;
         bbepWriteCmd(pBBEP, u8CMD); // memory write command
        for (int ty=dy; ty<dy+cy; ty++) {
@@ -464,7 +465,7 @@ uint8_t bFlipped = 0;
       }
      if (pBBEP->ucScreen == NULL && ((y & 7) == 7 || y == cy-1)) // dump to LCD
      {
-       bbepSetPosition(pBBEP, dx, y+dy, cx, 1);
+       bbepSetAddrWindow(pBBEP, dx, y+dy, cx, 1);
        bbepWriteData(pBBEP, u8Cache, cx);
      }
   } // for y
@@ -667,7 +668,7 @@ uint8_t *pBits, u8CMD1, u8CMD2, u8CMD, u8EndMask;
                // set the memory window for this character
                iSrcPitch = (w+7)/8;
                w += (dx & 7); // add parital byte
-               bbepSetPosition(pBBEP, dx, dy, w, h);
+               bbepSetAddrWindow(pBBEP, dx, dy, w, h);
                iPitch = (w+7)/8;
                // start writing into the correct plane
                if (pBBEP->chip_type == BBEP_CHIP_UC81xx) {
@@ -753,7 +754,7 @@ uint8_t u8Temp[128];
     {
        i = 0;
         if (!pBBEP->ucScreen) { // bufferless mode, rotate the coordinate system to fit the situation
- //           bbepSetPosition(pBBEP, √, pBBEP->iCursorX, 8, pBBEP->native_height-pBBEP->iCursorX);
+ //           bbepSetAddrWindow(pBBEP, √, pBBEP->iCursorX, 8, pBBEP->native_height-pBBEP->iCursorX);
 //            bbepWriteCmd(pBBEP, ucCMD1); // write to "new" plane
         }
        while (pBBEP->iCursorX < pBBEP->width && szMsg[i] != 0 && pBBEP->iCursorY < pBBEP->height)
@@ -769,7 +770,7 @@ uint8_t u8Temp[128];
                iLen = pBBEP->width - pBBEP->iCursorX;
            }
            if (!pBBEP->ucScreen) { // bufferless mode, rotate the coordinate system to fit the situation
-               bbepSetPosition(pBBEP, pBBEP->native_width-8-pBBEP->iCursorY, pBBEP->iCursorX, 8, pBBEP->native_height-pBBEP->iCursorX);
+               bbepSetAddrWindow(pBBEP, pBBEP->native_width-8-pBBEP->iCursorY, pBBEP->iCursorX, 8, pBBEP->native_height-pBBEP->iCursorX);
                bbepWriteCmd(pBBEP, ucCMD); // write to "new" plane
                bbepWriteData(pBBEP, u8Temp, iLen);
            } else { // draw in memory
@@ -899,10 +900,10 @@ uint8_t u8Temp[128];
               if (pBBEP->iCursorX + iLen > pBBEP->width) // clip right edge
                   iLen = pBBEP->width - pBBEP->iCursorX;
             if (!pBBEP->ucScreen) { // bufferless mode
-                bbepSetPosition(pBBEP, pBBEP->native_width-8-pBBEP->iCursorY, pBBEP->iCursorX, 8, iLen);
+                bbepSetAddrWindow(pBBEP, pBBEP->native_width-8-pBBEP->iCursorY, pBBEP->iCursorX, 8, iLen);
                 bbepWriteCmd(pBBEP, ucCMD); // write to "new" plane
                 bbepWriteData(pBBEP, &u8Temp[6], iLen);
-                bbepSetPosition(pBBEP, pBBEP->native_width-16-pBBEP->iCursorY, pBBEP->iCursorX, 8, iLen);
+                bbepSetAddrWindow(pBBEP, pBBEP->native_width-16-pBBEP->iCursorY, pBBEP->iCursorX, 8, iLen);
                 bbepWriteCmd(pBBEP, ucCMD); // write to "new" plane
                 bbepWriteData(pBBEP, &u8Temp[18], iLen);
             } else { // write to RAM
@@ -933,7 +934,7 @@ uint8_t u8Temp[128];
                if (pBBEP->iCursorX + iLen > pBBEP->width) // clip right edge
                    iLen = pBBEP->width - pBBEP->iCursorX;
            if (!pBBEP->ucScreen) { // bufferless mode
-               bbepSetPosition(pBBEP, pBBEP->iCursorX, pBBEP->iCursorY, 8, iLen);
+               bbepSetAddrWindow(pBBEP, pBBEP->iCursorX, pBBEP->iCursorY, 8, iLen);
                bbepWriteCmd(pBBEP, ucCMD); // write to "new" plane
                bbepWriteData(pBBEP, u8Temp, iLen);
            } else { // write to RAM
@@ -1062,7 +1063,7 @@ void bbepDrawLine(BBEPDISP *pBBEP, int x1, int y1, int x2, int y2, uint8_t ucCol
            mask >>= 1;
         if (mask == 0) // we've moved outside the current row, write the data we changed
         {
-            bbepSetPosition(pBBEP, x, y, 8*(int)(p-pStart), 1);
+            bbepSetAddrWindow(pBBEP, x, y, 8*(int)(p-pStart), 1);
             bbepWriteData(pBBEP, pStart,  (int)(p-pStart)); // write the row we changed
            x = x1+1; // we've already written the byte at x1
            y1 = y+yinc;
@@ -1080,7 +1081,7 @@ void bbepDrawLine(BBEPDISP *pBBEP, int x1, int y1, int x2, int y2, uint8_t ucCol
     } // for x1
    if (p != pStart) // some data needs to be written
    {
-     bbepSetPosition(pBBEP, x, y, 8*(int)(p-pStart), 1);
+     bbepSetAddrWindow(pBBEP, x, y, 8*(int)(p-pStart), 1);
      bbepWriteData(pBBEP, pStart, (int)(p-pStart));
    }
   } else {
@@ -1122,7 +1123,7 @@ void bbepDrawLine(BBEPDISP *pBBEP, int x1, int y1, int x2, int y2, uint8_t ucCol
         if (bOld != bNew)
         {
             p[0] = bNew; // save to RAM
-            bbepSetPosition(pBBEP, x, y1, 8, 1);
+            bbepSetAddrWindow(pBBEP, x, y1, 8, 1);
             bbepWriteData(pBBEP, &bNew, 1);
         } // data changed
         if (pBBEP->ucScreen) {
@@ -1139,7 +1140,7 @@ void bbepDrawLine(BBEPDISP *pBBEP, int x1, int y1, int x2, int y2, uint8_t ucCol
         if (bOld != bNew) // write the last byte we modified if it changed
         {
             p[0] = bNew; // save to RAM
-            bbepSetPosition(pBBEP, x, y1, 8, 1);
+            bbepSetAddrWindow(pBBEP, x, y1, 8, 1);
             bbepWriteData(pBBEP, &bNew, 1);
         }
           x += xinc;
@@ -1154,7 +1155,7 @@ void bbepDrawLine(BBEPDISP *pBBEP, int x1, int y1, int x2, int y2, uint8_t ucCol
     if (bOld != bNew) // write the last byte we modified if it changed
     {
       p[0] = bNew; // save to RAM
-        bbepSetPosition(pBBEP, x, y2, 8, 1);
+        bbepSetAddrWindow(pBBEP, x, y2, 8, 1);
         bbepWriteData(pBBEP, &bNew, 1);
     }
   } // y major case

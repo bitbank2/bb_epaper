@@ -980,7 +980,7 @@ int bbepSetPanelType(BBEPDISP *pBBEP, int iPanel)
     return BBEP_SUCCESS;
 } /* bbepSetPanelType() */
 
-void bbepSetPosition(BBEPDISP *pBBEP, int x, int y, int cx, int cy)
+void bbepSetAddrWindow(BBEPDISP *pBBEP, int x, int y, int cx, int cy)
 {
     uint8_t uc[12];
     int i, tx, ty;
@@ -1036,7 +1036,7 @@ void bbepSetPosition(BBEPDISP *pBBEP, int x, int y, int cx, int cy)
         bbepWriteData(pBBEP, uc, 2);
 //        bbepCMD2(pBBEP, SSD1608_DATA_MODE, 0x3);
     }
-} /* bbepSetPosition() */
+} /* bbepSetAddrWindow() */
 //    
 // Put the eink into light or deep sleep
 // 
@@ -1125,7 +1125,7 @@ uint8_t ucCMD1, ucCMD2;
         }
         // Write one or both memory planes to the EPD
         if (iPlane == PLANE_0 || iPlane == PLANE_DUPLICATE) { // write to first plane
-            bbepSetPosition(pBBEP, 0,0, pBBEP->native_width, pBBEP->native_height);
+            bbepSetAddrWindow(pBBEP, 0,0, pBBEP->native_width, pBBEP->native_height);
             bbepWriteCmd(pBBEP, ucCMD1);
             for (y=0; y<pBBEP->native_height; y++) {
                 memset(u8Cache, uc1, iPitch); // the data is overwritten after each write
@@ -1133,7 +1133,7 @@ uint8_t ucCMD1, ucCMD2;
             } // for y
         }
         if (iPlane == PLANE_1 || iPlane == PLANE_DUPLICATE) { // write to first plane
-            bbepSetPosition(pBBEP, 0,0, pBBEP->native_width, pBBEP->native_height);
+            bbepSetAddrWindow(pBBEP, 0,0, pBBEP->native_width, pBBEP->native_height);
             bbepWriteCmd(pBBEP, ucCMD2);
             for (y=0; y<pBBEP->native_height; y++) {
                 memset(u8Cache, uc2, iPitch); // the data is overwritten after each write

@@ -279,10 +279,13 @@ class BBEPAPER
 {
   public:
     BBEPAPER() { memset(&_bbep, 0, sizeof(_bbep)); _bbep.iFG = BBEP_BLACK; _bbep.type = EPD_PANEL_UNDEFINED;}
-    void setPosition(int x, int y, int w, int h);
+    void setAddrWindow(int x, int y, int w, int h);
     int setPanelType(int iPanel);
     void initIO(int iDC, int iReset, int iBusy, int iCS = SS, int iMOSI = MOSI, int iSCLK = SCK, uint32_t u32Speed = 8000000);
     int writePlane(int iPlane = PLANE_DUPLICATE);
+    void startWrite(int iPlane);
+    void writeData(uint8_t *pData, int iLen);
+    void writeCmd(uint8_t u8Cmd);
     int refresh(int iMode, bool bWait = true);
     void setBuffer(uint8_t *pBuffer);
     int allocBuffer(void);

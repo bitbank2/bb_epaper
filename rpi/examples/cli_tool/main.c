@@ -6,8 +6,7 @@
 //
 
 #include <stdio.h>
-#include "../src/g5dec.h"
-#include "../src/g5enc.h"
+#include "../../../src/g5enc.inl"
 //
 // Read a Windows BMP file into memory
 //
@@ -112,7 +111,7 @@ int main(int argc, const char * argv[]) {
         pOut = (uint8_t *)malloc(OUTSIZE);
         rc = g5_encode_init(&g5enc, w, h, pOut, OUTSIZE);
         for (y=0; y<h && rc == G5_SUCCESS; y++) {
-            rc = g5_encode_addLine(&g5enc, s);
+            rc = g5_encode_encodeLine(&g5enc, s);
             s += iPitch;
         }
         if (rc == G5_ENCODE_COMPLETE) {

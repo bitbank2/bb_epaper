@@ -37,7 +37,6 @@ void delay(int);
 #include "arduino_io.inl" // I/O (non-portable) code is in here
 #include "bb_ep.inl" // All of the display interface code is in here
 #include "bb_ep_gfx.inl" // drawing code
-#include "Group5.h" // Group5 data compression library
 #include "bb_font.h" // bitbank compressed font info
 #ifdef __cplusplus
 //
@@ -48,9 +47,9 @@ void delay(int);
 //    return _bbep.iTimeout;
 //}
 
-void BBEPAPER::setPosition(int x, int y, int w, int h)
+void BBEPAPER::setAddrWindow(int x, int y, int w, int h)
 {
-    bbepSetPosition(&_bbep, x, y, w, h);
+    bbepSetAddrWindow(&_bbep, x, y, w, h);
 }
 int BBEPAPER::setPanelType(int iPanel)
 {
@@ -458,4 +457,32 @@ void BBEPAPER::drawSprite(const uint8_t *pSprite, int cx, int cy, int iPitch, in
 {
     bbepDrawSprite(&_bbep, pSprite, cx, cy, iPitch, x, y, iColor);
 }
+void BBEPAPER::startWrite(int iPlane)
+{
+uint8_t u8Cmd;
+
+    if (_bbep.chip_type == BBEP_CHIP_UC81xx) {
+       if (iPlane == PLANE_0)
+           u8Cmd = UC8151_DTM2;
+       else
+           u8Cmd = UC8151_DTM1;
+    } else { // SSD16xx
+       if (iPlane == PLANE_0)
+           u8Cmd = SSD1608_WRITE_RAM;
+       else
+           u8Cmd = SSD1608_WRITE_ALTRAM;
+    }
+    bbepWriteCmd(&_bbep, u8Cmd);
+} /* startWrite() */
+
+void BBEPAPER::writeData(uint8_t *pData, int iLen)
+{
+   bbepWriteData(&_bbep, pData, iLen);
+} /* writeData() */
+
+void BBEPAPER::writeCmd(uint8_t u8Cmd)
+{
+    bbepWriteCmd(&_bbep, u8Cmd);
+} /* writeCmd() */
+
 #endif // __cplusplus
