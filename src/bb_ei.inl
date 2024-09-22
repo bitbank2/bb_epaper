@@ -1037,6 +1037,24 @@ void bbeiSetPosition(BBEIDISP *pBBEI, int x, int y, int cx, int cy)
 //        bbeiCMD2(pBBEI, SSD1608_DATA_MODE, 0x3);
     }
 } /* bbeiSetPosition() */
+//    
+// Put the eink into light or deep sleep
+// 
+void bbeiSleep(BBEIDISP *pBBEI, int bDeep) 
+{
+    if (pBBEI->chip_type == BBEI_CHIP_UC81xx) {
+        bbeiCMD2(pBBEI, UC8151_CDI, 0x17); // border floating
+        bbeiWriteCmd(pBBEI, UC8151_POFF); // power off
+        bbeiWaitBusy(pBBEI);
+        if (bDeep) {
+            bbeiCMD2(pBBEI, UC8151_DSLP, 0xa5); // deep sleep
+        }
+    } else {
+        bbeiCMD2(pBBEI, SSD1608_DEEP_SLEEP, 0x01); // deep sleep mode 1 keeps RAM,only uses about 1uA
+    }
+    pBBEI->is_awake = 0;
+} /* bbeiSleep() */
+
 //
 // More efficient means of sending commands, data and busy-pauses
 //

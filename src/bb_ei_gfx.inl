@@ -304,65 +304,38 @@ void bbeiDrawSprite(BBEIDISP *pBBEI, const uint8_t *pSprite, int cx, int cy, int
 int bbeiSetPixel(BBEIDISP *pBBEI, int x, int y, unsigned char ucColor)
 {
 int i;
-unsigned char uc, ucOld;
 int iPitch, iSize;
 
-    iPitch = pBBEI->width;
-    iSize = iPitch * ((pBBEI->height+7)/8);
+    // only available for local buffer operations
+    if (!pBBEI || !pBBEI->ucScreen) return BBEI_ERROR_BAD_PARAMETER;
+    
+    iPitch = (pBBEI->native_width+7)>>3;
+    iSize = iPitch * pBBEI->native_height;
 
-    i = ((y >> 3) * iPitch) + x;
+    i = (x >> 3) + (y * iPitch);
     if (i < 0 || i > iSize-1) { // off the screen
         return BBEI_ERROR_BAD_PARAMETER;
-    }
-    // Special case for 4-color e-ink
-    if (pBBEI->iFlags & BBEI_4COLOR) {
-        uint8_t ucMask = (1 << (y & 7));
-        ucColor ^= 1; // invert low bit
-        if (ucColor & 1)
-           pBBEI->ucScreen[i] |= ucMask;
-        else
-           pBBEI->ucScreen[i] &= ~ucMask;
-        if (ucColor & 2)
-            pBBEI->ucScreen[iSize + i] |= ucMask;
-        else
-            pBBEI->ucScreen[iSize + i] &= ~ucMask;
-        return BBEI_SUCCESS;
     }
     // special case for 3-color e-ink
     if (pBBEI->iFlags & BBEI_3COLOR) {
         if (ucColor >= BBEI_YELLOW) { // yellow/red has priority
-            pBBEI->ucScreen[iSize + i] |= (1 << (y & 7));
+            pBBEI->ucScreen[iSize + i] |= (0x80 >> (x & 7));
         } else {
-            pBBEI->ucScreen[iSize + i] &= ~(1 << (y & 7)); // clear red plane bit
+            pBBEI->ucScreen[iSize + i] &= ~(0x80 >> (x & 7)); // clear red plane bit
             if (ucColor == BBEI_WHITE) {
-                pBBEI->ucScreen[i] &= ~(1 << (y & 7));
+                pBBEI->ucScreen[i] &= ~(0x80 >> (x & 7));
             } else { // must be black
-                pBBEI->ucScreen[i] |= (1 << (y & 7));
+                pBBEI->ucScreen[i] |= (0x80 >> (x & 7));
             }
         }
         return BBEI_SUCCESS;
+    } else { // 2-color
+        if (ucColor == BBEI_WHITE) {
+            pBBEI->ucScreen[i] &= ~(0x80 >> (x & 7));
+        } else { // must be black
+            pBBEI->ucScreen[i] |= (0x80 >> (x & 7));
+        }
     }
-  bbeiSetPosition(pBBEI, x, y, 8, 1);
-
-  if (pBBEI->ucScreen)
-    uc = ucOld = pBBEI->ucScreen[i];
-  else
-     uc = ucOld = 0;
-
-  uc &= ~(0x1 << (y & 7));
-  if (ucColor)
-  {
-    uc |= (0x1 << (y & 7));
-  }
-  if (uc != ucOld) // pixel changed
-  {
-//    obdSetPosition(x, y>>3);
-    if (pBBEI->ucScreen)
-    {
-      bbeiWriteData(pBBEI, &uc, 1);
-      pBBEI->ucScreen[i] = uc;
-    }
-  }
   return BBEI_SUCCESS;
 } /* obdSetPixel() */
 
@@ -614,7 +587,7 @@ void bbeiSetTextWrap(BBEIDISP *pBBEI, int bWrap)
 //
 void bbeiWriteStringCustom(BBEIDISP *pBBEI, BB_FONT *pFont, int x, int y, char *szMsg, int iColor, uint8_t iPlane)
 {
-int rc, i, h, w, end_y, dx, dy, ty, iSrcPitch, iPitch;
+int rc, i, h, w, end_y, dx, dy, tx, ty, iSrcPitch, iPitch;
 unsigned int c;
 uint8_t *s, bInvert = 0;
 BB_GLYPH *pGlyph;
@@ -671,44 +644,65 @@ uint8_t *pBits, u8CMD1, u8CMD2, u8CMD, u8EndMask;
            if (ty < 0 || ty > 4096) ty = 4096; // DEBUG
            rc = g5_decode_init(&g5dec, w, h, s, ty);
            if (rc != G5_SUCCESS) return; // corrupt data?
-           // set the memory window for this character
-           iSrcPitch = (w+7)/8;
-           w += (dx & 7); // add parital byte
-           bbeiSetPosition(pBBEI, dx, dy, w, h);
-           iPitch = (w+7)/8;
-           // start writing into the correct plane
-           if (pBBEI->chip_type == BBEI_CHIP_UC81xx) {
-               u8CMD1 = UC8151_DTM2;
-               u8CMD2 = UC8151_DTM1;
-           } else {
-               u8CMD1 = SSD1608_WRITE_RAM;
-               u8CMD2 = SSD1608_WRITE_ALTRAM;
+           if (pBBEI->ucScreen) { // backbuffer, draw pixels
+               for (ty=dy; ty<end_y && ty < pBBEI->native_height; ty++) {
+                   uint8_t u8, u8Count;
+                   g5_decode_line(&g5dec, u8Cache);
+                   s = u8Cache;
+                   u8 = *s++;
+                   u8Count = 8;
+                   for (tx=x; tx<x+w; tx++) {
+                       if (u8 & 0x80) {
+                           bbeiSetPixel(pBBEI, tx, ty, iColor);
+                       }
+                       u8 <<= 1;
+                       u8Count--;
+                       if (u8Count == 0) {
+                           u8Count = 8;
+                           u8 = *s++;
+                       }
+                   }
+               }
+           } else { // draw directly into EPD memory
+               // set the memory window for this character
+               iSrcPitch = (w+7)/8;
+               w += (dx & 7); // add parital byte
+               bbeiSetPosition(pBBEI, dx, dy, w, h);
+               iPitch = (w+7)/8;
+               // start writing into the correct plane
+               if (pBBEI->chip_type == BBEI_CHIP_UC81xx) {
+                   u8CMD1 = UC8151_DTM2;
+                   u8CMD2 = UC8151_DTM1;
+               } else {
+                   u8CMD1 = SSD1608_WRITE_RAM;
+                   u8CMD2 = SSD1608_WRITE_ALTRAM;
+               }
+               u8CMD = u8CMD1;
+               if (iColor == BBEI_BLACK) bInvert = 1;
+               else if (iColor == BBEI_RED && (pBBEI->iFlags & BBEI_3COLOR)) {
+                   u8CMD = u8CMD2; // second plane is red (inverted)
+               }
+               bbeiWriteCmd(pBBEI, u8CMD); // memory write command
+               for (ty=dy; ty<end_y && ty < pBBEI->native_height; ty++) {
+                   g5_decode_line(&g5dec, u8Cache);
+                   u8Cache[iSrcPitch-1] &= u8EndMask; // clean pixels beyond character width
+                   u8Cache[iSrcPitch] = 0;
+                   if (dx & 7) { // need to shift it over by 1-7 bits
+                       uint8_t *s = u8Cache, uc1, uc0 = 0; // last shifted byte
+                       uint8_t n = dx & 7; // shift amount
+                       for (int j=0; j<w+7; j+= 8) {
+                           uc1 = *s;
+                           uc0 |= (uc1 >> n);
+                           *s++ = uc0;
+                           uc0 = uc1 << (8-n);
+                       }
+                       *s++ = uc0; // store final byte
+                       *s++ = 0; // and a zero for good measure
+                   }
+                   if (bInvert) InvertBytes(u8Cache, iPitch);
+                   bbeiWriteData(pBBEI, u8Cache, iPitch); // write each row into the EPD framebuffer
+               } // for y
            }
-           u8CMD = u8CMD1;
-           if (iColor == BBEI_BLACK) bInvert = 1;
-           else if (iColor == BBEI_RED && (pBBEI->iFlags & BBEI_3COLOR)) {
-               u8CMD = u8CMD2; // second plane is red (inverted)
-           }
-        bbeiWriteCmd(pBBEI, u8CMD); // memory write command
-      for (ty=dy; ty<end_y && ty < pBBEI->native_height; ty++) {
-          g5_decode_line(&g5dec, u8Cache);
-          u8Cache[iSrcPitch-1] &= u8EndMask; // clean pixels beyond character width
-          u8Cache[iSrcPitch] = 0;
-          if (dx & 7) { // need to shift it over by 1-7 bits
-            uint8_t *s = u8Cache, uc1, uc0 = 0; // last shifted byte
-            uint8_t n = dx & 7; // shift amount
-            for (int j=0; j<w+7; j+= 8) {
-                uc1 = *s;
-                uc0 |= (uc1 >> n);
-                *s++ = uc0;
-                uc0 = uc1 << (8-n);
-            }
-            *s++ = uc0; // store final byte
-            *s++ = 0; // and a zero for good measure
-          }
-          if (bInvert) InvertBytes(u8Cache, iPitch);
-          bbeiWriteData(pBBEI, u8Cache, iPitch); // write each row into the EPD framebuffer
-      } // for y
       } // if not drawing a space
       if (pFont->rotation == 0 || pFont->rotation == 180) {
         x += pGlyph->xAdvance; // width of this character

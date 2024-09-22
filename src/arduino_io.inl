@@ -19,7 +19,7 @@
 //
 #ifndef __BB_EI_IO__
 #define __BB_EI_IO__
-#ifdef ARDUINO
+
 #include <Arduino.h>
 #include <SPI.h>
 //
@@ -114,23 +114,6 @@ void bbeiWriteCmd(BBEIDISP *pBBEI, uint8_t cmd)
     digitalWrite(pBBEI->iDCPin, HIGH); // leave data mode as the default
 } /* bbeiWriteCmd() */
 //
-// Put the eink into light or deep sleep
-//
-void bbeiSleep(BBEIDISP *pBBEI, int bDeep)
-{
-    if (pBBEI->chip_type == BBEI_CHIP_UC81xx) {
-        bbeiCMD2(pBBEI, UC8151_CDI, 0x17); // border floating
-        bbeiWriteCmd(pBBEI, UC8151_POFF); // power off
-        bbeiWaitBusy(pBBEI);
-        if (bDeep) {
-            bbeiCMD2(pBBEI, UC8151_DSLP, 0xa5); // deep sleep
-        }
-    } else {
-        bbeiCMD2(pBBEI, SSD1608_DEEP_SLEEP, (bDeep) ? 0x02 : 0x01); // deep sleep mode 1 keeps RAM, mode 2 loses RAM
-    }
-    pBBEI->is_awake = 0;
-} /* bbeiSleep() */
-//
 // Write 1 or more bytes as DATA (D/C set high)
 //
 void bbeiWriteData(BBEIDISP *pBBEI, uint8_t *pData, int iLen)
@@ -145,6 +128,4 @@ void bbeiWriteData(BBEIDISP *pBBEI, uint8_t *pData, int iLen)
 #endif
 } /* bbeiWriteData() */
 
-#else // LINUX
-#endif // ARDUINO / LINUX
 #endif // __BB_EI_IO__

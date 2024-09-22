@@ -34,7 +34,7 @@ void delay(int);
 #endif // _LINUX_
 
 #include "bb_eink.h"
-#include "bb_ei_io.inl" // I/O (non-portable) code is in here
+#include "arduino_io.inl" // I/O (non-portable) code is in here
 #include "bb_ei.inl" // All of the display interface code is in here
 #include "bb_ei_gfx.inl" // drawing code
 #include "Group5.h" // Group5 data compression library
