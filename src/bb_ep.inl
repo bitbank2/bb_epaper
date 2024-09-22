@@ -1055,6 +1055,24 @@ void bbepSleep(BBEPDISP *pBBEP, int bDeep)
     pBBEP->is_awake = 0;
 } /* bbepSleep() */
 
+void bbepStartWrite(BBEPDISP *pBBEP, int iPlane)
+{
+uint8_t u8Cmd; 
+
+    if (pBBEP->chip_type == BBEP_CHIP_UC81xx) {
+       if (iPlane == PLANE_0)
+           u8Cmd = UC8151_DTM2;
+       else
+           u8Cmd = UC8151_DTM1;
+    } else { // SSD16xx
+       if (iPlane == PLANE_0)
+           u8Cmd = SSD1608_WRITE_RAM;
+       else
+           u8Cmd = SSD1608_WRITE_ALTRAM;
+    }
+    bbepWriteCmd(pBBEP, u8Cmd);
+} /* bbepStartWrite() */
+
 //
 // More efficient means of sending commands, data and busy-pauses
 //

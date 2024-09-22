@@ -1314,8 +1314,8 @@ void bbepRectangle(BBEPDISP *pBBEP, int x1, int y1, int x2, int y2, uint8_t ucCo
         }
     }
 
-    if (pBBEP == NULL || pBBEP->ucScreen == NULL)
-        return; // only works with a back buffer
+    if (pBBEP == NULL)
+        return; // invalid - must have BBEPDISP structure
 
     if (x1 < 0 || y1 < 0 || x2 < 0 || y2 < 0 ||
        x1 >= pBBEP->width || y1 >= pBBEP->height || x2 >= pBBEP->width || y2 >= pBBEP->height) return; // invalid coordinates
@@ -1336,41 +1336,48 @@ void bbepRectangle(BBEPDISP *pBBEP, int x1, int y1, int x2, int y2, uint8_t ucCo
     }
     if (bFilled)
     {
-        int x, y, iMiddle;
-        iMiddle = (y2 >> 3) - (y1 >> 3);
-        ucMask = 0xff << (y1 & 7);
-        if (iMiddle == 0) // top and bottom lines are in the same row
-            ucMask &= (0xff >> (7-(y2 & 7)));
-        d = &pBBEP->ucScreen[iRedOffset + (y1 >> 3)*iPitch + x1];
-        // Draw top
-        for (x = x1; x <= x2; x++)
-        {
-            if (ucColor)
-                *d |= ucMask;
-            else
-                *d &= ~ucMask;
-            d++;
-        }
-        if (iMiddle > 1) // need to draw middle part
-        {
-            ucMask = (ucColor) ? 0xff : 0x00;
-            for (y=1; y<iMiddle; y++)
-            {
-                d = &pBBEP->ucScreen[iRedOffset + (y1 >> 3)*iPitch + x1 + (y*iPitch)];
-                for (x = x1; x <= x2; x++)
-                    *d++ = ucMask;
-            }
-        }
-        if (iMiddle >= 1) // need to draw bottom part
-        {
-            ucMask = 0xff >> (7-(y2 & 7));
-            d = &pBBEP->ucScreen[iRedOffset + (y2 >> 3)*iPitch + x1];
-            for (x = x1; x <= x2; x++)
-            {
+        if (pBBEP->ucScreen) { // has a buffer to fill
+            int x, y, iMiddle;
+            iMiddle = (y2 >> 3) - (y1 >> 3);
+            ucMask = 0xff << (y1 & 7);
+            if (iMiddle == 0) // top and bottom lines are in the same row
+                ucMask &= (0xff >> (7-(y2 & 7)));
+            d = &pBBEP->ucScreen[iRedOffset + (y1 >> 3)*iPitch + x1];
+            // Draw top
+            for (x = x1; x <= x2; x++) {
                 if (ucColor)
-                    *d++ |= ucMask;
+                    *d |= ucMask;
                 else
-                    *d++ &= ~ucMask;
+                    *d &= ~ucMask;
+                d++;
+            }
+            if (iMiddle > 1) { // need to draw middle part
+                ucMask = (ucColor) ? 0xff : 0x00;
+                for (y=1; y<iMiddle; y++) {
+                    d = &pBBEP->ucScreen[iRedOffset + (y1 >> 3)*iPitch + x1 + (y*iPitch)];
+                    for (x = x1; x <= x2; x++)
+                        *d++ = ucMask;
+                }
+            }
+            if (iMiddle >= 1) { // need to draw bottom part
+                ucMask = 0xff >> (7-(y2 & 7));
+                d = &pBBEP->ucScreen[iRedOffset + (y2 >> 3)*iPitch + x1];
+                for (x = x1; x <= x2; x++) {
+                    if (ucColor)
+                        *d++ |= ucMask;
+                    else
+                        *d++ &= ~ucMask;
+                }
+            }
+        } else { // no buffer
+            int cx, cy, iPitch;
+            cx = x2-x1+1;
+            iPitch = (cx+7)/8;
+            memset(u8Cache, (ucColor == BBEP_WHITE) ? 0xff:0x00, iPitch);
+            bbepSetAddrWindow(pBBEP, x1, y1, cx, (y2-y1+1));
+            bbepStartWrite(pBBEP, pBBEP->iPlane);
+            for (cy = y1; cy <= y2; cy++) { // one line at a time
+                bbepWriteData(pBBEP, u8Cache, iPitch);
             }
         }
     }

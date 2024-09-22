@@ -123,7 +123,9 @@ void bbepWriteData(BBEPDISP *pBBEP, uint8_t *pData, int iLen)
     SPI.transferBytes(pData, NULL, iLen);
 #else
     digitalWrite(pBBEP->iCSPin, LOW);
-    SPI.transfer(pData, iLen);
+    for (int i=0; i<iLen; i++) { // Arduino clobbers the data (duplex)
+        SPI.transfer(pData[i]);
+    }
     digitalWrite(pBBEP->iCSPin, HIGH);
 #endif
 } /* bbepWriteData() */

@@ -130,7 +130,7 @@ uint32_t BBEPAPER::capabilities(void)
 
 void BBEPAPER::setRotation(int iRotation)
 {
-//    obdSetRotation(&_bbep, iRotation);
+    bbepSetRotation(&_bbep, iRotation);
 } /* setRotation() */
 
 int BBEPAPER::getRotation(void)
@@ -459,20 +459,7 @@ void BBEPAPER::drawSprite(const uint8_t *pSprite, int cx, int cy, int iPitch, in
 }
 void BBEPAPER::startWrite(int iPlane)
 {
-uint8_t u8Cmd;
-
-    if (_bbep.chip_type == BBEP_CHIP_UC81xx) {
-       if (iPlane == PLANE_0)
-           u8Cmd = UC8151_DTM2;
-       else
-           u8Cmd = UC8151_DTM1;
-    } else { // SSD16xx
-       if (iPlane == PLANE_0)
-           u8Cmd = SSD1608_WRITE_RAM;
-       else
-           u8Cmd = SSD1608_WRITE_ALTRAM;
-    }
-    bbepWriteCmd(&_bbep, u8Cmd);
+    bbepStartWrite(&_bbep, iPlane);
 } /* startWrite() */
 
 void BBEPAPER::writeData(uint8_t *pData, int iLen)
