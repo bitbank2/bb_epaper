@@ -14,7 +14,7 @@ BBEPAPER bbep(EPD213_104x212); // InkyPHAT 2.13"
 #define SPI_BUS 0
 
 int main(int argc, const char * argv[]) {
-  bbep.initIO(PIN_DC, PIN_RST, PIN_BUSY, PIN_CS, SPI_BUS, 8000000);
+  bbep.initIO(PIN_DC, PIN_RST, PIN_BUSY, PIN_CS, SPI_BUS, 4000000);
   bbep.fillRect(0,0,104,212, BBEP_WHITE);
   bbep.setRotation(90);
   bbep.setFont(FONT_12x16);

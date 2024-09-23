@@ -40,6 +40,9 @@ struct gpiod_chip *chip = NULL;
 struct gpiod_line *lines[64];
 static int spi_fd; // SPI handle
 
+// forward references
+void bbepWakeUp(BBEPDISP *pBBEP);
+
 void SPI_transfer(BBEPDISP *pBBEP, uint8_t *pBuf, int iLen)
 {
 struct spi_ioc_transfer spi;
@@ -109,29 +112,6 @@ char szName[32];
     spi_fd = open(szName, O_RDWR);
     //spi_fd = open("/dev/spidev0.1", O_RDWR); // DEBUG - open SPI channel 0
 } /* bbepInitIO() */
-//
-// Toggle the reset line to wake up the eink from deep sleep
-//
-void bbepWakeUp(BBEPDISP *pBBEP)
-{
-    digitalWrite(pBBEP->iRSTPin, LOW);
-    delay(10);
-    digitalWrite(pBBEP->iRSTPin, HIGH);
-    delay(10);
-} /* bbepWakeUp() */
-//
-// Wait for the busy status line to show idle
-// The polarity of the busy signal is reversed on the UC81xx compared
-// to the SSD16xx controllers
-//
-void bbepWaitBusy(BBEPDISP *pBBEP)
-{
-    uint8_t busy_idle =  (pBBEP->chip_type == BBEP_CHIP_UC81xx) ? HIGH : LOW;
-    delay(1); // some panels need a short delay before testing the BUSY line
-    while (1) {
-        if (digitalRead(pBBEP->iBUSYPin) == busy_idle) break;
-    }
-} /* bbepWaitBusy() */
 //
 // Convenience function to write a command byte along with a data
 // byte (it's single parameter)

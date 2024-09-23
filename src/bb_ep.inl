@@ -945,6 +945,20 @@ const uint8_t epd294_init_sequence_part[] =
    0x00 // end of sequence
 }; /* epd294_init_sequence_part */
 
+const uint8_t epd213_inky_init_sequence_full[] PROGMEM = {
+    5, UC8151_PWR, 0x07, 0x00, 0x0a, 0x00,
+    4, UC8151_BTST, 0x07, 0x07, 0x07,
+    1, UC8151_PON, // power on
+    BUSY_WAIT,
+    2, UC8151_PSR, 0xcf,
+    2, 0x50, 0x07,
+    2, 0x30, 0x29,
+    4, UC8151_TRES, 104, 0, 212,
+    2, 0x82, 0x0a,
+
+    0
+};
+
 uint8_t u8Cache[128]; // buffer a single line of up to 1024 pixels
 //
 // Definitions for each supported panel
@@ -969,7 +983,7 @@ const EPD_PANEL panelDefs[] PROGMEM = {
     {400, 300, epd42r_init_sequence_full, NULL, NULL, BBEP_3COLOR, BBEP_CHIP_SSD16xx}, // EPD42R_400x300
     {400, 300, epd42r2_init_sequence_full, NULL, NULL, BBEP_3COLOR, BBEP_CHIP_UC81xx}, // EPD42R2_400x300
     {240, 416, epd37_init_sequence_full, NULL, epd37_init_sequence_part, 0, BBEP_CHIP_UC81xx}, // EPD37_240x416
-    {176, 264, epd27_ws_init_sequence_full, NULL, NULL, BBEP_CS_EVERY_BYTE, BBEP_CHIP_UC81xx}, // EPD27_176x264 Waveshare 2.7" e-paper HAT
+    {104, 212, epd213_inky_init_sequence_full, NULL, NULL, 0, BBEP_CHIP_UC81xx}, // EPD213_104x212 InkyPHAT black and white
 };
 
 int bbepSetPanelType(BBEPDISP *pBBEP, int iPanel)
