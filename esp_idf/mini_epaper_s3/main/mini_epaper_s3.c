@@ -18,7 +18,7 @@ void app_main(void)
 
     init_ulp_program();
     /* Go to sleep, only the ULP Risc-V will run */
-    printf("Entering in deep sleep\n\n");
+//    printf("Entering in deep sleep\n\n");
 
     /* 5 second delay to ensure we can reflash from USB */
 //    vTaskDelay(500);
@@ -35,9 +35,9 @@ static void init_ulp_program(void)
     ESP_ERROR_CHECK(err);
 
     /* The first argument is the period index, which is not used by the ULP-RISC-V timer
-     * The second argument is the period in microseconds, which gives a wakeup time period of: 20ms
+     * The second argument is the period in microseconds
      */
-    ulp_set_wakeup_period(0, 5000000); // 5 seconds
+    ulp_set_wakeup_period(0, 20000); // 20 miliseconds for first wakeup
 
     /* Start the program */
     err = ulp_riscv_run();

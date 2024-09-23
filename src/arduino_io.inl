@@ -20,6 +20,8 @@
 
 #include <Arduino.h>
 #include <SPI.h>
+// foreward references
+void bbepWakeUp(BBEPDISP *pBBEP);
 //
 // Initialize the GPIO pins and SPI for use by bb_eink
 //

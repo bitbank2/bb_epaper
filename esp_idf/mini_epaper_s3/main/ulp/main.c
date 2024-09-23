@@ -20,6 +20,7 @@
 #include "ulp_riscv.h"
 #include "ulp_riscv_utils.h"
 #include "ulp_riscv_gpio.h"
+#include "ulp_common.h"
 
 // Tell the bb_epaper library not to include code related to
 // drawing with a back buffer for the epaper panel
@@ -65,6 +66,6 @@ int main (void)
 //        }
 //    }
     /* ulp_riscv_halt() is called automatically when main exits */
-//    ulp_set_wakeup_period(0, 5000000); // period in usec
+//    ulp_set_wakeup_period(0, 25000000); // period of next wake up in usec
     return 0;
 }

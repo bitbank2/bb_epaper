@@ -4,6 +4,9 @@
 #include <string.h>
 #include <stdint.h>
 #include <stdio.h>
+#ifdef __AVR__
+#include <avr/pgmspace.h>
+#endif
 //
 // Group5 1-bit image compression library
 // Written by Larry Bank
@@ -82,7 +85,17 @@ typedef struct g5_dec_image_tag
 } G5DECIMAGE;
 
 // Due to unaligned memory causing an exception, we have to do these macros the slow way
+#ifdef __AVR__
+// assume PROGMEM as the source of data
+inline uint32_t TIFFMOTOLONG(uint8_t *p)
+{
+  uint32_t u32 = pgm_read_dword(p);
+  return __builtin_bswap32(u32);
+}
+#else
 #define TIFFMOTOLONG(p) (((uint32_t)(*p)<<24UL) + ((uint32_t)(*(p+1))<<16UL) + ((uint32_t)(*(p+2))<<8UL) + (uint32_t)(*(p+3)))
+#endif // __AVR__
+
 #define TOP_BIT 0x80000000
 #define MAX_VALUE 0xffffffff
 // Must be a 32-bit target processor

@@ -112,32 +112,36 @@ void bbepInitIO(BBEPDISP *pBBEP, uint8_t u8DC, uint8_t u8RST, uint8_t u8BUSY, ui
 //
 // Bit Bang SPI
 //
-void SPIWriteByte(BBEPDISP *pBBEP, uint8_t uc)
+void SPIWriteBytes(BBEPDISP *pBBEP, uint8_t *pData, int iLen)
 {
-uint8_t u8MOSI = pBBEP->iMOSIPin;
-uint8_t u8SCK = pBBEP->iCLKPin;
+const uint8_t u8MOSI = pBBEP->iMOSIPin;
+const uint8_t u8SCK = pBBEP->iCLKPin;
+uint8_t uc;
 
-    if (uc == 0 || uc == 0xff) { // special case
-        ulp_riscv_gpio_output_level(u8MOSI, (uc & 1));
-        for (int i=0; i<8; i++) {
-            ulp_riscv_gpio_output_level(u8SCK, 1); // no delays needed since it runs at a slow clock
-            ulp_riscv_gpio_output_level(u8SCK, 0);
-        }
-    } else {
-        for (int i=0; i<8; i++) {
-            ulp_riscv_gpio_output_level(u8MOSI, (uc & 0x80)); // msb first
-            ulp_riscv_gpio_output_level(u8SCK, 1); // no delays needed since it runs at a slow clock
-            uc <<= 1;
-            ulp_riscv_gpio_output_level(u8SCK, 0);
+    for (int j=0; j<iLen; j++) {
+        uc = *pData++;
+        if (uc == 0 || uc == 0xff) { // special case
+            ulp_riscv_gpio_output_level(u8MOSI, (uc & 1));
+            for (int i=0; i<8; i++) {
+                ulp_riscv_gpio_output_level(u8SCK, 1); // no delays needed since it runs at a slow clock
+                ulp_riscv_gpio_output_level(u8SCK, 0);
+            }
+        } else {
+            for (int i=0; i<8; i++) {
+                ulp_riscv_gpio_output_level(u8MOSI, (uc & 0x80)); // msb first
+                ulp_riscv_gpio_output_level(u8SCK, 1); // no delays needed since it runs at a slow clock
+                uc <<= 1;
+                ulp_riscv_gpio_output_level(u8SCK, 0);
+            }
         }
     }
-} /* SPIWriteByte() */
+} /* SPIWriteBytes() */
 
 void bbepWriteCmd(BBEPDISP *pBBEP, uint8_t ucCMD)
 {   
     digitalWrite(pBBEP->iDCPin, LOW);
     digitalWrite(pBBEP->iCSPin, LOW);
-    SPIWriteByte(pBBEP, ucCMD);
+    SPIWriteBytes(pBBEP, &ucCMD, 1);
     digitalWrite(pBBEP->iDCPin, HIGH);
     digitalWrite(pBBEP->iCSPin, HIGH);
 } /* bbepWriteCmd() */
@@ -145,9 +149,7 @@ void bbepWriteCmd(BBEPDISP *pBBEP, uint8_t ucCMD)
 void bbepWriteData(BBEPDISP *pBBEP, uint8_t *pData, int iLen)
 {
     digitalWrite(pBBEP->iCSPin, LOW);
-    for (int i=0; i<iLen; i++) {
-        SPIWriteByte(pBBEP, pData[i]);
-    }
+    SPIWriteBytes(pBBEP, pData, iLen);
     digitalWrite(pBBEP->iCSPin, HIGH);
 }
 

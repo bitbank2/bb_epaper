@@ -115,7 +115,6 @@ static void Decode_Begin(G5DECIMAGE *pPage)
 {
     int i, xsize;
     int16_t *CurFlips, *RefFlips;
-    uint8_t *pBuf, *pBufEnd;
     
     xsize = pPage->iWidth;
     
@@ -135,21 +134,15 @@ static void Decode_Begin(G5DECIMAGE *pPage)
     
     pPage->pCur = CurFlips;
     pPage->pRef = RefFlips;
-
-    pBuf = pPage->pSrc;
-//
-// Some files may have leading 0's that would confuse the decoder
-// Valid G5 data can't begin with a 0
-//
-    pBufEnd = &pBuf[128]; // DEBUG
-    while (pBuf < pBufEnd && pBuf[0] == 0)
-    { pBuf++; }
-    
-    pPage->pBuf = pBuf;
-    pPage->ulBits = TIFFMOTOLONG(pBuf); // load 32 bits to start
+    pPage->pBuf = pPage->pSrc;
+    pPage->ulBits = TIFFMOTOLONG(pPage->pSrc); // load 32 bits to start
     pPage->ulBitOff = 0;
     // Calculate the number of bits needed for a long horizontal code
+#ifdef __AVR__
+    pPage->iHLen = 16 - __builtin_clz(pPage->iWidth);
+#else
     pPage->iHLen = 32 - __builtin_clz(pPage->iWidth);
+#endif
 } /* Decode_Begin() */
 //
 // Decode a single line of G5 data (private function)

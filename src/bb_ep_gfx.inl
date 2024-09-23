@@ -594,20 +594,25 @@ unsigned int c;
 uint8_t *s, bInvert = 0;
 BB_GLYPH *pGlyph;
 uint8_t *pBits, u8CMD1, u8CMD2, u8CMD, u8EndMask;
+uint8_t first, last;
+
+    if (pBBEP == NULL || pFont == NULL) return; // invalid param
 
     if (x == -1)
         x = pBBEP->iCursorX;
     if (y == -1)
         y = pBBEP->iCursorY;
+    first = pgm_read_byte(&pFont->first);
+    last = pgm_read_byte(&pFont->last);
     if (x == CENTER_X) { // center the string on the e-paper
         dx = i = 0;
         while (szMsg[i]) {
           c = szMsg[i++];
-          if (c < pFont->first || c > pFont->last) // undefined character
+          if (c < first || c > last) // undefined character
              continue; // skip it
-          c -= pFont->first; // first char of font defined
+          c -= first; // first char of font defined
           pGlyph = &pFont->glyphs[c]; // glyph info for this character
-          dx += pGlyph->xAdvance;
+          dx += pgm_read_byte(&pGlyph->xAdvance);
         }
         x = (pBBEP->native_width - dx)/2;
         if (x < 0) x = 0;
@@ -615,26 +620,26 @@ uint8_t *pBits, u8CMD1, u8CMD2, u8CMD, u8EndMask;
     // Point to the start of the compressed data
     pBits = (uint8_t *)pFont;
     pBits += sizeof(BB_FONT);
-    pBits += (pFont->last - pFont->first + 1) * sizeof(BB_GLYPH);
+    pBits += (last - first + 1) * sizeof(BB_GLYPH);
    i = 0;
    while (szMsg[i] && x < pBBEP->native_width && y < pBBEP->native_height) {
       c = szMsg[i++];
-      if (c < pFont->first || c > pFont->last) // undefined character
+      if (c < first || c > last) // undefined character
          continue; // skip it
-      c -= pFont->first; // first char of font defined
+      c -= first; // first char of font defined
       pGlyph = &pFont->glyphs[c]; // glyph info for this character
-       if (pGlyph->width > 1) { // skip this if drawing a space
-           s = pBits + pGlyph->bitmapOffset; // start of compressed bitmap data
-           if (pFont->rotation == 0 || pFont->rotation == 180) {
-               h = pGlyph->height;
-               w = pGlyph->width;
-               dx = x + pGlyph->xOffset; // offset from character UL to start drawing
-               dy = y + pGlyph->yOffset;
+       if (pgm_read_byte(&pGlyph->width) > 1) { // skip this if drawing a space
+           s = pBits + pgm_read_word(&pGlyph->bitmapOffset); // start of compressed bitmap data
+           if (pgm_read_word(&pFont->rotation) == 0 || pgm_read_word(&pFont->rotation) == 180) {
+               h = pgm_read_word(&pGlyph->height);
+               w = pgm_read_byte(&pGlyph->width);
+               dx = x + pgm_read_word(&pGlyph->xOffset); // offset from character UL to start drawing
+               dy = y + pgm_read_word(&pGlyph->yOffset);
            } else { // rotated
-               w = pGlyph->height;
-               h = pGlyph->width;
-               dx = x + pGlyph->yOffset; // offset from character UL to start drawing
-               dy = y + pGlyph->xOffset;
+               w = pgm_read_word(&pGlyph->height);
+               h = pgm_read_byte(&pGlyph->width);
+               dx = x + pgm_read_word(&pGlyph->yOffset); // offset from character UL to start drawing
+               dy = y + pgm_read_word(&pGlyph->xOffset);
            }
            if ((dy + h) > pBBEP->native_height) { // trim it
                h = pBBEP->native_height - dy;
@@ -644,7 +649,7 @@ uint8_t *pBits, u8CMD1, u8CMD2, u8CMD, u8EndMask;
                u8EndMask <<= (8-(w & 7));
            }
            end_y = dy + h;
-           ty = (pGlyph[1].bitmapOffset - (intptr_t)(s - pBits)); // compressed size
+           ty = (pgm_read_word(&pGlyph[1].bitmapOffset) - (intptr_t)(s - pBits)); // compressed size
            if (ty < 0 || ty > 4096) ty = 4096; // DEBUG
            rc = g5_decode_init(&g5dec, w, h, s, ty);
            if (rc != G5_SUCCESS) return; // corrupt data?
@@ -689,8 +694,8 @@ uint8_t *pBits, u8CMD1, u8CMD2, u8CMD, u8EndMask;
                    u8CMD = u8CMD2; // second plane is red (inverted)
                }
                bbepWriteCmd(pBBEP, u8CMD); // memory write command
-               for (ty=dy; ty<end_y && ty < pBBEP->native_height; ty++) {
-                   g5_decode_line(&g5dec, u8Cache);
+               for (ty=dy; ty<end_y && rc == G5_SUCCESS && ty < pBBEP->native_height; ty++) {
+                   rc = g5_decode_line(&g5dec, u8Cache);
                    u8Cache[iSrcPitch-1] &= u8EndMask; // clean pixels beyond character width
                    u8Cache[iSrcPitch] = 0;
                    if (dx & 7) { // need to shift it over by 1-7 bits
@@ -710,10 +715,10 @@ uint8_t *pBits, u8CMD1, u8CMD2, u8CMD, u8EndMask;
                } // for y
            }
       } // if not drawing a space
-      if (pFont->rotation == 0 || pFont->rotation == 180) {
-        x += pGlyph->xAdvance; // width of this character
+      if (pgm_read_word(&pFont->rotation) == 0 || pgm_read_word(&pFont->rotation) == 180) {
+        x += pgm_read_byte(&pGlyph->xAdvance); // width of this character
       } else {
-        y += pGlyph->xAdvance;
+        y += pgm_read_byte(&pGlyph->xAdvance);
       }
    } // while drawing characters
     pBBEP->iCursorX = x;
