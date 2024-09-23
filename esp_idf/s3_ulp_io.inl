@@ -1,44 +1,87 @@
 //
-// I/O wrapper functions for the ESP-IDF
+// I/O wrapper functions for the S2/S3 RISC-V ULP
 //
-#ifndef __ESP_IDF_IO__
-#define __ESP_IDF_IO__
+#ifndef __ULP_IO__
+#define __ULP_IO__
 
 #define INPUT 0
 #define INPUT_PULLUP 1
 #define OUTPUT 2
 #define DISABLED 3
+
 #define PROGMEM
 #define HIGH 1
 #define LOW 0
-#define PIN_SCK 4
-#define PIN_MOSI 6
+#define PIN_SDA 6
+#define PIN_SCL 7
+
+// Pinout for the LilyGo mini-epaper S3
+#define PIN_BUSY 10
+#define PIN_RST 11
+#define PIN_DC 12
+#define PIN_CS 13
+#define PIN_SCK 14
+#define PIN_MOSI 15
+
+// Pinout for my custom ESP32-S3 circuit
+//#define PIN_BUSY 12
+//#define PIN_RST 7
+//#define PIN_DC 10
+//#define PIN_CS 11
+//#define PIN_SCK 1
+//#define PIN_MOSI 3
+
+// CPU cycles per bit
+#define I2C_DELAY 40
 
 void digitalWrite(int iPin, int iState) {
-   gpio_set_level((gpio_num_t)iPin, (uint32_t)iState);
+   ulp_riscv_gpio_output_level(iPin, iState);
 }
 void pinMode(int iPin, int iMode)
 {
-    gpio_config_t io_conf = {};
-
-    gpio_reset_pin(iPin);
-    if (iMode == DISABLED) return;
-    io_conf.intr_type = GPIO_INTR_DISABLE; //disable interrupt
-    //bit mask of the pins that you want to set,e.g.GPIO18/19
-    io_conf.pin_bit_mask = (1ULL << iPin);
-    io_conf.pull_down_en = 0; //disable pull-down mode
-    io_conf.pull_up_en = (iMode == INPUT_PULLUP); // pull-up mode
+    ulp_riscv_gpio_init(iPin);
     if (iMode == INPUT || iMode == INPUT_PULLUP) {
-        io_conf.mode = GPIO_MODE_INPUT;
-    } else { // must be output
-        io_conf.mode = GPIO_MODE_OUTPUT;
+        ulp_riscv_gpio_output_disable(iPin);
+        ulp_riscv_gpio_input_enable(iPin);
+        if (iMode == INPUT_PULLUP) {
+            ulp_riscv_gpio_pullup(iPin);
+        } else {
+            ulp_riscv_gpio_pullup_disable(iPin);
+        }
+    } else if (iMode == DISABLED) {
+        ulp_riscv_gpio_deinit(iPin);
+    } else { // OUTPUT
+        ulp_riscv_gpio_input_disable(iPin);
+        ulp_riscv_gpio_set_output_mode(iPin, RTCIO_MODE_OUTPUT);
+        ulp_riscv_gpio_output_enable(iPin);
     }
-    gpio_config(&io_conf); //configure GPIO with the given settings
 } /* pinMode() */
+
 int digitalRead(int iPin)
 {
-  return (int)gpio_get_level((gpio_num_t)iPin);
+  return (int)ulp_riscv_gpio_get_level(iPin);
 } /* digitalRead() */
+//
+// Bit Bang SPI
+//
+void SPIWriteByte(uint8_t uc)
+{
+    if (uc == 0 || uc == 0xff) { // special case
+        ulp_riscv_gpio_output_level(PIN_MOSI, (uc & 1));
+        for (int i=0; i<8; i++) {
+            ulp_riscv_gpio_output_level(PIN_SCK, 1); // no delays needed since it runs at a slow clock
+            ulp_riscv_gpio_output_level(PIN_SCK, 0);
+        }
+    } else {
+        for (int i=0; i<8; i++) {
+            ulp_riscv_gpio_output_level(PIN_MOSI, (uc & 0x80)); // msb first
+            ulp_riscv_gpio_output_level(PIN_SCK, 1); // no delays needed since it runs at a slow clock
+            uc <<= 1;
+            ulp_riscv_gpio_output_level(PIN_SCK, 0);
+        }
+    }
+} /* SPIWriteByte() */
+
 void delayMicroseconds(long l)
 {
     l *= 40;
@@ -51,6 +94,16 @@ void _delay(long l)
 {
     delayMicroseconds(l*1000);
 }
+void mymemcpy(void *d, void *s, size_t iLen)
+{
+    uint8_t *d8 = (uint8_t *)d;
+    uint8_t *s8 = (uint8_t *)s;
+    while (iLen) {
+        *d8++ = *s8++;
+        iLen--;
+    }
+} /* mymemcpy() */
+
 void mymemset(void *d, uint8_t u8, int len)
 {
     uint8_t *d8;
@@ -70,15 +123,6 @@ void mymemset(void *d, uint8_t u8, int len)
         len--;
     }
 } /* mymemset() */
-void mymemcpy(void *d, void *s, size_t iLen)
-{
-    uint8_t *d8 = (uint8_t *)d;
-    uint8_t *s8 = (uint8_t *)s;
-    while (iLen) {
-        *d8++ = *s8++;
-        iLen--;
-    }
-} /* mymemcpy() */
 //
 // Convert a number into a fixed length, zero-terminated string
 //
@@ -124,63 +168,34 @@ int i2str(char *pDest, int iVal)
         *d++ = 0; // terminator
         return (int)(d - pDest - 1); // string length
 } /* i2str() */
-void delayCycles(int i)
-{
-    while (i > 3) {
-        __asm__ __volatile__ ("nop\n\t");
-        i -= 3;
-    }
-}
-//
-// Bit Bang SPI
-//
-void SPIWriteByte(uint8_t uc)
-{
-    if (uc == 0 || uc == 0xff) { // special case
-        digitalWrite(PIN_MOSI, (uc & 1));
-        delayCycles(5);
-        for (int i=0; i<8; i++) {
-            digitalWrite(PIN_SCK, 1); // no delays needed since it runs at a slow clock
-            delayCycles(5);
-            digitalWrite(PIN_SCK, 0);
-            delayCycles(5);
-        }
-    } else {
-        for (int i=0; i<8; i++) {
-            digitalWrite(PIN_MOSI,  (uc & 0x80) != 0); // MSB first
-            delayCycles(5);
-            digitalWrite(PIN_SCK, 1);
-            uc <<= 1;
-            delayCycles(5);
-            digitalWrite(PIN_SCK, 0);
-            delayCycles(5);
-        }
-    }
-} /* SPIWriteByte() */
 //
 // Need to bit-bang I2C
 //
 uint8_t SDA_READ(void)
 {
-    return digitalRead(PIN_SDA);
+    return ulp_riscv_gpio_get_level(PIN_SDA);
 }
 void SDA_HIGH(void)
 {
-    pinMode(PIN_SDA, INPUT_PULLUP);
+    ulp_riscv_gpio_output_disable(PIN_SDA);
+    ulp_riscv_gpio_input_enable(PIN_SDA);
 }
 void SDA_LOW(void)
 {
-    pinMode(PIN_SDA, OUTPUT);
-    digitalWrite(PIN_SDA, LOW);
+    ulp_riscv_gpio_input_disable(PIN_SDA);
+    ulp_riscv_gpio_output_enable(PIN_SDA);
+    ulp_riscv_gpio_output_level(PIN_SDA, 0);
 }
 void SCL_HIGH(void)
 {
-    pinMode(PIN_SCL, INPUT_PULLUP);
+    ulp_riscv_gpio_output_disable(PIN_SCL);
+    ulp_riscv_gpio_input_enable(PIN_SCL);
 }
 void SCL_LOW(void)
 {
-    pinMode(PIN_SCL, OUTPUT);
-    digitalWrite(PIN_SCL, LOW);
+    ulp_riscv_gpio_input_disable(PIN_SCL);
+    ulp_riscv_gpio_output_enable(PIN_SCL);
+    ulp_riscv_gpio_output_level(PIN_SDA, 0);
 }
 // Transmit a byte and read the ack bit
 // if we get a NACK (negative acknowledge) return 0
@@ -200,20 +215,20 @@ for (i=0; i<8; i++) {
     b <<= 1;
 //    my_sleep_us(iDelay);
     SCL_HIGH(); // clock high (slave latches data)
-    delayMicroseconds(1);
+    ulp_riscv_delay_cycles(I2C_DELAY);
     SCL_LOW(); // clock low
-    delayMicroseconds(1);
+    ulp_riscv_delay_cycles(I2C_DELAY);
 } // for i
 //my_sleep_us(iDelay);
 // read ack bit
 SDA_HIGH(); // set data line for reading
 //my_sleep_us(iDelay);
 SCL_HIGH(); // clock line high
-delayMicroseconds(1);
+ulp_riscv_delay_cycles(I2C_DELAY); // DEBUG - delay/2
 ack = SDA_READ();
 //my_sleep_us(iDelay);
 SCL_LOW(); // clock low
-delayMicroseconds(1);
+ulp_riscv_delay_cycles(I2C_DELAY); // DEBUG - delay/2
 SDA_LOW(); // data low
 return (ack == 0); // a low ACK bit means success
 } /* i2cByteOut() */
@@ -230,9 +245,9 @@ uint8_t b = 0;
      SDA_HIGH(); // set data line as input
      for (i=0; i<8; i++)
      {
-         delayMicroseconds(1);
+         ulp_riscv_delay_cycles(I2C_DELAY); // wait for data to settle
          SCL_HIGH(); // clock high (slave latches data)
-         delayMicroseconds(1);
+         ulp_riscv_delay_cycles(I2C_DELAY);
          b <<= 1;
          if (SDA_READ() != 0) // read the data bit
            b |= 1; // set data bit
@@ -244,9 +259,9 @@ uint8_t b = 0;
         SDA_LOW();
 //     my_sleep_us(iDelay);
      SCL_HIGH(); // clock high
-     delayMicroseconds(1);
+     ulp_riscv_delay_cycles(I2C_DELAY);
      SCL_LOW(); // clock low to send ack
-     delayMicroseconds(1);
+     ulp_riscv_delay_cycles(I2C_DELAY);
 //     SDA_HIGH();
      SDA_LOW(); // data low
   return b;
@@ -257,11 +272,11 @@ uint8_t b = 0;
 void i2cEnd(void)
 {
    SDA_LOW(); // data line low
-   delayMicroseconds(1);
+   ulp_riscv_delay_cycles(I2C_DELAY);
    SCL_HIGH(); // clock high
-   delayMicroseconds(1);
+   ulp_riscv_delay_cycles(I2C_DELAY);
    SDA_HIGH(); // data high
-   delayMicroseconds(1);
+   ulp_riscv_delay_cycles(I2C_DELAY);
 } /* i2cEnd() */
 
 int i2cBegin(uint8_t addr, uint8_t bRead)
@@ -270,7 +285,7 @@ int i2cBegin(uint8_t addr, uint8_t bRead)
 //   SCL_HIGH();
 //   my_sleep_us(iDelay);
    SDA_LOW(); // data line low first
-   delayMicroseconds(1);
+   ulp_riscv_delay_cycles(I2C_DELAY);
    SCL_LOW(); // then clock line low is a START signal
    addr <<= 1;
    if (bRead)
@@ -340,4 +355,4 @@ void I2CReadRegister(uint8_t iAddr, uint8_t u8Register, uint8_t *pData, int iLen
   I2CRead(iAddr, pData, iLen);
 } /* I2CReadRegister() */
 
-#endif // __ESP_IDF_IO__
+#endif // __ULP_IO__
