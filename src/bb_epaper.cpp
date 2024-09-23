@@ -63,13 +63,7 @@ void BBEPAPER::setAddrWindow(int x, int y, int w, int h)
 #ifdef ARDUINO
 void BBEPAPER::initIO(int iDC, int iReset, int iBusy, int iCS, int iMOSI, int iSCLK, uint32_t u32Speed)
 {
-    _bbep.iCSPin = iCS;
-    _bbep.iMOSIPin = iMOSI;
-    _bbep.iCLKPin = iSCLK;
-    _bbep.iDCPin = iDC;
-    _bbep.iRSTPin = iReset;
-    _bbep.iBUSYPin = iBusy;
-    bbepInitIO(&_bbep, u32Speed);
+    bbepInitIO(&_bbep, iDC, iReset, iBusy, iCS, iMOSI, iSCLK, u32Speed);
     bbepWakeUp(&_bbep);
     bbepSendCMDSequence(&_bbep, _bbep.pInitFull);
 } /* initIO() */

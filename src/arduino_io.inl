@@ -23,8 +23,15 @@
 //
 // Initialize the GPIO pins and SPI for use by bb_eink
 //
-void bbepInitIO(BBEPDISP *pBBEP, uint32_t u32Speed)
+void bbepInitIO(BBEPDISP *pBBEP, uint8_t u8DC, uint8_t u8RST, uint8_t u8BUSY, uint8_t u8CS, uint8_t u8MOSI, uint8_t u8SCK, uint32_t u32Speed)
 {
+    pBBEP->iDCPin = u8DC;
+    pBBEP->iCSPin = u8CS;
+    pBBEP->iMOSIPin = u8MOSI;
+    pBBEP->iCLKPin = u8SCK;
+    pBBEP->iRSTPin = u8RST;
+    pBBEP->iBUSYPin = u8BUSY;
+
     pinMode(pBBEP->iDCPin, OUTPUT);
     pinMode(pBBEP->iRSTPin, OUTPUT);
     digitalWrite(pBBEP->iRSTPin, LOW);
@@ -45,29 +52,6 @@ void bbepInitIO(BBEPDISP *pBBEP, uint32_t u32Speed)
     SPI.beginTransaction(SPISettings(u32Speed, MSBFIRST, SPI_MODE0));
     SPI.endTransaction(); // N.B. - if you call beginTransaction() again without a matching endTransaction(), it will hang on ESP32
 } /* bbepInitIO() */
-//
-// Toggle the reset line to wake up the eink from deep sleep
-//
-void bbepWakeUp(BBEPDISP *pBBEP)
-{
-    digitalWrite(pBBEP->iRSTPin, LOW);
-    delay(10);
-    digitalWrite(pBBEP->iRSTPin, HIGH);
-    delay(10);
-} /* bbepWakeUp() */
-//
-// Wait for the busy status line to show idle
-// The polarity of the busy signal is reversed on the UC81xx compared
-// to the SSD16xx controllers
-//
-void bbepWaitBusy(BBEPDISP *pBBEP)
-{
-    uint8_t busy_idle =  (pBBEP->chip_type == BBEP_CHIP_UC81xx) ? HIGH : LOW;
-    delay(1); // some panels need a short delay before testing the BUSY line
-    while (1) {
-        if (digitalRead(pBBEP->iBUSYPin) == busy_idle) break;
-    }
-} /* bbepWaitBusy() */
 //
 // Convenience function to write a command byte along with a data
 // byte (it's single parameter)

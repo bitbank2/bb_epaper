@@ -14,6 +14,9 @@
 //
 // bb_ei_gfx.inl - graphics functions
 //
+// For constrained CPU environments, the NO_RAM macro will be defined
+// to reduce codespace used by each of the functions
+//
 #ifndef __BB_EP_GFX__
 #define __BB_EP_GFX__
 #include "Group5.h"
@@ -621,15 +624,17 @@ uint8_t *pBits, u8CMD1, u8CMD2, u8CMD, u8EndMask;
       c -= pFont->first; // first char of font defined
       pGlyph = &pFont->glyphs[c]; // glyph info for this character
        if (pGlyph->width > 1) { // skip this if drawing a space
-           dx = x + pGlyph->xOffset; // offset from character UL to start drawing
-           dy = y + pGlyph->yOffset;
            s = pBits + pGlyph->bitmapOffset; // start of compressed bitmap data
            if (pFont->rotation == 0 || pFont->rotation == 180) {
                h = pGlyph->height;
                w = pGlyph->width;
+               dx = x + pGlyph->xOffset; // offset from character UL to start drawing
+               dy = y + pGlyph->yOffset;
            } else { // rotated
                w = pGlyph->height;
                h = pGlyph->width;
+               dx = x + pGlyph->yOffset; // offset from character UL to start drawing
+               dy = y + pGlyph->xOffset;
            }
            if ((dy + h) > pBBEP->native_height) { // trim it
                h = pBBEP->native_height - dy;
@@ -644,6 +649,7 @@ uint8_t *pBits, u8CMD1, u8CMD2, u8CMD, u8EndMask;
            rc = g5_decode_init(&g5dec, w, h, s, ty);
            if (rc != G5_SUCCESS) return; // corrupt data?
            if (pBBEP->ucScreen) { // backbuffer, draw pixels
+#ifndef NO_RAM
                for (ty=dy; ty<end_y && ty < pBBEP->native_height; ty++) {
                    uint8_t u8, u8Count;
                    g5_decode_line(&g5dec, u8Cache);
@@ -662,6 +668,7 @@ uint8_t *pBits, u8CMD1, u8CMD2, u8CMD, u8EndMask;
                        }
                    }
                }
+#endif // NO_RAM
            } else { // draw directly into EPD memory
                // set the memory window for this character
                iSrcPitch = (w+7)/8;
@@ -751,10 +758,6 @@ uint8_t u8Temp[128];
     if (iSize == FONT_8x8) // 8x8 font
     {
        i = 0;
-        if (!pBBEP->ucScreen) { // bufferless mode, rotate the coordinate system to fit the situation
- //           bbepSetAddrWindow(pBBEP, √, pBBEP->iCursorX, 8, pBBEP->native_height-pBBEP->iCursorX);
-//            bbepWriteCmd(pBBEP, ucCMD1); // write to "new" plane
-        }
        while (pBBEP->iCursorX < pBBEP->width && szMsg[i] != 0 && pBBEP->iCursorY < pBBEP->height)
        {
          c = (unsigned char)szMsg[i];
@@ -772,7 +775,9 @@ uint8_t u8Temp[128];
                bbepWriteCmd(pBBEP, ucCMD); // write to "new" plane
                bbepWriteData(pBBEP, u8Temp, iLen);
            } else { // draw in memory
+#ifndef NO_RAM
                // DEBUG
+#endif
            }
          pBBEP->iCursorX += iLen;
         if (pBBEP->iCursorX >= pBBEP->width-7 && pBBEP->wrap) { // word wrap enabled?
@@ -905,7 +910,9 @@ uint8_t u8Temp[128];
                 bbepWriteCmd(pBBEP, ucCMD); // write to "new" plane
                 bbepWriteData(pBBEP, &u8Temp[18], iLen);
             } else { // write to RAM
+#ifndef NO_RAM
                 // DEBUG
+#endif
             }
               pBBEP->iCursorX += iLen;
               if (pBBEP->iCursorX >= pBBEP->width-11 && pBBEP->wrap) // word wrap enabled?
@@ -936,7 +943,9 @@ uint8_t u8Temp[128];
                bbepWriteCmd(pBBEP, ucCMD); // write to "new" plane
                bbepWriteData(pBBEP, u8Temp, iLen);
            } else { // write to RAM
+#ifndef NO_RAM
                // DEBUG
+#endif
            }
                pBBEP->iCursorX += iLen;
                if (pBBEP->iCursorX >= pBBEP->width-5 && pBBEP->wrap) // word wrap enabled?
@@ -981,8 +990,10 @@ int miny, maxy;
 
 void bbepAllocBuffer(BBEPDISP *pBBEP)
 {
+#ifndef NO_RAM
   pBBEP->ucScreen = (uint8_t *)malloc(pBBEP->width * ((pBBEP->height+7)>>3));
   pBBEP->iScreenOffset = 0;
+#endif
 } /* obdAllocBuffer() */
 
 void bbepDrawLine(BBEPDISP *pBBEP, int x1, int y1, int x2, int y2, uint8_t ucColor)
@@ -1334,6 +1345,7 @@ void bbepRectangle(BBEPDISP *pBBEP, int x1, int y1, int x2, int y2, uint8_t ucCo
     }
     if (bFilled)
     {
+#ifndef NO_RAM
         if (pBBEP->ucScreen) { // has a buffer to fill
             int x, y, iMiddle;
             iMiddle = (y2 >> 3) - (y1 >> 3);
@@ -1367,7 +1379,9 @@ void bbepRectangle(BBEPDISP *pBBEP, int x1, int y1, int x2, int y2, uint8_t ucCo
                         *d++ &= ~ucMask;
                 }
             }
-        } else { // no buffer
+        } else
+#endif // NO_RAM
+        { // no buffer
             int cx, cy, iPitch;
             cx = x2-x1+1;
             iPitch = (cx+7)/8;

@@ -971,6 +971,7 @@ const EPD_PANEL panelDefs[] PROGMEM = {
     {240, 416, epd37_init_sequence_full, NULL, epd37_init_sequence_part, 0, BBEP_CHIP_UC81xx}, // EPD37_240x416
     {176, 264, epd27_ws_init_sequence_full, NULL, NULL, BBEP_CS_EVERY_BYTE, BBEP_CHIP_UC81xx}, // EPD27_176x264 Waveshare 2.7" e-paper HAT
 };
+
 int bbepSetPanelType(BBEPDISP *pBBEP, int iPanel)
 {
     if (pBBEP == NULL || iPanel <= EPD_PANEL_UNDEFINED || iPanel >= EPD_PANEL_COUNT)
@@ -987,6 +988,30 @@ int bbepSetPanelType(BBEPDISP *pBBEP, int iPanel)
     pBBEP->type = iPanel;
     return BBEP_SUCCESS;
 } /* bbepSetPanelType() */
+
+//
+// Toggle the reset line to wake up the eink from deep sleep
+// 
+void bbepWakeUp(BBEPDISP *pBBEP)
+{
+    digitalWrite(pBBEP->iRSTPin, LOW);
+    delay(10);
+    digitalWrite(pBBEP->iRSTPin, HIGH);
+    delay(10); 
+} /* bbepWakeUp() */
+// 
+// Wait for the busy status line to show idle
+// The polarity of the busy signal is reversed on the UC81xx compared
+// to the SSD16xx controllers
+//
+void bbepWaitBusy(BBEPDISP *pBBEP)
+{
+    uint8_t busy_idle =  (pBBEP->chip_type == BBEP_CHIP_UC81xx) ? HIGH : LOW;
+    delay(1); // some panels need a short delay before testing the BUSY line
+    while (1) {
+        if (digitalRead(pBBEP->iBUSYPin) == busy_idle) break;
+    }
+} /* bbepWaitBusy() */
 
 void bbepSetAddrWindow(BBEPDISP *pBBEP, int x, int y, int cx, int cy)
 {
