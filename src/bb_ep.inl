@@ -1154,7 +1154,7 @@ uint8_t *s;
 //
 void bbepFill(BBEPDISP *pBBEP, unsigned char ucData, int iPlane)
 {
-uint8_t uc1, uc2;
+uint8_t uc1=0, uc2=0;
 int y, iSize, iPitch;
 uint8_t ucCMD1, ucCMD2;
     
