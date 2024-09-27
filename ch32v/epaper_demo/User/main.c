@@ -1,5 +1,7 @@
 #include "debug.h"
-#include "debug.h"
+// This makes the compiled code smaller on systems with almost no RAM
+// since it can't use a local copy of the framebuffer for drawing
+#define NO_RAM
 #include "../../../src/bb_epaper.h"
 #include "../../ch32v_io.inl"
 #include "../../../src/bb_ep.inl"

@@ -17,6 +17,10 @@
 
 #ifdef ARDUINO
 #include <Arduino.h>
+#ifdef __AVR__
+// AVR doesn't have enough RAM for a back buffer
+#define NO_RAM
+#endif // __AVR__
 #else // _LINUX_
 // for Print support
 #define DEC 10

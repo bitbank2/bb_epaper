@@ -299,10 +299,11 @@ void bbepDrawSprite(BBEPDISP *pBBEP, const uint8_t *pSprite, int cx, int cy, int
         } // for ty
     }
 } /* bbepDrawSprite() */
-
+//
 // Set (or clear) an individual pixel
-// The local copy of the frame buffer is used to avoid
-// reading data from the display controller
+// This function only works with a back buffer defined. A bufferless version
+// is possible, but would be too impractical.
+//
 int bbepSetPixel(BBEPDISP *pBBEP, int x, int y, unsigned char ucColor)
 {
 int i;
@@ -370,11 +371,6 @@ uint8_t b=0, *s, *d=NULL;
 uint8_t ucFill, dst_mask=0, src_mask;
 uint8_t bFlipped = 0;
 
-    if (pBBEP->ucScreen == NULL) {
-        // no BG specified or no back buffer, BG color is opposite of FG
-        if (iFG == -1) iFG = BBEP_WHITE;
-        if (iBG == -1) iBG = BBEP_BLACK;
-    }
     // Don't use pgm_read_word because it can cause an unaligned
     // access on RP2040 for odd addresses
   i16 = pgm_read_byte(pBMP);
@@ -391,6 +387,14 @@ uint8_t bFlipped = 0;
   else bFlipped = 1;
   if (cy + dy > pBBEP->height) // must fit on the display
      return BBEP_ERROR_BAD_PARAMETER;
+    if (pBBEP->ucScreen == NULL) {
+        // no BG specified or no back buffer, BG color is opposite of FG
+        if (iFG == -1) iFG = BBEP_WHITE;
+        if (iBG == -1) iBG = BBEP_BLACK;
+        bbepSetAddrWindow(pBBEP, dx, dy, cx+(dx&7), cy);
+        bbepStartWrite(pBBEP, pBBEP->iPlane); // get ready to write the data
+    }
+
   i16 = pgm_read_byte(pBMP + 28);
     i16 += (pgm_read_byte(pBMP+29)<<8);
   if (i16 != 1) // must be 1 bit per pixel
@@ -410,51 +414,32 @@ uint8_t bFlipped = 0;
         iFG = iBG;
         iBG = x; // swap colors
     }
-  for (y=0; y<cy; y++)
-  {
-     if (!pBBEP->ucScreen)
-     {
-         dst_mask = (1 << (y & 7));
-        d = u8Cache;
-        if ((y & 7) == 0)
-           memset(u8Cache, ucFill, sizeof(u8Cache));
-     }
-     s = (uint8_t *)&pBMP[iOffBits + (y*iPitch)];
-     src_mask = 0;
-      if (!pBBEP->ucScreen) // direct to display
-      {
-         for (x=0; x<cx; x++)
-         {
-            if (src_mask == 0) // need to load the next byte
-            {
-               b = pgm_read_byte(s++);
-               src_mask = 0x80; // MSB on left
-            }
-            if (b & src_mask)
-            {
-               if (iFG == BBEP_WHITE)
-                  d[0] &= ~dst_mask;
-               else
-                  d[0] |= dst_mask;
-            } else {
-                if (iBG == BBEP_BLACK)
-                   d[0] |= dst_mask;
-                else
-                   d[0] &= ~dst_mask;
-            }
-            d++;
-            src_mask >>= 1;
-         } // for x
+  for (y=0; y<cy; y++) {
+      s = (uint8_t *)&pBMP[iOffBits + (y*iPitch)];
+     if (!pBBEP->ucScreen) {
+         if (dx & 7) { // need to shift it over by 1-7 bits
+             uint8_t *d = u8Cache, uc1, uc0 = 0; // last shifted byte
+             uint8_t n = dx & 7; // shift amount
+             for (int j=0; j<cx+7; j+= 8) {
+                 uc1 = pgm_read_byte(s++);
+                 uc0 |= (uc1 >> n);
+                 *d++ = uc0;
+                 uc0 = uc1 << (8-n);
+             }
+             *d++ = uc0; // store final byte
+             *d++ = 0; // and a zero for good measure
+         } else {
+             memcpy_P(u8Cache, s, (cx+7)>>3);
+         }
+         bbepWriteData(pBBEP, u8Cache, (cx+(dx&7)+7)>>3);
       } else { // use the setPixel function for more features
-          for (x=0; x<cx; x++)
-          {
-             if (src_mask == 0) // need to load the next byte
-             {
+          src_mask = 0; // make it read a byte to start
+          for (x=0; x<cx; x++) {
+              if (src_mask == 0) { // need to load the next byte
                 b = pgm_read_byte(s++);
                 src_mask = 0x80; // MSB on left
              }
-             if (b & src_mask)
-             {
+             if (b & src_mask) {
                  if (iFG >= 0)
                      bbepSetPixel(pBBEP, dx+x, dy+y, (uint8_t)iFG);
              } else {
@@ -464,11 +449,6 @@ uint8_t bFlipped = 0;
              src_mask >>= 1;
           } // for x
       }
-     if (pBBEP->ucScreen == NULL && ((y & 7) == 7 || y == cy-1)) // dump to LCD
-     {
-       bbepSetAddrWindow(pBBEP, dx, y+dy, cx, 1);
-       bbepWriteData(pBBEP, u8Cache, cx);
-     }
   } // for y
   return BBEP_SUCCESS;
 } /* bbepLoadBMP() */
@@ -1000,7 +980,10 @@ void bbepAllocBuffer(BBEPDISP *pBBEP)
   pBBEP->iScreenOffset = 0;
 #endif
 } /* obdAllocBuffer() */
-
+//
+// Draw a line from x1,y1 to x2,y2 in the given color
+// This function supports both buffered and bufferless drawing
+//
 void bbepDrawLine(BBEPDISP *pBBEP, int x1, int y1, int x2, int y2, uint8_t ucColor)
 {
   int temp;
@@ -1010,29 +993,23 @@ void bbepDrawLine(BBEPDISP *pBBEP, int x1, int y1, int x2, int y2, uint8_t ucCol
   uint8_t *p, *pStart, ucFill = 0, mask, bOld, bNew;
   int xinc, yinc;
   int y, x;
-  int iPitch = pBBEP->width;
+  int iPitch;
   int iRedOffset = 0;
 
   if (pBBEP == NULL) return;
 
   if (x1 < 0 || x2 < 0 || y1 < 0 || y2 < 0 || x1 >= pBBEP->width || x2 >= pBBEP->width || y1 >= pBBEP->height || y2 >= pBBEP->height)
      return;
+    iPitch = (pBBEP->width + 7)>>3;
   if (ucColor >= BBEP_YELLOW && pBBEP->iFlags & (BBEP_3COLOR | BBEP_4COLOR)) {
         // use the second half of the image buffer
-        iRedOffset = pBBEP->width * ((pBBEP->height+7)/8);
+        iRedOffset = iPitch * pBBEP->height;
     }
     if (!pBBEP->ucScreen) { // no back buffer, draw in local buffer
-        if (pBBEP->type >= EPD42_400x300) {
-            // no back buffer on EPD means we may need to invert the color
-            if (ucColor >= BBEP_YELLOW)
-                ucColor = BBEP_BLACK;
-            else
-                ucColor = 1-ucColor; // swap black/white
-        }
         if (ucColor == BBEP_BLACK) // fill with opposite color
-            ucFill = 0;
-        else
             ucFill = 0xff;
+        else
+            ucFill = 0;
         memset(u8Cache, ucFill, sizeof(u8Cache));
     }
   if(abs(dx) > abs(dy)) {
@@ -1057,45 +1034,45 @@ void bbepDrawLine(BBEPDISP *pBBEP, int x1, int y1, int x2, int y2, uint8_t ucCol
       yinc = -1;
     }
       if (pBBEP->ucScreen) {
-          p = pStart = &pBBEP->ucScreen[iRedOffset + x1 + ((y >> 3) * iPitch)]; // point to current spot in back buffer
+          p = pStart = &pBBEP->ucScreen[iRedOffset + (x1>>3) + (y * iPitch)]; // point to current spot in back buffer
       } else { // no back buffer, draw directly to the display RAM
           p = pStart = u8Cache;
       }
-    mask = 1 << (y & 7); // current bit offset
+    mask = 0x80 >> (x1 & 7); // current bit offset
     for(x=x1; x1 <= x2; x1++) {
-      if (ucColor == BBEP_BLACK)
-        *p++ |= mask; // set pixel and increment x pointer
-      else
-        *p++ &= ~mask;
+        if (ucColor == BBEP_BLACK) {
+            *p &= ~mask; // set pixel and increment x pointer
+        } else {
+            *p |= mask;
+        }
+        mask >>= 1;
+        if (mask == 0) {
+            p++;
+            mask = 0x80; // next byte
+        }
       error -= dy;
       if (error < 0)
       {
-        error += dx;
-        if (yinc > 0)
-           mask <<= 1;
-        else
-           mask >>= 1;
-        if (mask == 0) // we've moved outside the current row, write the data we changed
-        {
-            bbepSetAddrWindow(pBBEP, x, y, 8*(int)(p-pStart), 1);
-            bbepWriteData(pBBEP, pStart,  (int)(p-pStart)); // write the row we changed
+          error += dx;
+          if (pBBEP->ucScreen) {
+              p += (yinc > 0) ? iPitch : -iPitch;
+              pStart = p;
+          } else { // no buffer
+              // y is changing, dump the pixels we modified
+              bbepSetAddrWindow(pBBEP, x, y1, 8*(int)(p-pStart), 1);
+              bbepStartWrite(pBBEP, pBBEP->iPlane);
+              bbepWriteData(pBBEP, pStart,  (int)(p-pStart)); // write the row we changed
+              memset(pStart, ucFill, (int)(p-pStart));
+              p = pStart;
+          }
            x = x1+1; // we've already written the byte at x1
-           y1 = y+yinc;
-            if (pBBEP->ucScreen) {
-                p += (yinc > 0) ? iPitch : -iPitch;
-                pStart = p;
-            } else { // no buffer
-                memset(pStart, ucFill, (int)(p-pStart));
-                p = pStart;
-            }
-           mask = 1 << (y1 & 7);
-        }
-        y += yinc;
+           y1 += yinc;
       }
     } // for x1
    if (p != pStart) // some data needs to be written
    {
-     bbepSetAddrWindow(pBBEP, x, y, 8*(int)(p-pStart), 1);
+     bbepSetAddrWindow(pBBEP, x, y1, 8*(int)(p-pStart), 1);
+       bbepStartWrite(pBBEP, pBBEP->iPlane);
      bbepWriteData(pBBEP, pStart, (int)(p-pStart));
    }
   } else {
@@ -1109,69 +1086,44 @@ void bbepDrawLine(BBEPDISP *pBBEP, int x1, int y1, int x2, int y2, uint8_t ucCol
       y1 = y2;
       y2 = temp;
     }
-      if (pBBEP->ucScreen) {
-          p = &pBBEP->ucScreen[iRedOffset + x1 + ((y1 >> 3) * iPitch)]; // point to current spot in back buffer
-          bOld = bNew = p[0]; // current pixels
-      } else {
-          p = u8Cache;
-          bOld = bNew = ucFill;
-      }
-    mask = 1 << (y1 & 7); // current bit offset
     dx = (x2 - x1);
     error = dy >> 1;
     xinc = 1;
-    if (dx < 0)
-    {
+    if (dx < 0) {
       dx = -dx;
       xinc = -1;
     }
-    for(x = x1; y1 <= y2; y1++) {
-      if (ucColor == BBEP_BLACK)
-        bNew |= mask; // set the pixel
-      else
-        bNew &= ~mask;
-      error -= dx;
-      mask <<= 1; // y1++
-      if (mask == 0) // we're done with this byte, write it if necessary
-      {
-        if (bOld != bNew)
-        {
-            p[0] = bNew; // save to RAM
-            bbepSetAddrWindow(pBBEP, x, y1, 8, 1);
-            bbepWriteData(pBBEP, &bNew, 1);
-        } // data changed
+    for(; y1 <= y2; y1++) {
+        mask = 0x80 >> (x1 & 7); // current bit offset
         if (pBBEP->ucScreen) {
-            p += iPitch; // next line
-            bOld = bNew = p[0];
+            p = &pBBEP->ucScreen[iRedOffset + (x1>>3) + (y1 * iPitch)]; // point       if (ucColor == BBEP_BLACK)
+            bOld = bNew = p[0]; // current pixels
         } else {
             bOld = bNew = ucFill;
         }
-        mask = 1; // start at LSB again
-      }
-      if (error < 0)
-      {
-        error += dy;
-        if (bOld != bNew) // write the last byte we modified if it changed
-        {
-            p[0] = bNew; // save to RAM
-            bbepSetAddrWindow(pBBEP, x, y1, 8, 1);
-            bbepWriteData(pBBEP, &bNew, 1);
+        if (ucColor == BBEP_BLACK) {
+            bNew &= ~mask; // set the pixel
+        } else {
+            bNew |= mask;
         }
-          x += xinc;
-          if (pBBEP->ucScreen) {
-              p += xinc;
-              bOld = bNew = p[0];
-          } else {
-              bOld = bNew = ucFill;
-          }
+      error -= dx;
+        if (bOld != bNew) {
+        if (pBBEP->ucScreen) {
+            p[0] = bNew; // save to RAM
+            p += iPitch; // next line
+            bOld = bNew = p[0];
+        } else {
+            bbepSetAddrWindow(pBBEP, x1, y1, 8, 1);
+            bbepStartWrite(pBBEP, pBBEP->iPlane);
+            bbepWriteData(pBBEP, &bNew, 1);
+            bOld = bNew = ucFill;
+        }
+      }
+      if (error < 0) {
+        error += dy;
+          x1 += xinc;
       }
     } // for y
-    if (bOld != bNew) // write the last byte we modified if it changed
-    {
-      p[0] = bNew; // save to RAM
-        bbepSetAddrWindow(pBBEP, x, y2, 8, 1);
-        bbepWriteData(pBBEP, &bNew, 1);
-    }
   } // y major case
 } /* bbepDrawLine() */
 
@@ -1185,18 +1137,18 @@ static void DrawScaledPixel(BBEPDISP *pBBEP, int iCX, int iCY, int x, int y, int
     int iPitch;
     int iRedOffset = 0;
 
-    iPitch = pBBEP->width;
+    iPitch = (pBBEP->width + 7) >> 3;
     if (ucColor >= BBEP_YELLOW && pBBEP->iFlags & (BBEP_3COLOR | BBEP_4COLOR)) {
           // use the second half of the image buffer
-          iRedOffset = pBBEP->width * ((pBBEP->height+7)/8);
+          iRedOffset = iPitch * pBBEP->height;
       }
     if (iXFrac != 0x10000) x = ((x * iXFrac) >> 16);
     if (iYFrac != 0x10000) y = ((y * iYFrac) >> 16);
     x += iCX; y += iCY;
     if (x < 0 || x >= pBBEP->width || y < 0 || y >= pBBEP->height)
         return; // off the screen
-    d = &pBBEP->ucScreen[iRedOffset + ((y >> 3)*iPitch) + x];
-    ucMask = 1 << (y & 7);
+    d = &pBBEP->ucScreen[iRedOffset + (x>>3) + (y * iPitch)];
+    ucMask = 0x80 >> (x & 7);
     if (ucColor)
         *d |= ucMask;
     else
@@ -1208,15 +1160,7 @@ static void DrawScaledPixel(BBEPDISP *pBBEP, int iCX, int iCY, int x, int y, int
 static void DrawScaledLine(BBEPDISP *pBBEP, int iCX, int iCY, int x, int y, int32_t iXFrac, int32_t iYFrac, uint8_t ucColor)
 {
     int iLen, x2;
-    uint8_t *d, ucMask;
-    int iPitch;
-    int iRedOffset = 0;
 
-    if (ucColor >= BBEP_YELLOW && pBBEP->iFlags & (BBEP_3COLOR | BBEP_4COLOR)) {
-          // use the second half of the image buffer
-          iRedOffset = pBBEP->width * ((pBBEP->height+7)/8);
-      }
-    iPitch = pBBEP->width;
     if (iXFrac != 0x10000) x = ((x * iXFrac) >> 16);
     if (iYFrac != 0x10000) y = ((y * iYFrac) >> 16);
     iLen = x*2;
@@ -1226,19 +1170,7 @@ static void DrawScaledLine(BBEPDISP *pBBEP, int iCX, int iCY, int x, int y, int3
         return; // completely off the screen
     if (x < 0) x = 0;
     if (x2 >= pBBEP->width) x2 = pBBEP->width-1;
-    iLen = x2 - x + 1; // new length
-    d = &pBBEP->ucScreen[iRedOffset + ((y >> 3)*iPitch) + x];
-    ucMask = 1 << (y & 7);
-    if (ucColor) // white
-    {
-        for (; iLen > 0; iLen--)
-            *d++ |= ucMask;
-    }
-    else // black
-    {
-        for (; iLen > 0; iLen--)
-            *d++ &= ~ucMask;
-    }
+    bbepDrawLine(pBBEP, x, y, x2, y, ucColor);
 } /* DrawScaledLine() */
 //
 // Draw the 8 pixels around the Bresenham circle
@@ -1275,8 +1207,8 @@ void bbepEllipse(BBEPDISP *pBBEP, int iCenterX, int iCenterY, int32_t iRadiusX, 
     int32_t iXFrac, iYFrac;
     int iRadius, iDelta, x, y;
     
-    if (pBBEP == NULL || pBBEP->ucScreen == NULL)
-        return; // must have back buffer defined
+    if (pBBEP == NULL || (pBBEP->ucScreen == NULL && !bFilled)
+        return; // must have back buffer defined for outline mode
 
     if (iRadiusX <= 0 || iRadiusY <= 0) return; // invalid radii
     
@@ -1311,6 +1243,7 @@ void bbepEllipse(BBEPDISP *pBBEP, int iCenterX, int iCenterY, int32_t iRadiusX, 
 } /* bbepEllipse() */
 //
 // Draw an outline or filled rectangle
+//
 //
 void bbepRectangle(BBEPDISP *pBBEP, int x1, int y1, int x2, int y2, uint8_t ucColor, uint8_t bFilled)
 {
