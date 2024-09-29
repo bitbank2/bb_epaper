@@ -558,7 +558,7 @@ void bbepSetCursor(BBEPDISP *pBBEP, int x, int y)
     pBBEP->iCursorY = y;
 } /* bbepSetCursor() */
 //
-// Turn text wrap on or off for the oldWriteString() function
+// Turn text wrap on or off for the bbepWriteString() function
 //
 void bbepSetTextWrap(BBEPDISP *pBBEP, int bWrap)
 {
@@ -705,6 +705,27 @@ void bbepWriteStringCustom(BBEPDISP *pBBEP, BB_FONT *pFont, int x, int y, char *
     pBBEP->iCursorY = y;
 } /* EPDWriteStringCustom() */
 //
+// Rotate an 8x8 pixel block (8 bytes) by 90 degrees
+// Used to draw the built-in font at 2 angles
+//
+void RotateCharBox(uint8_t *pSrc)
+{
+    int x, y;
+    uint8_t ucDest[8], uc, ucSrcMask, ucDstMask;
+    
+    for (y=0; y<8; y++) {
+        ucSrcMask = 1<<y;
+        ucDstMask = 0x80;
+        uc = 0;
+        for (x=0; x<8; x++) {
+            if (pSrc[x] & ucSrcMask) uc |= ucDstMask;
+            ucDstMask >>= 1;
+        }
+        ucDest[y] = uc;
+    }
+    memcpy(pSrc, ucDest, 8); // rotate "in-place"
+} /* RotateCharBox() */
+//
 // Draw a string of normal (8x8), small (6x8) or large (16x32) characters
 // At the given col+row
 //
@@ -713,7 +734,7 @@ int bbepWriteString(BBEPDISP *pBBEP, int x, int y, char *szMsg, int iSize, int i
     int i, iFontOff, iLen;
     uint8_t c, *s, ucCMD, ucCMD1, ucCMD2;
     int iOldFG; // old fg color to make sure red works
-    uint8_t u8Temp[128];
+    uint8_t u8Temp[40];
     
     if (pBBEP == NULL) return BBEP_ERROR_BAD_PARAMETER;
     if (pBBEP->chip_type == BBEP_CHIP_UC81xx) {
@@ -743,7 +764,7 @@ int bbepWriteString(BBEPDISP *pBBEP, int x, int y, char *szMsg, int iSize, int i
     if (iSize == FONT_8x8) // 8x8 font
     {
         i = 0;
-        while (pBBEP->iCursorX < pBBEP->width && szMsg[i] != 0 && pBBEP->iCursorY < pBBEP->height)
+        while (x < pBBEP->width && szMsg[i] != 0 && y < pBBEP->height)
         {
             c = (unsigned char)szMsg[i];
             iFontOff = (int)(c-32) * 7;
@@ -752,26 +773,41 @@ int bbepWriteString(BBEPDISP *pBBEP, int x, int y, char *szMsg, int iSize, int i
             memcpy_P(&u8Temp[1], &ucFont[iFontOff], 7); // only needed on AVR
             if (iColor == BBEP_BLACK) InvertBytes(u8Temp, 8);
             iLen = 8;
-            if (pBBEP->iCursorX + iLen > pBBEP->width) { // clip right edge
-                iLen = pBBEP->width - pBBEP->iCursorX;
+            if (x + iLen > pBBEP->width) { // clip right edge
+                iLen = pBBEP->width - x;
             }
             if (!pBBEP->ucScreen) { // bufferless mode, rotate the coordinate system to fit the situation
-                bbepSetAddrWindow(pBBEP, pBBEP->native_width-8-pBBEP->iCursorY, pBBEP->iCursorX, 8, pBBEP->native_height-pBBEP->iCursorX);
+                if (pBBEP->iOrientation == 0) { // need to rotate the font and bounding box
+                    RotateCharBox(u8Temp);
+                    bbepSetAddrWindow(pBBEP, x, y, 8, 8);
+                } else {
+                    bbepSetAddrWindow(pBBEP, pBBEP->native_width-8-y, x, 8, pBBEP->native_height-pBBEP->iCursorX);
+                }
                 bbepWriteCmd(pBBEP, ucCMD); // write to "new" plane
                 bbepWriteData(pBBEP, u8Temp, iLen);
             } else { // draw in memory
 #ifndef NO_RAM
-                // DEBUG
+                uint8_t u8Mask;
+                for (int ty=y; ty<y+8; ty++) {
+                    u8Mask = 1<<y;
+                    for (int tx = 0; tx<iLen; tx++) {
+                        if (u8Temp[tx] & u8Mask) {
+                            bbepSetPixel(pBBEP, x+tx, ty, iColor);
+                        }
+                    }
+                }
 #endif
             }
-            pBBEP->iCursorX += iLen;
-            if (pBBEP->iCursorX >= pBBEP->width-7 && pBBEP->wrap) { // word wrap enabled?
-                pBBEP->iCursorX = 0; // start at the beginning of the next line
-                pBBEP->iCursorY+=8;
+            x += iLen;
+            if (x >= pBBEP->width-7 && pBBEP->wrap) { // word wrap enabled?
+                x = 0; // start at the beginning of the next line
+                y += 8;
             }
             i++;
         } // while
         pBBEP->iFG = iOldFG; // restore color
+        pBBEP->iCursorX = x;
+        pBBEP->iCursorY = y;
         return BBEP_SUCCESS;
     } else if (iSize == FONT_12x16) { // 6x8 stretched to 12x16
         i = 0;
@@ -896,14 +932,25 @@ int bbepWriteString(BBEPDISP *pBBEP, int x, int y, char *szMsg, int iSize, int i
                 bbepWriteData(pBBEP, &u8Temp[18], iLen);
             } else { // write to RAM
 #ifndef NO_RAM
-                // DEBUG
+                uint8_t u8Mask;
+                for (int ty=y; ty<y+8; ty++) {
+                    u8Mask = 1<<y;
+                    for (int tx = 0; tx<iLen; tx++) {
+                        if (u8Temp[6+tx] & u8Mask) {
+                            bbepSetPixel(pBBEP, x+tx, ty, iColor);
+                        }
+                        if (u8Temp[18+tx] & u8Mask) {
+                            bbepSetPixel(pBBEP, x+tx, ty+8, iColor);
+                        }
+                    }
+                }
 #endif
             }
             pBBEP->iCursorX += iLen;
             if (pBBEP->iCursorX >= pBBEP->width-11 && pBBEP->wrap) // word wrap enabled?
             {
-                pBBEP->iCursorX = 0; // start at the beginning of the next line
-                pBBEP->iCursorY += 16;
+                x = pBBEP->iCursorX = 0; // start at the beginning of the next line
+                y = pBBEP->iCursorY = y+16;
             }
             i++;
         } // while
@@ -929,14 +976,22 @@ int bbepWriteString(BBEPDISP *pBBEP, int x, int y, char *szMsg, int iSize, int i
                 bbepWriteData(pBBEP, u8Temp, iLen);
             } else { // write to RAM
 #ifndef NO_RAM
-                // DEBUG
+                uint8_t u8Mask;
+                for (int ty=y; ty<y+8; ty++) {
+                    u8Mask = 1<<y;
+                    for (int tx = 0; tx<iLen; tx++) {
+                        if (u8Temp[tx] & u8Mask) {
+                            bbepSetPixel(pBBEP, x+tx, ty, iColor);
+                        }
+                    }
+                }
 #endif
             }
             pBBEP->iCursorX += iLen;
             if (pBBEP->iCursorX >= pBBEP->width-5 && pBBEP->wrap) // word wrap enabled?
             {
-                pBBEP->iCursorX = 0; // start at the beginning of the next line
-                pBBEP->iCursorY +=8;
+                x = pBBEP->iCursorX = 0; // start at the beginning of the next line
+                y = pBBEP->iCursorY = y+8;
             }
             i++;
         }

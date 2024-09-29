@@ -108,6 +108,7 @@ enum {
     EPD42R2_400x300, // GDEQ042Z21
     EPD37_240x416, // GDEY037T03
     EPD213_104x212, // InkyPHAT 2.13 black and white
+    EPD75_800x480, // GDEY075T7
     EPD_PANEL_COUNT
 };
 #ifdef FUTURE
@@ -130,7 +131,6 @@ enum {
   EPD37Y_240x416, // DEPG0370YN
   EPD579_792x272, // GDEY0579T93
   EPD583R_600x448,
-  EPD75_800x480, // GDEY075T7
   EPD74R_640x384,
   EPD583_648x480, // DEPG0583BN
   EPD29_BWYR_128x296, // GDEY029F51
@@ -332,17 +332,7 @@ class BBEPAPER
     void setPlane(int iPlane);
     int getPlane(void);
     int getChip(void);
-    void drawSprite(const uint8_t *pSprite, int cx, int cy, int iPitch, int x, int y, uint8_t iColor);
-#ifdef FUTURE
-//    int drawGFX(int x, int y, int cx, int cy, uint8_t *pPlane0, uint8_t *pPlane1);
-//    void setFreeFont(const BB_FONT *pFont);
-    void pushBytes(uint8_t *pByte, int iCount);
-    void writeCommand(uint8_t ucCMD);
-    void writeRaw(uint8_t *pData, int iLen);
-    void pushImage(int x, int y, int w, int h, uint16_t *pixels);
-    void drawString(String text, int x, int y);
-#endif // FUTURE
-    
+    void drawSprite(const uint8_t *pSprite, int cx, int cy, int iPitch, int x, int y, uint8_t iColor);    
 #ifdef _LINUX_
     void print(const char *pString);
     void println(const char *pString);
