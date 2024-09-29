@@ -761,8 +761,9 @@ int bbepWriteString(BBEPDISP *pBBEP, int x, int y, char *szMsg, int iSize, int i
     if (iColor >= BBEP_YELLOW) {
         pBBEP->iFG = iColor;
     }
-    if (iSize == FONT_8x8) // 8x8 font
+    if (iSize == FONT_8x8 || iSize == FONT_16x16) // 8x8 font (and stretched)
     {
+        int iCount = (iSize == FONT_8x8) ? 8 : 16;
         i = 0;
         while (x < pBBEP->width && szMsg[i] != 0 && y < pBBEP->height)
         {
@@ -779,12 +780,36 @@ int bbepWriteString(BBEPDISP *pBBEP, int x, int y, char *szMsg, int iSize, int i
             if (!pBBEP->ucScreen) { // bufferless mode, rotate the coordinate system to fit the situation
                 if (pBBEP->iOrientation == 0) { // need to rotate the font and bounding box
                     RotateCharBox(u8Temp);
-                    bbepSetAddrWindow(pBBEP, x, y, 8, 8);
+                    bbepSetAddrWindow(pBBEP, x, y, iCount, iCount);
                 } else {
-                    bbepSetAddrWindow(pBBEP, pBBEP->native_width-8-y, x, 8, pBBEP->native_height-pBBEP->iCursorX);
+                    bbepSetAddrWindow(pBBEP, pBBEP->native_width-iCount-y, x, iCount, pBBEP->native_height-x);
                 }
                 bbepWriteCmd(pBBEP, ucCMD); // write to "new" plane
-                bbepWriteData(pBBEP, u8Temp, iLen);
+                if (iCount == 8) { // non-stretched
+                    bbepWriteData(pBBEP, u8Temp, iCount);
+                } else { // stretch the pixels 2x
+                    uint8_t u8SrcMask, u8DstMask, u8_0, u8_1;
+                    uint8_t *d = u8Cache;
+                    for (int ty=0; ty<8; ty++) {
+                        u8_0 = u8_1 = 0;
+                        u8SrcMask = 0x80;
+                        u8DstMask = 0xc0;
+                        for (int tx=0; tx<4; tx++) {
+                            if (u8Temp[ty] & u8SrcMask) {
+                                u8_0 |= u8DstMask;
+                            }
+                            if (u8Temp[ty] & (u8SrcMask >> 4)) {
+                                u8_1 |= u8DstMask;
+                            }
+                            u8SrcMask >>= 1;
+                            u8DstMask >>= 2;
+                        } // for tx
+                        d[0] = d[2] = u8_0;
+                        d[1] = d[3] = u8_1;
+                        d += 4;
+                    } // for ty
+                    bbepWriteData(pBBEP, u8Cache, 32);
+                } // stretched 2x
             } else { // draw in memory
 #ifndef NO_RAM
                 uint8_t u8Mask;
@@ -792,16 +817,23 @@ int bbepWriteString(BBEPDISP *pBBEP, int x, int y, char *szMsg, int iSize, int i
                     u8Mask = 1<<y;
                     for (int tx = 0; tx<iLen; tx++) {
                         if (u8Temp[tx] & u8Mask) {
-                            bbepSetPixel(pBBEP, x+tx, ty, iColor);
+                            if (iCount == 8) {
+                                bbepSetPixel(pBBEP, x+tx, ty, iColor);
+                            } else { // stretched
+                                bbepSetPixel(pBBEP, x+tx*2, ty*2, iColor);
+                                bbepSetPixel(pBBEP, 1+x+tx*2, ty*2, iColor);
+                                bbepSetPixel(pBBEP, x+tx*2, 1+ty*2, iColor);
+                                bbepSetPixel(pBBEP, 1+x+tx*2, 1+ty*2, iColor);
+                            }
                         }
                     }
                 }
 #endif
             }
-            x += iLen;
-            if (x >= pBBEP->width-7 && pBBEP->wrap) { // word wrap enabled?
+            x += iCount;
+            if (x >= pBBEP->width-iCount-1 && pBBEP->wrap) { // word wrap enabled?
                 x = 0; // start at the beginning of the next line
-                y += 8;
+                y += iCount;
             }
             i++;
         } // while

@@ -72,6 +72,7 @@ enum {
    FONT_6x8 = 0,
    FONT_8x8,
    FONT_12x16,
+   FONT_16x16,
    FONT_COUNT
 };
 // Centering coordinates to pass to the character drawing functions
