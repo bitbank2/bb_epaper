@@ -237,7 +237,7 @@ int main(int argc, char *argv[])
         return 1;
     }
     // Write the file header
-    bbff.u16Marker = BB_MARKER;
+    bbff.u16Marker = BB_FONT_MARKER;
     bbff.first = first;
     bbff.last = last;
     bbff.rotation = iRotation; // save rotation angle

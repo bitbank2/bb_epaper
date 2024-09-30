@@ -6,6 +6,7 @@
 //
 
 #include <stdio.h>
+#define MAX_IMAGE_FLIPS 256
 #include "../src/Group5.h"
 #include "../src/g5enc.inl"
 //
@@ -118,7 +119,8 @@ int main(int argc, const char * argv[]) {
             FILE *f;
             printf("Encode succeeded!\n");
             iOutSize = g5_encode_getOutSize(&g5enc);
-            printf("Input size = %d, output size = %d\n", iPitch*h, iOutSize);
+            printf("Input size:  %d bytes, output size: %d bytes\n", iPitch*h, iOutSize);
+            printf("Compression ratio: %2.1f:1\n", (float)(iPitch*h) / (float)iOutSize);
             bbbm.u16Marker = BB_BITMAP_MARKER;
             bbbm.width = w;
             bbbm.height = h;
