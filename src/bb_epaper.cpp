@@ -191,6 +191,11 @@ void BBEPAPER::setCursor(int x, int y)
     _bbep.iCursorY = y;
 } /* setCursor() */
 
+int BBEPAPER::loadG5Image(const uint8_t *pG5, int x, int y, int iFG, int iBG)
+{
+    return bbepLoadG5(&_bbep, pG5, x, y, iFG, iBG);
+} /* loadG5Image() */
+
 int BBEPAPER::loadBMP(const uint8_t *pBMP, int x, int y, int iFG, int iBG)
 {
     return bbepLoadBMP(&_bbep, pBMP, x, y, iFG, iBG);
@@ -327,7 +332,7 @@ char ucTemp[4];
 #ifndef __AVR__
 size_t BBEPAPER::write(uint8_t c) {
 char szTemp[2]; // used to draw 1 character at a time to the C methods
-int w, h;
+int w=8, h=8;
 
   szTemp[0] = c; szTemp[1] = 0;
    if (_bbep.pFont == NULL) { // use built-in fonts

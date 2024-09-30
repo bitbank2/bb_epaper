@@ -1308,7 +1308,7 @@ static void bbepWriteImage(BBEPDISP *pBBEP, uint8_t ucCMD, uint8_t *pBits, int b
 {
     int tx, ty;
     uint8_t *s, *d, ucSrcMask, ucDstMask, uc;
-    uint8_t *pBuffer, ucInvert = 0;
+    uint8_t *pBuffer=NULL, ucInvert = 0;
     int iPitch;
     
     iPitch = (pBBEP->width + 7) >> 3;

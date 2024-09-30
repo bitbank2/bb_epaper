@@ -354,7 +354,78 @@ void InvertBytes(uint8_t *pData, uint8_t bLen)
         pData++;
     }
 } /* InvertBytes() */
-
+//
+// Load a 1-bpp Group5 compressed bitmap
+// Pass the pointer to the beginning of the G5 file
+// If the FG == BG color, and there is a back buffer, it will
+// draw the 1's bits as the FG color and leave
+// the background (0 pixels) unchanged - aka transparent.
+//
+int bbepLoadG5(BBEPDISP *pBBEP, const uint8_t *pG5, int x, int y, int iFG, int iBG)
+{
+    uint16_t rc, tx, ty, cx, cy, size;
+    BB_BITMAP *pbbb;
+    
+    if (pBBEP == NULL || pG5 == NULL) return BBEP_ERROR_BAD_PARAMETER;
+    pbbb = (BB_BITMAP *)pG5;
+    if (pgm_read_word(&pbbb->u16Marker) != BB_BITMAP_MARKER) return BBEP_ERROR_BAD_DATA;
+    cx = pgm_read_word(&pbbb->width);
+    cy = pgm_read_word(&pbbb->height);
+    size = pgm_read_word(&pbbb->size);
+    if (iFG == -1) iFG = BBEP_WHITE;
+    if (iBG == -1) iBG = BBEP_BLACK;
+    rc = g5_decode_init(&g5dec, cx, cy, (uint8_t *)&pbbb[1], size);
+    if (rc != G5_SUCCESS) return BBEP_ERROR_BAD_DATA; // corrupt data?
+    if (!pBBEP->ucScreen) { // no back buffer
+        bbepSetAddrWindow(pBBEP, x, y, cx+(x&7), cy);
+        bbepStartWrite(pBBEP, pBBEP->iPlane); // get ready to write
+    }
+    for (ty=y; ty<y+cy && ty < pBBEP->height; ty++) {
+        uint8_t u8, *s, src_mask;
+        g5_decode_line(&g5dec, u8Cache);
+        if (!pBBEP->ucScreen) {
+            if (x & 7) { // need to shift it over by 1-7 bits
+                uint8_t *d = s = u8Cache, uc1, uc0; // last shifted byte
+                if (iFG == BBEP_WHITE) {
+                    uc0 = 0;
+                } else {
+                    uc0 = 0xff << (7-(x & 7));
+                }
+                uint8_t n = x & 7; // shift amount
+                for (int j=0; j<cx+7; j+= 8) {
+                    uc1 = *s++;
+                    uc0 |= (uc1 >> n);
+                    *d++ = uc0;
+                    uc0 = uc1 << (8-n);
+                }
+                *d++ = uc0; // store final byte
+                *d++ = 0; // and a zero for good measure
+            }
+            if (iFG == BBEP_WHITE) { // inverted
+                InvertBytes(u8Cache, (cx+(x&7)+7)>>3);
+            }
+            bbepWriteData(pBBEP, u8Cache, (cx+(x&7)+7)>>3);
+        } else { // use the setPixel function for more features
+            src_mask = 0; // make it read a byte to start
+            s = u8Cache;
+            for (tx=0; tx<cx; tx++) {
+                if (src_mask == 0) { // need to load the next byte
+                    u8 = *s++;
+                    src_mask = 0x80; // MSB on left
+                }
+                if (u8 & src_mask) {
+                    if (iFG >= 0)
+                        bbepSetPixel(pBBEP, x+tx, y+ty, (uint8_t)iFG);
+                } else {
+                    if (iBG >= 0)
+                        bbepSetPixel(pBBEP, x+tx, y+ty, (uint8_t)iBG);
+                }
+                src_mask >>= 1;
+            } // for x
+        }
+    } // for y
+    return BBEP_SUCCESS;
+} /* bbepLoadG5() */
 //
 // Load a 1-bpp Windows bitmap
 // Pass the pointer to the beginning of the BMP file
@@ -367,8 +438,8 @@ int bbepLoadBMP(BBEPDISP *pBBEP, const uint8_t *pBMP, int dx, int dy, int iFG, i
     int16_t i16, cx, cy;
     int iOffBits; // offset to bitmap data
     int x, y, iPitch;
-    uint8_t b=0, *s, *d=NULL;
-    uint8_t ucFill, dst_mask=0, src_mask;
+    uint8_t b=0, *s;
+    uint8_t src_mask;
     uint8_t bFlipped = 0;
     
     // Don't use pgm_read_word because it can cause an unaligned
@@ -407,9 +478,7 @@ int bbepLoadBMP(BBEPDISP *pBBEP, const uint8_t *pBMP, int dx, int dy, int iFG, i
         iOffBits += ((cy-1) * iPitch); // start from bottom
         iPitch = -iPitch;
     }
-    ucFill = (iBG == BBEP_WHITE && pBBEP->type < EPD42_400x300) ? iBG : 0xff;
     if (!pBBEP->ucScreen || iFG >= BBEP_YELLOW) { // this will override the B/W plane, so invert things
-        ucFill = 0x00;
         x = iFG;
         iFG = iBG;
         iBG = x; // swap colors
@@ -610,7 +679,7 @@ void bbepWriteStringCustom(BBEPDISP *pBBEP, BB_FONT *pFont, int x, int y, char *
         pGlyph = &pFont->glyphs[c]; // glyph info for this character
         if (pgm_read_byte(&pGlyph->width) > 1) { // skip this if drawing a space
             s = pBits + pgm_read_word(&pGlyph->bitmapOffset); // start of compressed bitmap data
-            if (pgm_read_word(&pFont->rotation) == 0 || pgm_read_word(&pFont->rotation) == 180) {
+            if (pgm_read_dword(&pFont->rotation) == 0 || pgm_read_dword(&pFont->rotation) == 180) {
                 h = pgm_read_word(&pGlyph->height);
                 w = pgm_read_byte(&pGlyph->width);
                 dx = x + pgm_read_word(&pGlyph->xOffset); // offset from character UL to start drawing
@@ -695,7 +764,7 @@ void bbepWriteStringCustom(BBEPDISP *pBBEP, BB_FONT *pFont, int x, int y, char *
                 } // for y
             }
         } // if not drawing a space
-        if (pgm_read_word(&pFont->rotation) == 0 || pgm_read_word(&pFont->rotation) == 180) {
+        if (pgm_read_dword(&pFont->rotation) == 0 || pgm_read_dword(&pFont->rotation) == 180) {
             x += pgm_read_byte(&pGlyph->xAdvance); // width of this character
         } else {
             y += pgm_read_byte(&pGlyph->xAdvance);
@@ -745,7 +814,7 @@ int bbepWriteString(BBEPDISP *pBBEP, int x, int y, char *szMsg, int iSize, int i
         ucCMD2 = SSD1608_WRITE_ALTRAM;
     }
     ucCMD = ucCMD1;
-    if ((pBBEP->iFlags & BBEP_3COLOR) && iColor == BBEP_RED || pBBEP->iPlane == 1) {
+    if (((pBBEP->iFlags & BBEP_3COLOR) && iColor == BBEP_RED) || pBBEP->iPlane == 1) {
         ucCMD = ucCMD2; // write to second plane for red
     }
     if (x == -1 || y == -1) // use the cursor position
