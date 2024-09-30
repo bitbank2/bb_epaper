@@ -21,7 +21,6 @@
 #include FT_GLYPH_H
 #include FT_MODULE_H
 #include FT_TRUETYPE_DRIVER_H
-#include "../src/bb_font.h" // BitBank font structures
 #include "../src/g5enc.inl" // Group5 image compression library
 G5ENCIMAGE g5enc; // Group5 encoder state
 

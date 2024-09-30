@@ -21,7 +21,7 @@
 #define __BB_EP_GFX__
 #include "Group5.h"
 #include "g5dec.inl"
-#include "bb_font.h"
+
 static G5DECIMAGE g5dec;
 // forward declarations
 void InvertBytes(uint8_t *pData, uint8_t bLen);

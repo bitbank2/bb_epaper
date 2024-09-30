@@ -39,7 +39,7 @@ void delay(int);
 #endif
 #include "bb_ep.inl" // All of the display interface code is in here
 #include "bb_ep_gfx.inl" // drawing code
-#include "bb_font.h" // bitbank compressed font info
+
 #ifdef __cplusplus
 //
 // C++ Class implementation

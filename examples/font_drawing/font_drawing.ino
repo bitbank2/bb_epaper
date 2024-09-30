@@ -9,7 +9,6 @@
 // work with the compressed font files created by the Group5 fontconvert tool
 //
 #include <Group5.h>
-#include "bb_font.h"
 #include <bb_spi_lcd.h>
 #include "Roboto_Black_40.h" // BBF (BitBank Font file included as hex data to compile with the sketch)
 

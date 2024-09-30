@@ -131,6 +131,41 @@ typedef struct g5_enc_image_tag
     int16_t RefFlips[MAX_IMAGE_FLIPS];
 } G5ENCIMAGE;
 
+// 16-bit marker at the start of a BB_FONT file
+// (BitBank FontFile)
+#define BB_FONT_MARKER 0xBBFF
+// 16-bit marker at the start of a BB_BITMAP file
+// (BitBank BitmapFile)
+#define BB_BITMAP_MARKER 0xBBBF
+
+// Font info per character (glyph)
+typedef struct {
+  uint16_t bitmapOffset; // Offset to compressed bitmap data for this glyph (starting from the end of the BB_GLYPH[] array)
+  uint8_t width;         // bitmap width in pixels
+  uint8_t xAdvance;      // total width in pixels (bitmap + padding)
+  uint16_t height;        // bitmap height in pixels
+  int16_t xOffset;        // left padding to upper left corner
+  int16_t yOffset;        // padding from baseline to upper left corner (usually negative)
+} BB_GLYPH;
+
+// This structure is stored at the beginning of a BB_FONT file
+typedef struct {
+  uint16_t u16Marker; // 16-bit Marker defining a BB_FONT file
+  uint16_t first;      // first char (ASCII value)
+  uint16_t last;       // last char (ASCII value)
+  uint16_t height;    // total height of font
+  uint32_t rotation; // store this as 32-bits to not have a struct packing problem
+  BB_GLYPH glyphs[];  // Array of glyphs (one for each char)
+} BB_FONT;
+
+// This structure defines the start of a compressed bitmap file
+typedef struct {
+    uint16_t u16Marker; // 16-bit marker defining a BB_BITMAP file
+    uint16_t width;
+    uint16_t height;
+    uint16_t size; // compressed data size (not including this 8-byte header)
+} BB_BITMAP;
+
 #ifdef __cplusplus
 //
 // The G5 classes wrap portable C code which does the actual work
