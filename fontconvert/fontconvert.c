@@ -1,5 +1,6 @@
 //
 // TrueType to bb_font converter
+// Copyright (c) 2024 BitBank Software, inc.
 // Written by Larry Bank
 // August 31, 2024
 // The bb_font format is a losslessly compressed bitmap font of a single point size

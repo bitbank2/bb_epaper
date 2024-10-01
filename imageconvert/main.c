@@ -1,5 +1,4 @@
 //
-//
 // Group5 Image Compressor tool
 // Written by Larry Bank
 // Copyright (c) 2024 BitBank Software, Inc.
