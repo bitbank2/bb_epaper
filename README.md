@@ -27,9 +27,7 @@ Features:<br>
 - Optimized Bresenham outline and filled ellipse drawing<br>
 - Optimized outline and filled rectangle drawing<br>
 <br>
-This code depends on my Group5 data compression library. You can download it here:<br>
-https://github.com/bitbank2/Group5
-<br>
+This code depends on my Group5 data compression library (included).<br>
 See the Wiki for help getting started<br>
 https://github.com/bitbank2/bb_epaper/wiki <br>
 <br>
