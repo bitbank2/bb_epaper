@@ -339,9 +339,9 @@ int w=8, h=8;
       if (_bbep.iFont == FONT_8x8 || _bbep.iFont == FONT_6x8) {
         h = 8;
         w = (_bbep.iFont == FONT_8x8) ? 8 : 6;
-      } else if (_bbep.iFont == FONT_12x16) {
+      } else if (_bbep.iFont == FONT_12x16 || _bbep.iFont == FONT_16x16) {
         h = 16;
-        w = 12;
+        w = (_bbep.iFont == FONT_12x16) ? 12:16;
       }
 
     if (c == '\n') {              // Newline?
