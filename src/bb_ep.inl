@@ -1133,7 +1133,7 @@ void bbepSleep(BBEPDISP *pBBEP, int bDeep)
 
 void bbepStartWrite(BBEPDISP *pBBEP, int iPlane)
 {
-    uint8_t u8Cmd;
+    uint16_t u8Cmd; // AVR crashes w/odd number of bytes for stack vars
     
     if (!pBBEP) return;
     if (pBBEP->chip_type == BBEP_CHIP_UC81xx) {
@@ -1147,7 +1147,7 @@ void bbepStartWrite(BBEPDISP *pBBEP, int iPlane)
         else
             u8Cmd = SSD1608_WRITE_ALTRAM;
     }
-    bbepWriteCmd(pBBEP, u8Cmd);
+    bbepWriteCmd(pBBEP, (uint8_t)u8Cmd);
 } /* bbepStartWrite() */
 
 //
@@ -1264,7 +1264,7 @@ int bbepRefresh(BBEPDISP *pBBEP, int iMode)
         bbepWriteCmd(pBBEP, UC8151_PTOU); // partial out (update the entire panel, not just the last memory window)
         bbepWriteCmd(pBBEP, UC8151_DRF);
     } else {
-        const uint8_t u8CMD[3] = {0xf7, 0xc7, 0xff}; // normal, fast, partial
+        const uint8_t u8CMD[4] = {0xf7, 0xc7, 0xff, 0}; // normal, fast, partial
         if (pBBEP->iFlags & BBEP_3COLOR) {
             iMode = REFRESH_FAST;
         } // 3-color = 0xc7

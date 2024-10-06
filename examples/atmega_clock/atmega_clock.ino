@@ -11,7 +11,8 @@
 #include "Roboto_Black_38.h"
 #include "Roboto_Black_78.h"
 #include <bb_epaper.h>
-BBEPAPER bbep(EPD42_400x300);
+BBEPAPER bbep(EPD295_128x296);
+//BBEPAPER bbep(EPD42B_400x300);
 static int iRunCount = 0;
 static int iSec, iMin, iHour, iWDay, iMDay, iMon;
 int iSleepTime; // number of microseconds to sleep in each wakeup phase
@@ -23,12 +24,17 @@ int iSleepTime; // number of microseconds to sleep in each wakeup phase
 #define RTC_ADDR RTC_DS3231_ADDR
 #define RTC_START_REG 0
 // Ugly solder job of Xiao ESP32-C6 and my e-paper adapter
-#define PIN_SDA 4
-#define PIN_SCL 3
-#define POWER_PIN 5
-#define PIN_DC 14
+//#define PIN_SDA 4
+//#define PIN_SCL 3
+//#define POWER_PIN 5
+//#define PIN_DC 14
+//#define PIN_BUSY 16
+//#define PIN_RST 15
+// Arduino Pro mini clone
+#define PIN_DC 15
 #define PIN_BUSY 16
-#define PIN_RST 15
+#define PIN_RST 14
+#define PIN_CS 10
 
 const char *szDays[7] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
 const char *szMonths[12] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
@@ -140,7 +146,7 @@ void DrawPlane(int bInvert, int iPlane, char *string1, char *string2)
       iFG = BBEP_BLACK; iBG = BBEP_WHITE;
     }
     bbep.setPlane(iPlane);
-    bbep.fillRect(0,0, bbep.width(), bbep.height(), iBG); // clear both buffers to white for full update
+    bbep.fillScreen(iBG); // clear both buffers to white for full update
     bbep.setFont(Roboto_Black_78);
     bbep.setTextColor(iFG, iBG);
     bbep.drawString(string1, CENTER_X, 120);
@@ -162,9 +168,9 @@ void loop()
     char szTemp[32] ,szTemp2[32];
     int bPartial, iSleepTime, bInvert;
     
-    bbep.initIO(PIN_DC, PIN_RST, PIN_BUSY);
+    bbep.initIO(PIN_DC, PIN_RST, PIN_BUSY, PIN_CS, MOSI, SCK, 4000000);
     while (1) {
-      bInvert = 1;
+      bInvert = 0;
       if ((iRunCount & 1) == 0) { // get time and update
           bPartial = ((iRunCount & 0x1f) != 0);
          rtc_get_time();
@@ -174,7 +180,7 @@ void loop()
         // the SSD16xx remembers the old properly and just needs to know the new
           if (bPartial) { // inverted too, with the old time strings
               DrawPlane(bInvert, PLANE_1, szTemp, szTemp2);
-              bInvert = 0;
+   //           bInvert = 0;
           }
         } // BBEP_CHIP_UC81xx
         // Print the current hour:minute

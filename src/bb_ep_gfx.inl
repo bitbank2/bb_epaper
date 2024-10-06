@@ -638,9 +638,10 @@ void bbepSetTextWrap(BBEPDISP *pBBEP, int bWrap)
 //
 void bbepWriteStringCustom(BBEPDISP *pBBEP, BB_FONT *pFont, int x, int y, char *szMsg, int iColor, uint8_t iPlane)
 {
-    int rc, i, h, w, end_y, dx, dy, tx, ty, iSrcPitch, iPitch;
-    unsigned int c;
-    uint8_t *s, bInvert = 0;
+    int rc, i, h, w, j, end_y, dx, dy, tx, ty, iSrcPitch, iPitch;
+    signed int n;
+    unsigned int c, bInvert = 0;
+    uint8_t *s, uc0, uc1;
     BB_GLYPH *pGlyph;
     uint8_t *pBits, u8CMD1, u8CMD2, u8CMD, u8EndMask;
     uint8_t first, last;
@@ -687,7 +688,9 @@ void bbepWriteStringCustom(BBEPDISP *pBBEP, BB_FONT *pFont, int x, int y, char *
             } else { // rotated
                 w = pgm_read_word(&pGlyph->height);
                 h = pgm_read_byte(&pGlyph->width);
-                dx = x + pgm_read_word(&pGlyph->yOffset); // offset from character UL to start drawing
+                n = pgm_read_word(&pGlyph->yOffset); // offset from character UL to start drawing
+                dx = x;
+                if (-n < w) dx -= (w+n); // since we draw from the baseline
                 dy = y + pgm_read_word(&pGlyph->xOffset);
             }
             if ((dy + h) > pBBEP->native_height) { // trim it
@@ -748,9 +751,10 @@ void bbepWriteStringCustom(BBEPDISP *pBBEP, BB_FONT *pFont, int x, int y, char *
                     u8Cache[iSrcPitch-1] &= u8EndMask; // clean pixels beyond character width
                     u8Cache[iSrcPitch] = 0;
                     if (dx & 7) { // need to shift it over by 1-7 bits
-                        uint8_t *s = u8Cache, uc1, uc0 = 0; // last shifted byte
-                        uint8_t n = dx & 7; // shift amount
-                        for (int j=0; j<w+7; j+= 8) {
+                        s = u8Cache;
+                        uc0 = 0; // last shifted byte
+                        n = dx & 7; // shift amount
+                        for (j=0; j<w+7; j+= 8) {
                             uc1 = *s;
                             uc0 |= (uc1 >> n);
                             *s++ = uc0;
