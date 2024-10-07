@@ -1228,7 +1228,7 @@ void bbepDrawLine(BBEPDISP *pBBEP, int x1, int y1, int x2, int y2, uint8_t ucCol
                 y1 += yinc;
             }
         } // for x1
-        if (x != x1) { // some data needs to be written
+        if (x != x1 && !pBBEP->ucScreen) { // some data needs to be written
             bbepSetAddrWindow(pBBEP, x, y1, 16+x1-x, 1);
             bbepStartWrite(pBBEP, pBBEP->iPlane);
             bbepWriteData(pBBEP, pStart, (16+x1-x)>>3);

@@ -1338,7 +1338,7 @@ static void bbepWriteImage(BBEPDISP *pBBEP, uint8_t ucCMD, uint8_t *pBuffer, int
                 ucSrcMask = 0x80 >> (tx & 7);
                 for (ty=pBBEP->height-1; ty>=0; ty--) {
                     s = &pBuffer[(tx >> 3) + (ty * iPitch)];
-                    if (s[0] & ucSrcMask) uc &= ~ucDstMask;
+                    if ((s[0] & ucSrcMask) == 0) uc &= ~ucDstMask;
                     ucDstMask >>= 1;
                     if (ucDstMask == 0) {
                         *d++ = (uc ^ ucInvert);
@@ -1355,7 +1355,7 @@ static void bbepWriteImage(BBEPDISP *pBBEP, uint8_t ucCMD, uint8_t *pBuffer, int
                 d = u8Cache;
                 s = &pBuffer[ty * iPitch];
                 for (tx=iPitch-1; tx>=0; tx--) {
-                    *d++ = (ucMirror[s[tx]] & ucInvert);
+                    *d++ = (ucMirror[s[tx]] ^ ucInvert);
                 } // for tx
                 bbepWriteData(pBBEP, u8Cache, iPitch);
             } // for ty
@@ -1369,7 +1369,7 @@ static void bbepWriteImage(BBEPDISP *pBBEP, uint8_t ucCMD, uint8_t *pBuffer, int
                 ucSrcMask = 0x80 << (tx & 7);
                 for (ty=0; ty<pBBEP->height; ty++) {
                     s = &pBuffer[(tx>>3) + (ty * iPitch)];
-                    if (s[0] & ucSrcMask) uc &= ~ucDstMask;
+                    if ((s[0] & ucSrcMask) == 0) uc &= ~ucDstMask;
                     ucDstMask >>= 1;
                     if (ucDstMask == 0) {
                         *d++ = (uc ^ ucInvert);
