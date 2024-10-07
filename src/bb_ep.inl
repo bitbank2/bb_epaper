@@ -1304,11 +1304,11 @@ void bbepSetRotation(BBEPDISP *pBBEP, int iRotation)
 // Write Image data (entire plane) from RAM to the e-paper
 // Rotate the pixels if necessary
 //
-static void bbepWriteImage(BBEPDISP *pBBEP, uint8_t ucCMD, uint8_t *pBits, int bInvert)
+static void bbepWriteImage(BBEPDISP *pBBEP, uint8_t ucCMD, uint8_t *pBuffer, int bInvert)
 {
     int tx, ty;
     uint8_t *s, *d, ucSrcMask, ucDstMask, uc;
-    uint8_t *pBuffer=NULL, ucInvert = 0;
+    uint8_t ucInvert = 0;
     int iPitch;
     
     iPitch = (pBBEP->width + 7) >> 3;
