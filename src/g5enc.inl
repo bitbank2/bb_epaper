@@ -105,13 +105,14 @@ int g5_encode_init(G5ENCIMAGE *pImage, int iWidth, int iHeight, uint8_t *pOut, i
 // Internal function to convert uncompressed 1-bit per pixel data
 // into the run-end data needed to feed the G5 encoder
 //
-static void G5ENCEncodeLine(unsigned char *buf, int xsize, int16_t *pDest)
+static int G5ENCEncodeLine(unsigned char *buf, int xsize, int16_t *pDest)
 {
 int iCount, xborder;
 uint8_t i, c;
 int8_t cBits;
 int iLen;
 int16_t x;
+int16_t *pLimit = pDest + (MAX_IMAGE_FLIPS-4);
 
    xborder = xsize;
    iCount = (xsize + 7) >> 3; /* Number of bytes per line */
@@ -121,8 +122,8 @@ int16_t x;
 
    c = *buf++;  /* Get the first byte to start */
    iCount--;
-   while (iCount >=0)
-      {
+   while (iCount >=0) {
+      if (pDest >= pLimit) return G5_MAX_FLIPS_EXCEEDED;
       i = bitcount[c]; /* Get the number of consecutive bits */
       iLen += i; /* Add this length to total run length */
       c <<= i;
@@ -176,10 +177,12 @@ doblack:
       } /* while */
 
    x += iLen;
+   if (pDest >= pLimit) return G5_MAX_FLIPS_EXCEEDED;
    *pDest++ = x;
    *pDest++ = x; // Store a few more XSIZE to end the line
    *pDest++ = x; // so that the compressor doesn't go past
    *pDest++ = x; // the end of the line
+   return G5_SUCCESS;
 } /* G5ENCEncodeLine() */
 //
 // Compress a line of pixels and add it to the output
@@ -205,12 +208,11 @@ BUFFERED_BITS bb;
     memcpy(&bb, &pImage->bb, sizeof(BUFFERED_BITS)); // keep local copy
     CurFlips = pImage->pCur;
     RefFlips = pImage->pRef;
-    iErr = 0;
     xsize = pImage->iWidth; /* For performance reasons */
 
     // Convert the incoming line of pixels into run-end data
-    G5ENCEncodeLine(pPixels, pImage->iWidth, CurFlips);
-
+    iErr = G5ENCEncodeLine(pPixels, pImage->iWidth, CurFlips);
+    if (iErr != G5_SUCCESS) return iErr; // exceeded the maximum number of color changes
     /* Encode this line as G5 */
     a0 = a0_c = 0;
     iCur = iRef = 0;

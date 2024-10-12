@@ -44,7 +44,11 @@
 // You can define this in your compiler macros to override the default vlaue
 //
 #ifndef MAX_IMAGE_FLIPS
+#ifdef __AVR__
 #define MAX_IMAGE_FLIPS 32
+#else
+#define MAX_IMAGE_FLIPS 512
+#endif // __AVR__
 #endif
 // Horizontal prefix bits
 enum {
@@ -64,6 +68,7 @@ enum {
     G5_DECODE_COMPLETE,
     G5_NOT_INITIALIZED,
     G5_DATA_OVERFLOW,
+    G5_MAX_FLIPS_EXCEEDED
 };
 //
 // Decoder state

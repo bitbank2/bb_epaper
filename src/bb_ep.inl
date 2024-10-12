@@ -1003,7 +1003,7 @@ const EPD_PANEL panelDefs[] PROGMEM = {
     {400, 300, epd42r2_init_sequence_full, NULL, NULL, BBEP_3COLOR, BBEP_CHIP_UC81xx}, // EPD42R2_400x300
     {240, 416, epd37_init_sequence_full, NULL, epd37_init_sequence_part, 0, BBEP_CHIP_UC81xx}, // EPD37_240x416
     {104, 212, epd213_inky_init_sequence_full, NULL, NULL, 0, BBEP_CHIP_UC81xx}, // EPD213_104x212 InkyPHAT black and white
-    {800, 480, epd75_init_sequence_full, epd75_init_sequence_fast, epd75_init_sequence_partial, 0, BBEP_CHIP_UC81xx}, // EPD37_240x416
+    {800, 480, epd75_init_sequence_full, epd75_init_sequence_fast, epd75_init_sequence_partial, 0, BBEP_CHIP_UC81xx}, // EPD75_800x480
 };
 //
 // Set the e-paper panel type
