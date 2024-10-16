@@ -312,8 +312,8 @@ int bbepSetPixel(BBEPDISP *pBBEP, int x, int y, unsigned char ucColor)
     // only available for local buffer operations
     if (!pBBEP || !pBBEP->ucScreen) return BBEP_ERROR_BAD_PARAMETER;
     
-    iPitch = (pBBEP->native_width+7)>>3;
-    iSize = iPitch * pBBEP->native_height;
+    iPitch = (pBBEP->width+7)>>3;
+    iSize = ((pBBEP->native_width+7)>>3) * pBBEP->native_height;
     
     i = (x >> 3) + (y * iPitch);
     if (i < 0 || i > iSize-1) { // off the screen
@@ -326,17 +326,17 @@ int bbepSetPixel(BBEPDISP *pBBEP, int x, int y, unsigned char ucColor)
         } else {
             pBBEP->ucScreen[iSize + i] &= ~(0x80 >> (x & 7)); // clear red plane bit
             if (ucColor == BBEP_WHITE) {
-                pBBEP->ucScreen[i] &= ~(0x80 >> (x & 7));
-            } else { // must be black
                 pBBEP->ucScreen[i] |= (0x80 >> (x & 7));
+            } else { // must be black
+                pBBEP->ucScreen[i] &= ~(0x80 >> (x & 7));
             }
         }
         return BBEP_SUCCESS;
     } else { // 2-color
         if (ucColor == BBEP_WHITE) {
-            pBBEP->ucScreen[i] &= ~(0x80 >> (x & 7));
-        } else { // must be black
             pBBEP->ucScreen[i] |= (0x80 >> (x & 7));
+        } else { // must be black
+            pBBEP->ucScreen[i] &= ~(0x80 >> (x & 7));
         }
     }
     return BBEP_SUCCESS;
@@ -647,7 +647,6 @@ void bbepWriteStringCustom(BBEPDISP *pBBEP, BB_FONT *pFont, int x, int y, char *
     uint8_t first, last;
     
     if (pBBEP == NULL || pFont == NULL) return; // invalid param
-    
     if (x == -1)
         x = pBBEP->iCursorX;
     if (y == -1)
@@ -664,7 +663,7 @@ void bbepWriteStringCustom(BBEPDISP *pBBEP, BB_FONT *pFont, int x, int y, char *
             pGlyph = &pFont->glyphs[c]; // glyph info for this character
             dx += pgm_read_byte(&pGlyph->xAdvance);
         }
-        x = (pBBEP->native_width - dx)/2;
+        x = (pBBEP->width - dx)/2;
         if (x < 0) x = 0;
     }
     // Point to the start of the compressed data
@@ -672,7 +671,7 @@ void bbepWriteStringCustom(BBEPDISP *pBBEP, BB_FONT *pFont, int x, int y, char *
     pBits += sizeof(BB_FONT);
     pBits += (last - first + 1) * sizeof(BB_GLYPH);
     i = 0;
-    while (szMsg[i] && x < pBBEP->native_width && y < pBBEP->native_height) {
+    while (szMsg[i] && x < pBBEP->width && y < pBBEP->height) {
         c = szMsg[i++];
         if (c < first || c > last) // undefined character
             continue; // skip it
@@ -683,18 +682,18 @@ void bbepWriteStringCustom(BBEPDISP *pBBEP, BB_FONT *pFont, int x, int y, char *
             if (pgm_read_dword(&pFont->rotation) == 0 || pgm_read_dword(&pFont->rotation) == 180) {
                 h = pgm_read_word(&pGlyph->height);
                 w = pgm_read_byte(&pGlyph->width);
-                dx = x + pgm_read_word(&pGlyph->xOffset); // offset from character UL to start drawing
-                dy = y + pgm_read_word(&pGlyph->yOffset);
+                dx = x + (int16_t)pgm_read_word(&pGlyph->xOffset); // offset from character UL to start drawing
+                dy = y + (int16_t)pgm_read_word(&pGlyph->yOffset);
             } else { // rotated
                 w = pgm_read_word(&pGlyph->height);
                 h = pgm_read_byte(&pGlyph->width);
-                n = pgm_read_word(&pGlyph->yOffset); // offset from character UL to start drawing
+                n = (int16_t)pgm_read_word(&pGlyph->yOffset); // offset from character UL to start drawing
                 dx = x;
                 if (-n < w) dx -= (w+n); // since we draw from the baseline
-                dy = y + pgm_read_word(&pGlyph->xOffset);
+                dy = y + (int16_t)pgm_read_word(&pGlyph->xOffset);
             }
-            if ((dy + h) > pBBEP->native_height) { // trim it
-                h = pBBEP->native_height - dy;
+            if ((dy + h) > pBBEP->height) { // trim it
+                h = pBBEP->height - dy;
             }
             u8EndMask = 0xff;
             if (w & 7) { // width ends on a partial byte
@@ -704,10 +703,12 @@ void bbepWriteStringCustom(BBEPDISP *pBBEP, BB_FONT *pFont, int x, int y, char *
             ty = (pgm_read_word(&pGlyph[1].bitmapOffset) - (intptr_t)(s - pBits)); // compressed size
             if (ty < 0 || ty > 4096) ty = 4096; // DEBUG
             rc = g5_decode_init(&g5dec, w, h, s, ty);
-            if (rc != G5_SUCCESS) return; // corrupt data?
+            if (rc != G5_SUCCESS) {
+                 return; // corrupt data?
+            }
             if (pBBEP->ucScreen) { // backbuffer, draw pixels
 #ifndef NO_RAM
-                for (ty=dy; ty<end_y && ty < pBBEP->native_height; ty++) {
+                for (ty=dy; ty<end_y && ty < pBBEP->height; ty++) {
                     uint8_t u8, u8Count;
                     g5_decode_line(&g5dec, u8Cache);
                     s = u8Cache;
@@ -845,7 +846,7 @@ int bbepWriteString(BBEPDISP *pBBEP, int x, int y, char *szMsg, int iSize, int i
             // we can't directly use the pointer to FLASH memory, so copy to a local buffer
             u8Temp[0] = 0; // first column is blank
             memcpy_P(&u8Temp[1], &ucFont[iFontOff], 7); // only needed on AVR
-            if (iColor == BBEP_BLACK) InvertBytes(u8Temp, 8);
+            if (iColor == BBEP_BLACK && !pBBEP->ucScreen) InvertBytes(u8Temp, 8);
             iLen = 8;
             if (x + iLen > pBBEP->width) { // clip right edge
                 iLen = pBBEP->width - x;
@@ -886,17 +887,17 @@ int bbepWriteString(BBEPDISP *pBBEP, int x, int y, char *szMsg, int iSize, int i
             } else { // draw in memory
 #ifndef NO_RAM
                 uint8_t u8Mask;
-                for (int ty=y; ty<y+8; ty++) {
-                    u8Mask = 1<<y;
+                for (int ty=0; ty<8; ty++) {
+                    u8Mask = 1<<ty;
                     for (int tx = 0; tx<iLen; tx++) {
                         if (u8Temp[tx] & u8Mask) {
                             if (iCount == 8) {
-                                bbepSetPixel(pBBEP, x+tx, ty, iColor);
+                                bbepSetPixel(pBBEP, x+tx, y+ty, iColor);
                             } else { // stretched
-                                bbepSetPixel(pBBEP, x+tx*2, ty*2, iColor);
-                                bbepSetPixel(pBBEP, 1+x+tx*2, ty*2, iColor);
-                                bbepSetPixel(pBBEP, x+tx*2, 1+ty*2, iColor);
-                                bbepSetPixel(pBBEP, 1+x+tx*2, 1+ty*2, iColor);
+                                bbepSetPixel(pBBEP, x+tx*2, y+(ty*2), iColor);
+                                bbepSetPixel(pBBEP, 1+x+tx*2, y+(ty*2), iColor);
+                                bbepSetPixel(pBBEP, x+tx*2, y+1+ty*2, iColor);
+                                bbepSetPixel(pBBEP, 1+x+tx*2, y+1+ty*2, iColor);
                             }
                         }
                     }
@@ -1038,14 +1039,14 @@ int bbepWriteString(BBEPDISP *pBBEP, int x, int y, char *szMsg, int iSize, int i
             } else { // write to RAM
 #ifndef NO_RAM
                 uint8_t u8Mask;
-                for (int ty=y; ty<y+8; ty++) {
-                    u8Mask = 1<<y;
+                for (int ty=0; ty<8; ty++) {
+                    u8Mask = 1<<ty;
                     for (int tx = 0; tx<iLen; tx++) {
-                        if (u8Temp[6+tx] & u8Mask) {
-                            bbepSetPixel(pBBEP, x+tx, ty, iColor);
+                        if (!(u8Temp[6+tx] & u8Mask)) {
+                            bbepSetPixel(pBBEP, x+tx, y+ty, iColor);
                         }
-                        if (u8Temp[18+tx] & u8Mask) {
-                            bbepSetPixel(pBBEP, x+tx, ty+8, iColor);
+                        if (!(u8Temp[18+tx] & u8Mask)) {
+                            bbepSetPixel(pBBEP, x+tx, y+ty+8, iColor);
                         }
                     }
                 }
