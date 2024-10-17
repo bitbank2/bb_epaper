@@ -44,6 +44,11 @@ The current code supports 1-bit black and white epaper displays as well as the B
 See WiKi and example code for how to use the library.<br> 
 <br>
 
+In the photo below, the custom font and ellipse were drawn without using a local copy of the frame buffer (aka bufferless). bb_epaper offers some unique features like these when working on very constrained devices (insufficient RAM to hold a copy of the graphics). 
+<br>
+![bb_epaper](/bb_epaper_demo.jpg?raw=true "bb_epaper")
+<br>
+
 If you find this code useful, please consider sending a donation or becomming a Github sponsor.
 
 [![paypal](https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=SR4F44J2UR8S4)

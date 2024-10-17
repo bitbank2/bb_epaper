@@ -1335,7 +1335,7 @@ static void DrawScaledLine(BBEPDISP *pBBEP, int iCX, int iCY, int x, int y, int3
 // Draw the 8 pixels around the Bresenham circle
 // (scaled to make an ellipse)
 //
-static void BresenhamCircle(BBEPDISP *pBBEP, int iCX, int iCY, int x, int y, int32_t iXFrac, int32_t iYFrac, uint8_t ucColor, uint8_t bFill)
+static void BresenhamCircle(BBEPDISP *pBBEP, int iCX, int iCY, int x, int y, int32_t iXFrac, int32_t iYFrac, uint8_t ucColor, uint8_t u8Parts, uint8_t bFill)
 {
     if (bFill) // draw a filled ellipse
     {
@@ -1347,21 +1347,29 @@ static void BresenhamCircle(BBEPDISP *pBBEP, int iCX, int iCY, int x, int y, int
     }
     else // draw 8 pixels around the edges
     {
-        DrawScaledPixel(pBBEP, iCX, iCY, x, y, iXFrac, iYFrac, ucColor);
-        DrawScaledPixel(pBBEP, iCX, iCY, -x, y, iXFrac, iYFrac, ucColor);
-        DrawScaledPixel(pBBEP, iCX, iCY, x, -y, iXFrac, iYFrac, ucColor);
-        DrawScaledPixel(pBBEP, iCX, iCY, -x, -y, iXFrac, iYFrac, ucColor);
-        DrawScaledPixel(pBBEP, iCX, iCY, y, x, iXFrac, iYFrac, ucColor);
-        DrawScaledPixel(pBBEP, iCX, iCY, -y, x, iXFrac, iYFrac, ucColor);
-        DrawScaledPixel(pBBEP, iCX, iCY, y, -x, iXFrac, iYFrac, ucColor);
-        DrawScaledPixel(pBBEP, iCX, iCY, -y, -x, iXFrac, iYFrac, ucColor);
+        if (u8Parts & 1) {
+            DrawScaledPixel(pBBEP, iCX, iCY, -x, -y, iXFrac, iYFrac, ucColor);
+            DrawScaledPixel(pBBEP, iCX, iCY, -y, -x, iXFrac, iYFrac, ucColor);
+        }
+        if (u8Parts & 2) {
+            DrawScaledPixel(pBBEP, iCX, iCY, x, -y, iXFrac, iYFrac, ucColor);
+            DrawScaledPixel(pBBEP, iCX, iCY, y, -x, iXFrac, iYFrac, ucColor);
+        }
+        if (u8Parts & 4) {
+            DrawScaledPixel(pBBEP, iCX, iCY, x, y, iXFrac, iYFrac, ucColor);
+            DrawScaledPixel(pBBEP, iCX, iCY, y, x, iXFrac, iYFrac, ucColor);
+        }
+        if (u8Parts & 8) {
+            DrawScaledPixel(pBBEP, iCX, iCY, -x, y, iXFrac, iYFrac, ucColor);
+            DrawScaledPixel(pBBEP, iCX, iCY, -y, x, iXFrac, iYFrac, ucColor);
+        }
     }
 } /* BresenhamCircle() */
 
 //
 // Draw an outline or filled ellipse
 //
-void bbepEllipse(BBEPDISP *pBBEP, int iCenterX, int iCenterY, int32_t iRadiusX, int32_t iRadiusY, uint8_t ucColor, uint8_t bFilled)
+void bbepEllipse(BBEPDISP *pBBEP, int iCenterX, int iCenterY, int32_t iRadiusX, int32_t iRadiusY, uint8_t u8Parts, uint8_t ucColor, uint8_t bFilled)
 {
     int32_t iXFrac, iYFrac;
     int iRadius, iDelta, x, y;
@@ -1383,7 +1391,7 @@ void bbepEllipse(BBEPDISP *pBBEP, int iCenterX, int iCenterY, int32_t iRadiusX, 
     iDelta = 3 - (2 * iRadius);
     x = 0; y = iRadius;
     while (x <= y) {
-        BresenhamCircle(pBBEP, iCenterX, iCenterY, x, y, iXFrac, iYFrac, ucColor, bFilled);
+        BresenhamCircle(pBBEP, iCenterX, iCenterY, x, y, iXFrac, iYFrac, ucColor, u8Parts, bFilled);
         x++;
         if (iDelta < 0) {
             iDelta += (4*x) + 6;
@@ -1553,6 +1561,30 @@ void bbepRectangle(BBEPDISP *pBBEP, int x1, int y1, int x2, int y2, uint8_t ucCo
         }
     } // outline
 } /* bbepRectangle() */
+
+void bbepRoundRect(BBEPDISP *pBBEP, int x, int y, int w, int h, int r, uint8_t iColor, int bFilled)
+{
+    if (bFilled) {
+        bbepRectangle(pBBEP, x+r, y, w-(2*r), r, iColor, 1);
+        bbepRectangle(pBBEP, x, y+r, w, h-(2*r), iColor, 1);
+        bbepRectangle(pBBEP, x+r, y+h-r, w-(2*r), r, iColor, 1);
+        // draw four corners
+        bbepEllipse(pBBEP, x+w-r-1, y+r, r, r, 1, iColor, 1);
+        bbepEllipse(pBBEP, x+r, y+r, r, r, 2, iColor, 1);
+        bbepEllipse(pBBEP, x+w-r-1, y+h-r, r, r, 1, iColor, 1);
+        bbepEllipse(pBBEP, x+r, y+h-r, r, r, 2, iColor, 1);
+    } else {
+        bbepDrawLine(pBBEP, x+r, y, x+w-r, y, iColor); // top
+        bbepDrawLine(pBBEP, x+r, y+h-1, x+w-r, y+h-1, iColor); // bottom
+        bbepDrawLine(pBBEP, x, y+r, x, y+h-r, iColor); // left
+        bbepDrawLine(pBBEP, x+w-1, y+r, x+w-1, y+h-r, iColor); // right
+        // four corners
+        bbepEllipse(pBBEP, x+r, y+r, r, r, 1, iColor, 0);
+        bbepEllipse(pBBEP, x+w-r-1, y+r, r, r, 2, iColor, 0);
+        bbepEllipse(pBBEP, x+w-r-1, y+h-r-1, r, r, 4, iColor, 0);
+        bbepEllipse(pBBEP, x+r, y+h-r-1, r, r, 8, iColor, 0);
+    }
+} /* bbepRoundRect() */
 
 #endif // __BB_EP_GFX__
 

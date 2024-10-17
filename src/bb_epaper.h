@@ -301,6 +301,10 @@ class BBEPAPER
     uint32_t capabilities();
     void setRotation(int iAngle);
     int getRotation(void);
+    void drawRoundRect(int x, int y, int w, int h,
+                       int r, uint8_t color);
+    void fillRoundRect(int x, int y, int w, int h,
+                       int r, uint8_t color);
     void fillScreen(int iColor, int iPlane = PLANE_DUPLICATE);
     void drawRect(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t color);
     void fillRect(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t color);

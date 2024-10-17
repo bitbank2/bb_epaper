@@ -428,19 +428,19 @@ int16_t BBEPAPER::height(void)
 }
 void BBEPAPER::drawCircle(int32_t x, int32_t y, int32_t r, uint32_t color)
 {
-  bbepEllipse(&_bbep, x, y, r, r, color, 0);
+  bbepEllipse(&_bbep, x, y, r, r, 0xf, color, 0);
 }
 void BBEPAPER::fillCircle(int32_t x, int32_t y, int32_t r, uint32_t color)
 {
-    bbepEllipse(&_bbep, x, y, r, r, color, 1);
+    bbepEllipse(&_bbep, x, y, r, r, 0xf, color, 1);
 }
 void BBEPAPER::drawEllipse(int16_t x, int16_t y, int32_t rx, int32_t ry, uint16_t color)
 {
-    bbepEllipse(&_bbep, x, y, rx, ry, color, 0);
+    bbepEllipse(&_bbep, x, y, rx, ry, 0xf, color, 0);
 }
 void BBEPAPER::fillEllipse(int16_t x, int16_t y, int32_t rx, int32_t ry, uint16_t color)
 {
-    bbepEllipse(&_bbep, x, y, rx, ry, color, 1);
+    bbepEllipse(&_bbep, x, y, rx, ry, 0xf, color, 1);
 }
 
 void BBEPAPER::sleep(int bDeep)
@@ -491,5 +491,16 @@ void BBEPAPER::writeCmd(uint8_t u8Cmd)
 {
     bbepWriteCmd(&_bbep, u8Cmd);
 } /* writeCmd() */
+
+void BBEPAPER::drawRoundRect(int x, int y, int w, int h,
+                   int r, uint8_t color)
+{
+    bbepRoundRect(&_bbep, x, y, w, h, r, color, 0);
+}
+void BBEPAPER::fillRoundRect(int x, int y, int w, int h,
+                   int r, uint8_t color)
+{
+    bbepRoundRect(&_bbep, x, y, w, h, r, color, 1);
+}
 
 #endif // __cplusplus
