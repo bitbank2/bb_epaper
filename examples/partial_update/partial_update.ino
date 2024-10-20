@@ -28,13 +28,18 @@
 // both old and new data each update.
 //
 #include <bb_epaper.h>
-BBEPAPER bbep(EPD295_128x296);
-//BBEPAPER bbep(EPD122_192x176);
+//BBEPAPER bbep(EPD295_128x296);
+BBEPAPER bbep(EPD29_128x296); // Badger2040
 // My Arduino Nano 33 BLE e-paper adapter
-#define DC_PIN 16
-#define BUSY_PIN 15
-#define RESET_PIN 14
-#define CS_PIN 10
+//#define DC_PIN 16
+//#define BUSY_PIN 15
+//#define RESET_PIN 14
+//#define CS_PIN 10
+// Badger2040
+#define CS_PIN 17
+#define BUSY_PIN 26
+#define RESET_PIN 21
+#define DC_PIN 20
 
 void DrawScene(int i, int iPlane)
 {

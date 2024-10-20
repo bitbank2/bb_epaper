@@ -41,6 +41,7 @@ enum {
     BBEP_ERROR_BAD_DATA,
     BBEP_ERROR_NOT_SUPPORTED,
     BBEP_ERROR_NO_MEMORY,
+    BBEP_ERROR_OUT_OF_BOUNDS,
     BBEP_ERROR_COUNT
 };
 
@@ -110,6 +111,7 @@ enum {
     EPD37_240x416, // GDEY037T03
     EPD213_104x212, // InkyPHAT 2.13 black and white
     EPD75_800x480, // GDEY075T7
+    EPD29_128x296, // Pimoroni Badger2040
     EPD_PANEL_COUNT
 };
 #ifdef FUTURE
@@ -249,7 +251,7 @@ enum {
 
 typedef struct bbepstruct
 {
-uint8_t wrap, type, chip_type;
+uint8_t wrap, type, chip_type, last_error;
 uint8_t *ucScreen;
 int iCursorX, iCursorY;
 int width, height, native_width, native_height;
@@ -301,6 +303,7 @@ class BBEPAPER
     uint32_t capabilities();
     void setRotation(int iAngle);
     int getRotation(void);
+    int getLastError(void);
     void drawRoundRect(int x, int y, int w, int h,
                        int r, uint8_t color);
     void fillRoundRect(int x, int y, int w, int h,

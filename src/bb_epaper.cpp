@@ -397,7 +397,7 @@ void BBEPAPER::getTextBounds(const char *string, int16_t x, int16_t y, int16_t *
 {
     if (_bbep.pFont) {
         int width, top, bottom;
-        bbepGetStringBox((BB_FONT *)_bbep.pFont, string, &width, &top, &bottom);
+        bbepGetStringBox(&_bbep, (BB_FONT *)_bbep.pFont, string, &width, &top, &bottom);
         *x1 = x;
         *w = width;
         *y1 = y + top;
@@ -503,4 +503,8 @@ void BBEPAPER::fillRoundRect(int x, int y, int w, int h,
     bbepRoundRect(&_bbep, x, y, w, h, r, color, 1);
 }
 
+int BBEPAPER::getLastError(void)
+{
+    return _bbep.last_error;
+}
 #endif // __cplusplus

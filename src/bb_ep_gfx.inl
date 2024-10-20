@@ -191,8 +191,10 @@ void bbepDrawSprite(BBEPDISP *pBBEP, const uint8_t *pSprite, int cx, int cy, int
     iLocalPitch = pBBEP->width;
     
     if (pBBEP == NULL) return;
-    if (x+cx < 0 || y+cy < 0 || x >= pBBEP->native_width || y >= pBBEP->native_height)
+    if (x+cx < 0 || y+cy < 0 || x >= pBBEP->native_width || y >= pBBEP->native_height) {
+        pBBEP->last_error = BBEP_ERROR_BAD_PARAMETER;
         return; // out of bounds
+    }
     dy = y; // destination y
     if (y < 0) // skip the invisible parts
     {
@@ -244,6 +246,7 @@ void bbepDrawSprite(BBEPDISP *pBBEP, const uint8_t *pSprite, int cx, int cy, int
             bbepWriteData(pBBEP, u8Cache, iDestPitch); // write each row into the EPD framebuffer
         } // for y
     } else {
+#ifndef NO_RAM
         iStartX = 0;
         dx = x;
         if (x < 0)
@@ -297,6 +300,7 @@ void bbepDrawSprite(BBEPDISP *pBBEP, const uint8_t *pSprite, int cx, int cy, int
             dy++;
             pSprite += iPitch;
         } // for ty
+#endif // NO_RAM
     }
 } /* bbepDrawSprite() */
 //
@@ -317,6 +321,7 @@ int bbepSetPixel(BBEPDISP *pBBEP, int x, int y, unsigned char ucColor)
     
     i = (x >> 3) + (y * iPitch);
     if (i < 0 || i > iSize-1) { // off the screen
+        pBBEP->last_error = BBEP_ERROR_BAD_PARAMETER;
         return BBEP_ERROR_BAD_PARAMETER;
     }
     // special case for 3-color e-ink
@@ -406,6 +411,7 @@ int bbepLoadG5(BBEPDISP *pBBEP, const uint8_t *pG5, int x, int y, int iFG, int i
             }
             bbepWriteData(pBBEP, u8Cache, (cx+(x&7)+7)>>3);
         } else { // use the setPixel function for more features
+#ifndef NO_RAM
             src_mask = 0; // make it read a byte to start
             s = u8Cache;
             for (tx=0; tx<cx; tx++) {
@@ -421,7 +427,8 @@ int bbepLoadG5(BBEPDISP *pBBEP, const uint8_t *pG5, int x, int y, int iFG, int i
                         bbepSetPixel(pBBEP, x+tx, y+ty, (uint8_t)iBG);
                 }
                 src_mask >>= 1;
-            } // for x
+            } // for tx
+#endif // NO_RAM
         }
     } // for y
     return BBEP_SUCCESS;
@@ -446,18 +453,24 @@ int bbepLoadBMP(BBEPDISP *pBBEP, const uint8_t *pBMP, int dx, int dy, int iFG, i
     // access on RP2040 for odd addresses
     i16 = pgm_read_byte(pBMP);
     i16 += (pgm_read_byte(&pBMP[1]) << 8);
-    if (i16 != 0x4d42) // must start with 'BM'
+    if (i16 != 0x4d42) { // must start with 'BM'
+        pBBEP->last_error = BBEP_ERROR_BAD_DATA;
         return BBEP_ERROR_BAD_DATA; // not a BMP file
+    }
     cx = pgm_read_byte(pBMP + 18);
     cx += (pgm_read_byte(pBMP+19)<<8);
-    if (cx + dx > pBBEP->width) // must fit on the display
+    if (cx + dx > pBBEP->width) { // must fit on the display
+        pBBEP->last_error = BBEP_ERROR_BAD_PARAMETER;
         return BBEP_ERROR_BAD_PARAMETER;
+    }
     cy = pgm_read_byte(pBMP + 22);
     cy += (pgm_read_byte(pBMP+23)<<8);
     if (cy < 0) cy = -cy;
     else bFlipped = 1;
-    if (cy + dy > pBBEP->height) // must fit on the display
+    if (cy + dy > pBBEP->height) { // must fit on the display
+        pBBEP->last_error = BBEP_ERROR_BAD_PARAMETER;
         return BBEP_ERROR_BAD_PARAMETER;
+    }
     if (pBBEP->ucScreen == NULL) {
         // no BG specified or no back buffer, BG color is opposite of FG
         if (iFG == -1) iFG = BBEP_WHITE;
@@ -468,8 +481,10 @@ int bbepLoadBMP(BBEPDISP *pBBEP, const uint8_t *pBMP, int dx, int dy, int iFG, i
     
     i16 = pgm_read_byte(pBMP + 28);
     i16 += (pgm_read_byte(pBMP+29)<<8);
-    if (i16 != 1) // must be 1 bit per pixel
+    if (i16 != 1) { // must be 1 bit per pixel
+        pBBEP->last_error = BBEP_ERROR_BAD_DATA;
         return BBEP_ERROR_BAD_DATA;
+    }
     iOffBits = pgm_read_byte(pBMP + 10);
     iOffBits += (pgm_read_byte(pBMP+11));
     iPitch = (((cx+7)>>3) + 3) & 0xfffc; // must be DWORD aligned
@@ -502,6 +517,7 @@ int bbepLoadBMP(BBEPDISP *pBBEP, const uint8_t *pBMP, int dx, int dy, int iFG, i
             }
             bbepWriteData(pBBEP, u8Cache, (cx+(dx&7)+7)>>3);
         } else { // use the setPixel function for more features
+#ifndef NO_RAM
             src_mask = 0; // make it read a byte to start
             for (x=0; x<cx; x++) {
                 if (src_mask == 0) { // need to load the next byte
@@ -517,6 +533,7 @@ int bbepLoadBMP(BBEPDISP *pBBEP, const uint8_t *pBMP, int dx, int dy, int iFG, i
                 }
                 src_mask >>= 1;
             } // for x
+#endif // NO_RAM
         }
     } // for y
     return BBEP_SUCCESS;
@@ -537,33 +554,45 @@ int bbepLoadBMP3(BBEPDISP *pBBEP, const uint8_t *pBMP, int dx, int dy)
     uint8_t bFlipped = 0;
     uint8_t ucColorMap[16];
     
-    if (!(pBBEP->iFlags & BBEP_3COLOR) || pBBEP->ucScreen == 0)
-        return BBEP_ERROR_NOT_SUPPORTED; // if not 3-color EPD or no back buffer, bye-byte
+    if (!(pBBEP->iFlags & BBEP_3COLOR) || pBBEP->ucScreen == 0) {
+        pBBEP->last_error = BBEP_ERROR_NOT_SUPPORTED;
+        return BBEP_ERROR_NOT_SUPPORTED; // if not 3-color EPD or no back buffer
+    }
     iDestPitch = pBBEP->width;
     iRedOff = ((pBBEP->height+7)>>3) * iDestPitch;
     // Need to avoid pgm_read_word because it can cause an
     // unaligned address exception on the RP2040 for odd addresses
     i16 = pgm_read_byte(pBMP);
     i16 += (pgm_read_byte(pBMP+1)<<8);
-    if (i16 != 0x4d42) // must start with 'BM'
+    if (i16 != 0x4d42) { // must start with 'BM'
+        pBBEP->last_error = BBEP_ERROR_BAD_DATA;
         return BBEP_ERROR_BAD_DATA; // not a BMP file
+    }
     cx = pgm_read_byte(&pBMP[18]);
     cx += (pgm_read_byte(&pBMP[19]) << 8);
-    if (cx + dx > pBBEP->width) // must fit on the display
+    if (cx + dx > pBBEP->width) { // must fit on the display
+        pBBEP->last_error = BBEP_ERROR_BAD_PARAMETER;
         return BBEP_ERROR_BAD_PARAMETER;
+    }
     cy = pgm_read_byte(&pBMP[22]);
     cy += (pgm_read_byte(&pBMP[23])<<8);
     if (cy < 0)
         cy = -cy;
     else
         bFlipped = 1;
-    if (cy + dy > pBBEP->height) // must fit on the display
+    if (cy + dy > pBBEP->height) { // must fit on the display
+        pBBEP->last_error = BBEP_ERROR_BAD_PARAMETER;
         return BBEP_ERROR_BAD_PARAMETER;
-    if (pgm_read_byte(&pBMP[30]) != 0) // compression must be NONE
+    }
+    if (pgm_read_byte(&pBMP[30]) != 0) { // compression must be NONE
+        pBBEP->last_error = BBEP_ERROR_BAD_DATA;
         return BBEP_ERROR_BAD_DATA;
+    }
     bpp = pgm_read_byte(&pBMP[28]);
-    if (bpp != 4) // must be 4 bits per pixel
+    if (bpp != 4) { // must be 4 bits per pixel
+        pBBEP->last_error = BBEP_ERROR_BAD_DATA;
         return BBEP_ERROR_BAD_DATA;
+    }
     iOffBits = pgm_read_byte(&pBMP[10]);
     iOffBits += (pgm_read_byte(&pBMP[11])<<8);
     iColors = pgm_read_byte(&pBMP[46]); // colors used BMP field
@@ -646,7 +675,11 @@ void bbepWriteStringCustom(BBEPDISP *pBBEP, BB_FONT *pFont, int x, int y, char *
     uint8_t *pBits, u8CMD1, u8CMD2, u8CMD, u8EndMask;
     uint8_t first, last;
     
-    if (pBBEP == NULL || pFont == NULL) return; // invalid param
+    if (pBBEP == NULL) return;
+    if (pFont == NULL) {
+        pBBEP->last_error = BBEP_ERROR_BAD_PARAMETER;
+        return; // invalid param
+    }
     if (x == -1)
         x = pBBEP->iCursorX;
     if (y == -1)
@@ -704,6 +737,7 @@ void bbepWriteStringCustom(BBEPDISP *pBBEP, BB_FONT *pFont, int x, int y, char *
             if (ty < 0 || ty > 4096) ty = 4096; // DEBUG
             rc = g5_decode_init(&g5dec, w, h, s, ty);
             if (rc != G5_SUCCESS) {
+                pBBEP->last_error = BBEP_ERROR_BAD_DATA;
                  return; // corrupt data?
             }
             if (pBBEP->ucScreen) { // backbuffer, draw pixels
@@ -810,7 +844,9 @@ int bbepWriteString(BBEPDISP *pBBEP, int x, int y, char *szMsg, int iSize, int i
     int iOldFG; // old fg color to make sure red works
     uint8_t u8Temp[40];
     
-    if (pBBEP == NULL) return BBEP_ERROR_BAD_PARAMETER;
+    if (pBBEP == NULL) {
+        return BBEP_ERROR_BAD_PARAMETER;
+    }
     if (pBBEP->chip_type == BBEP_CHIP_UC81xx) {
         ucCMD1 = UC8151_DTM2;
         ucCMD2 = UC8151_DTM1;
@@ -828,8 +864,10 @@ int bbepWriteString(BBEPDISP *pBBEP, int x, int y, char *szMsg, int iSize, int i
     } else {
         pBBEP->iCursorX = x; pBBEP->iCursorY = y;
     }
-    if (pBBEP->iCursorX >= pBBEP->width || pBBEP->iCursorY >= pBBEP->height)
+    if (pBBEP->iCursorX >= pBBEP->width || pBBEP->iCursorY >= pBBEP->height) {
+        pBBEP->last_error = BBEP_ERROR_BAD_PARAMETER;
         return BBEP_ERROR_BAD_PARAMETER; // can't draw off the display
+    }
     
     iOldFG = pBBEP->iFG; // save old fg color
     if (iColor >= BBEP_YELLOW) {
@@ -1105,19 +1143,25 @@ int bbepWriteString(BBEPDISP *pBBEP, int x, int y, char *szMsg, int iSize, int i
         return BBEP_SUCCESS;
     } // 6x8
     pBBEP->iFG = iOldFG; // restore color
+    pBBEP->last_error = BBEP_ERROR_BAD_PARAMETER;
     return BBEP_ERROR_BAD_PARAMETER; // invalid size
 } /* bbepWriteString() */
 //
 // Get the width of text in a custom font
 //
-void bbepGetStringBox(BB_FONT *pFont, const char *szMsg, int *width, int *top, int *bottom)
+void bbepGetStringBox(BBEPDISP *pBBEP, BB_FONT *pFont, const char *szMsg, int *width, int *top, int *bottom)
 {
     int cx = 0;
     unsigned int c, i = 0;
     BB_GLYPH *pBBG;
     int miny, maxy;
     
-    if (width == NULL || top == NULL || bottom == NULL || pFont == NULL || szMsg == NULL) return; // bad pointers
+    if (!pBBEP) return;
+    
+    if (width == NULL || top == NULL || bottom == NULL || pFont == NULL || szMsg == NULL) {
+        pBBEP->last_error = BBEP_ERROR_BAD_PARAMETER;
+        return; // bad pointers
+    }
     miny = 1000; maxy = 0;
     while (szMsg[i]) {
         c = szMsg[i++];
@@ -1157,10 +1201,14 @@ void bbepDrawLine(BBEPDISP *pBBEP, int x1, int y1, int x2, int y2, uint8_t ucCol
     int iPitch;
     int iRedOffset = 0;
     
-    if (pBBEP == NULL) return;
-    
-    if (x1 < 0 || x2 < 0 || y1 < 0 || y2 < 0 || x1 >= pBBEP->width || x2 >= pBBEP->width || y1 >= pBBEP->height || y2 >= pBBEP->height)
+    if (pBBEP == NULL) {
         return;
+    }
+    
+    if (x1 < 0 || x2 < 0 || y1 < 0 || y2 < 0 || x1 >= pBBEP->width || x2 >= pBBEP->width || y1 >= pBBEP->height || y2 >= pBBEP->height) {
+        pBBEP->last_error = BBEP_ERROR_BAD_PARAMETER;
+        return;
+    }
     iPitch = (pBBEP->width + 7)>>3;
     if (ucColor >= BBEP_YELLOW && pBBEP->iFlags & (BBEP_3COLOR | BBEP_4COLOR)) {
         // use the second half of the image buffer
@@ -1304,8 +1352,10 @@ static void DrawScaledPixel(BBEPDISP *pBBEP, int iCX, int iCY, int x, int y, int
     if (iXFrac != 0x10000) x = ((x * iXFrac) >> 16);
     if (iYFrac != 0x10000) y = ((y * iYFrac) >> 16);
     x += iCX; y += iCY;
-    if (x < 0 || x >= pBBEP->width || y < 0 || y >= pBBEP->height)
+    if (x < 0 || x >= pBBEP->width || y < 0 || y >= pBBEP->height) {
+        pBBEP->last_error = BBEP_ERROR_BAD_PARAMETER;
         return; // off the screen
+    }
     d = &pBBEP->ucScreen[iRedOffset + (x>>3) + (y * iPitch)];
     ucMask = 0x80 >> (x & 7);
     if (ucColor)
@@ -1325,8 +1375,10 @@ static void DrawScaledLine(BBEPDISP *pBBEP, int iCX, int iCY, int x, int y, int3
     iLen = x*2;
     x = iCX - x; y += iCY;
     x2 = x + iLen;
-    if (y < 0 || y >= pBBEP->height)
+    if (y < 0 || y >= pBBEP->height) {
+        pBBEP->last_error = BBEP_ERROR_BAD_PARAMETER;
         return; // completely off the screen
+    }
     if (x < 0) x = 0;
     if (x2 >= pBBEP->width) x2 = pBBEP->width-1;
     bbepDrawLine(pBBEP, x, y, x2, y, ucColor);
@@ -1374,11 +1426,16 @@ void bbepEllipse(BBEPDISP *pBBEP, int iCenterX, int iCenterY, int32_t iRadiusX, 
     int32_t iXFrac, iYFrac;
     int iRadius, iDelta, x, y;
     
-    if (pBBEP == NULL || (pBBEP->ucScreen == NULL && !bFilled))
+    if (pBBEP == NULL) return;
+    if (pBBEP->ucScreen == NULL && !bFilled) {
+        pBBEP->last_error = BBEP_ERROR_BAD_PARAMETER;
         return; // must have back buffer defined for outline mode
+    }
     
-    if (iRadiusX <= 0 || iRadiusY <= 0) return; // invalid radii
-    
+    if (iRadiusX <= 0 || iRadiusY <= 0) {
+        pBBEP->last_error = BBEP_ERROR_BAD_PARAMETER;
+        return; // invalid radii
+    }
     if (iRadiusX > iRadiusY) {// use X as the primary radius
         iRadius = iRadiusX;
         iXFrac = 65536;
@@ -1404,7 +1461,6 @@ void bbepEllipse(BBEPDISP *pBBEP, int iCenterX, int iCenterY, int32_t iRadiusX, 
 //
 // Draw an outline or filled rectangle
 //
-//
 void bbepRectangle(BBEPDISP *pBBEP, int x1, int y1, int x2, int y2, uint8_t ucColor, uint8_t bFilled)
 {
     uint8_t *d, ucMask, ucMask2;
@@ -1421,11 +1477,15 @@ void bbepRectangle(BBEPDISP *pBBEP, int x1, int y1, int x2, int y2, uint8_t ucCo
         }
     }
     
-    if (pBBEP == NULL)
+    if (pBBEP == NULL) {
         return; // invalid - must have BBEPDISP structure
+    }
     
     if (x1 < 0 || y1 < 0 || x2 < 0 || y2 < 0 ||
-        x1 >= pBBEP->width || y1 >= pBBEP->height || x2 >= pBBEP->width || y2 >= pBBEP->height) return; // invalid coordinates
+        x1 >= pBBEP->width || y1 >= pBBEP->height || x2 >= pBBEP->width || y2 >= pBBEP->height) {
+        pBBEP->last_error = BBEP_ERROR_BAD_PARAMETER;
+        return; // invalid coordinates
+    }
     iPitch = pBBEP->width;
     // Make sure that X1/Y1 is above and to the left of X2/Y2
     // swap coordinates as needed to make this true
