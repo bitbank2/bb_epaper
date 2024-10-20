@@ -1448,9 +1448,11 @@ int bbepWritePlane(BBEPDISP *pBBEP, int iPlane)
     
     if (pBBEP == NULL || pBBEP->ucScreen == NULL || iPlane < PLANE_0 || iPlane > PLANE_DUPLICATE)
         return BBEP_ERROR_BAD_PARAMETER;
+    bbepSetAddrWindow(pBBEP, 0,0, pBBEP->native_width, pBBEP->native_height);
+
     if (pBBEP->chip_type == BBEP_CHIP_UC81xx) {
-        ucCMD1 = UC8151_DTM1;
-        ucCMD2 = UC8151_DTM2;
+        ucCMD1 = UC8151_DTM2;
+        ucCMD2 = UC8151_DTM1;
     } else {
         ucCMD1 = SSD1608_WRITE_RAM;
         ucCMD2 = SSD1608_WRITE_ALTRAM;

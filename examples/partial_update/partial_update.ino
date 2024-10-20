@@ -73,7 +73,7 @@ void setup()
     DrawScene(i, 1); // new scene drawn to plane 1
     bbep.refresh(REFRESH_PARTIAL);
     bbep.wait();
-//    bbep.sleep(LIGHT_SLEEP);
+    bbep.sleep(LIGHT_SLEEP);
   } // for i
   delay(5000); // wait 5 seconds, then erase to white
   bbep.setPlane(0);
