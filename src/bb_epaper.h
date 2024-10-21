@@ -303,6 +303,7 @@ class BBEPAPER
     uint32_t capabilities();
     void setRotation(int iAngle);
     int getRotation(void);
+    void backupPlane(void);
     int getLastError(void);
     void drawRoundRect(int x, int y, int w, int h,
                        int r, uint8_t color);

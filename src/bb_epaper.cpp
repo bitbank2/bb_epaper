@@ -111,6 +111,13 @@ void BBEPAPER::setBuffer(uint8_t *pBuffer)
     _bbep.ucScreen = pBuffer;
 }
 
+void BBEPAPER::backupPlane(void)
+{
+    int iSize = ((_bbep.native_width+7)>>3) * _bbep.native_height;
+    if (!(_bbep.iFlags & (BBEP_3COLOR | BBEP_4COLOR)) && _bbep.ucScreen) {
+        memcpy(&_bbep.ucScreen[iSize], _bbep.ucScreen, iSize);
+    }
+}
 int BBEPAPER::allocBuffer(void)
 {
     int iSize = ((_bbep.native_width+7)>>3) * _bbep.native_height;
