@@ -1081,6 +1081,20 @@ int bbepSetPanelType(BBEPDISP *pBBEP, int iPanel)
     return BBEP_SUCCESS;
 } /* bbepSetPanelType() */
 
+int bbepCreateVirtual(BBEPDISP *pBBEP, int iWidth, int iHeight, int iFlags)
+{
+    if (pBBEP) {
+        memset(pBBEP, 0, sizeof(BBEPDISP));
+        pBBEP->native_width = pBBEP->width = iWidth;
+        pBBEP->native_height = pBBEP->height = iHeight;
+        pBBEP->iFlags = iFlags;
+        pBBEP->chip_type = BBEP_CHIP_NONE;
+        return BBEP_SUCCESS;
+    } else {
+        return BBEP_ERROR_BAD_PARAMETER;
+    }
+}
+
 //
 // Toggle the reset line to wake up the eink from deep sleep
 //

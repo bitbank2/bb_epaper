@@ -58,6 +58,7 @@ enum {
     BBEP_CHIP_NOT_DEFINED = 0,
     BBEP_CHIP_SSD16xx,
     BBEP_CHIP_UC81xx,
+    BBEP_CHIP_NONE, // for virtual display
     BBEP_CHIP_COUNT
 };
 
@@ -285,6 +286,7 @@ class BBEPAPER
 {
   public:
     BBEPAPER(int iPanel);
+    int createVirtual(int iWidth, int iHeight, int iFlags);
     void setAddrWindow(int x, int y, int w, int h);
 #ifdef ARDUINO
     void initIO(int iDC, int iReset, int iBusy, int iCS = SS, int iMOSI = MOSI, int iSCLK = SCK, uint32_t u32Speed = 8000000);

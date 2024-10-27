@@ -105,7 +105,13 @@ int BBEPAPER::refresh(int iMode, bool bWait)
 //{
 //    _bbep.iFlags = iFlags;
 //}
-
+//
+// Create a RAM-only virtual display
+//
+int BBEPAPER::createVirtual(int iWidth, int iHeight, int iFlags)
+{
+    return bbepCreateVirtual(&_bbep, iWidth, iHeight, iFlags);
+}
 void BBEPAPER::setBuffer(uint8_t *pBuffer)
 {
     _bbep.ucScreen = pBuffer;
