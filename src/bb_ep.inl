@@ -1262,10 +1262,20 @@ void bbepFill(BBEPDISP *pBBEP, unsigned char ucData, int iPlane)
     pBBEP->iCursorX = pBBEP->iCursorY = 0;
     iPitch = ((pBBEP->native_width+7)/8);
     iSize = pBBEP->native_height * iPitch;
+    if (pBBEP->iFlags & BBEP_3COLOR) {
+        if (ucData == BBEP_WHITE) {
+            uc1 = 0xff; uc2 = 0x00; // red plane has priority
+        } else if (ucData == BBEP_BLACK) {
+            uc1 = 0x00; uc2 = 0x00;
+        } else if (ucData == BBEP_RED) {
+            uc1 = 0x00; uc2 = 0xff;
+        }
+    }
     if (pBBEP->ucScreen) { // there's a local framebuffer, use it
-        if (ucData == BBEP_WHITE) ucData = 0xff;
-        else if (ucData == BBEP_BLACK) ucData = 0;
-        memset(pBBEP->ucScreen, ucData, iSize);
+        memset(pBBEP->ucScreen, uc1, iSize);
+        if (pBBEP->iFlags & BBEP_3COLOR) {
+            memset(&pBBEP->ucScreen[iSize], uc2, iSize);
+        }
     } else { // write directly to the EPD's framebuffer
         if (pBBEP->iFlags & BBEP_3COLOR) {
             if (ucData == BBEP_WHITE) {
@@ -1472,7 +1482,9 @@ int bbepWritePlane(BBEPDISP *pBBEP, int iPlane)
         ucCMD2 = SSD1608_WRITE_ALTRAM;
     }
     iOffset = ((pBBEP->native_width+7)>>3) * pBBEP->native_height;
-    
+    if (pBBEP->iFlags & BBEP_3COLOR && iPlane == PLANE_DUPLICATE) {
+        iPlane = PLANE_BOTH;
+    } 
     switch (iPlane) {
         case PLANE_0:
             bbepWriteImage(pBBEP, ucCMD1, pBBEP->ucScreen, 0);

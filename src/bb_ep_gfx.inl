@@ -963,7 +963,7 @@ int bbepWriteString(BBEPDISP *pBBEP, int x, int y, char *szMsg, int iSize, int i
             s = (unsigned char *)&ucSmallFont[(int)c*5];
             u8Temp[0] = 0; // first column is blank
             memcpy_P(&u8Temp[1], s, 6);
-            if (iColor == BBEP_BLACK)
+            if (iColor == BBEP_BLACK && !pBBEP->ucScreen)
                 InvertBytes(u8Temp, 6);
             // Stretch the font to double width + double height
             memset(&u8Temp[6], 0, 24); // write 24 new bytes
@@ -1001,7 +1001,7 @@ int bbepWriteString(BBEPDISP *pBBEP, int x, int y, char *szMsg, int iSize, int i
                     {
                         if (ty < 3) // top half
                         {
-                            if (iColor == BBEP_BLACK) {
+                            if (iColor == BBEP_WHITE) {
                                 pDest[1] &= ~(1 << ((ty * 2)+1));
                                 pDest[2] &= ~(1 << ((ty * 2)+1));
                                 pDest[1] &= ~(1 << ((ty+1) * 2));
@@ -1015,7 +1015,7 @@ int bbepWriteString(BBEPDISP *pBBEP, int x, int y, char *szMsg, int iSize, int i
                         }
                         else if (ty == 3) // on the border
                         {
-                            if (iColor == BBEP_BLACK) {
+                            if (iColor == BBEP_WHITE) {
                                 pDest[1] &= ~0x80; pDest[2] &= ~0x80;
                                 pDest[13] &= ~1; pDest[14] &= ~1;
                             } else {
@@ -1025,7 +1025,7 @@ int bbepWriteString(BBEPDISP *pBBEP, int x, int y, char *szMsg, int iSize, int i
                         }
                         else // bottom half
                         {
-                            if (iColor == BBEP_BLACK) {
+                            if (iColor == BBEP_WHITE) {
                                 pDest[13] &= ~(1 << (2*(ty-4)+1));
                                 pDest[14] &= ~(1 << (2*(ty-4)+1));
                                 pDest[13] &= ~(1 << ((ty-3) * 2));
@@ -1042,7 +1042,7 @@ int bbepWriteString(BBEPDISP *pBBEP, int x, int y, char *szMsg, int iSize, int i
                     {
                         if (ty < 4) // top half
                         {
-                            if (iColor == BBEP_BLACK) {
+                            if (iColor == BBEP_WHITE) {
                                 pDest[1] &= ~(1 << ((ty * 2)+1));
                                 pDest[2] &= ~(1 << ((ty+1) * 2));
                             } else {
@@ -1052,7 +1052,7 @@ int bbepWriteString(BBEPDISP *pBBEP, int x, int y, char *szMsg, int iSize, int i
                         }
                         else
                         {
-                            if (iColor == BBEP_BLACK) {
+                            if (iColor == BBEP_WHITE) {
                                 pDest[13] &= ~(1 << (2*(ty-4)+1));
                                 pDest[14] &= ~(1 << ((ty-3) * 2));
                             } else {
@@ -1080,10 +1080,10 @@ int bbepWriteString(BBEPDISP *pBBEP, int x, int y, char *szMsg, int iSize, int i
                 for (int ty=0; ty<8; ty++) {
                     u8Mask = 1<<ty;
                     for (int tx = 0; tx<iLen; tx++) {
-                        if (!(u8Temp[6+tx] & u8Mask)) {
+                        if (u8Temp[6+tx] & u8Mask) {
                             bbepSetPixel(pBBEP, x+tx, y+ty, iColor);
                         }
-                        if (!(u8Temp[18+tx] & u8Mask)) {
+                        if (u8Temp[18+tx] & u8Mask) {
                             bbepSetPixel(pBBEP, x+tx, y+ty+8, iColor);
                         }
                     }
