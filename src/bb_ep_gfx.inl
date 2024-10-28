@@ -1303,7 +1303,7 @@ void bbepDrawLine(BBEPDISP *pBBEP, int x1, int y1, int x2, int y2, uint8_t ucCol
         for(; y1 <= y2; y1++) {
             mask = 0x80 >> (x1 & 7); // current bit offset
             if (pBBEP->ucScreen) {
-                p = &pBBEP->ucScreen[iRedOffset + (x1>>3) + (y1 * iPitch)]; // point       if (ucColor == BBEP_BLACK)
+                p = &pBBEP->ucScreen[iRedOffset + (x1>>3) + (y1 * iPitch)]; // point
                 bOld = bNew = p[0]; // current pixels
             } else {
                 bOld = bNew = ucFill;
@@ -1345,10 +1345,6 @@ static void DrawScaledPixel(BBEPDISP *pBBEP, int iCX, int iCY, int x, int y, int
     int iRedOffset = 0;
     
     iPitch = (pBBEP->width + 7) >> 3;
-    if (ucColor >= BBEP_YELLOW && pBBEP->iFlags & (BBEP_3COLOR | BBEP_4COLOR)) {
-        // use the second half of the image buffer
-        iRedOffset = iPitch * pBBEP->height;
-    }
     if (iXFrac != 0x10000) x = ((x * iXFrac) >> 16);
     if (iYFrac != 0x10000) y = ((y * iYFrac) >> 16);
     x += iCX; y += iCY;
@@ -1356,12 +1352,26 @@ static void DrawScaledPixel(BBEPDISP *pBBEP, int iCX, int iCY, int x, int y, int
         pBBEP->last_error = BBEP_ERROR_BAD_PARAMETER;
         return; // off the screen
     }
-    d = &pBBEP->ucScreen[iRedOffset + (x>>3) + (y * iPitch)];
     ucMask = 0x80 >> (x & 7);
-    if (ucColor)
-        *d |= ucMask;
-    else
-        *d &= ~ucMask;
+    d = &pBBEP->ucScreen[(x>>3) + (y * iPitch)];
+    if (pBBEP->iFlags & (BBEP_3COLOR | BBEP_4COLOR)) {
+        // use the second half of the image buffer
+        iRedOffset = iPitch * pBBEP->height;
+        if (ucColor == BBEP_RED) {
+             d[iRedOffset] |= ucMask; // red has priority
+        } else {
+             d[iRedOffset] &= ~ucMask; // must remove red first
+             if (ucColor == BBEP_WHITE)
+                 *d |= ucMask;
+             else
+                 *d &= ~ucMask;
+        }
+    } else {
+        if (ucColor == BBEP_WHITE)
+            *d |= ucMask;
+        else
+            *d &= ~ucMask;
+    }
 } /* DrawScaledPixel() */
 //
 // For drawing filled ellipses
