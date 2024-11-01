@@ -204,6 +204,13 @@ int main(int argc, char *argv[])
         // code currently doesn't check for overflow.  (Doesn't
         // check that size & offsets are within bounds either for
         // that matter...please convert fonts responsibly.)
+	
+	// Check that the requested font size fits within the limits
+        // of the 8-bit member variables
+        if (bitmap->width > 255 || (face->glyph->advance.x>>6) > 255) {
+            printf("The requested size is too large to fit in the BB_GLYPH member vars\nEither request a smaller size or change the member variables to be 16-bits\n");
+            return -1;
+        }
         pGlyphs[index].bitmapOffset = iOffset;
         pGlyphs[index].width = bitmap->width;
         pGlyphs[index].height = bitmap->rows;
