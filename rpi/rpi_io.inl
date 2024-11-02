@@ -34,7 +34,9 @@
 #ifndef CONSUMER
 #define CONSUMER "Consumer"
 #endif
-#define pgm_read_byte(a) *(uint8_t *)a
+#define pgm_read_byte(a) (*(uint8_t *)a)
+#define pgm_read_word(a) (*(uint16_t *)a)
+#define pgm_read_dword(a) (*(uint32_t *)a)
 #define memcpy_P memcpy
 struct gpiod_chip *chip = NULL;
 struct gpiod_line *lines[64];
