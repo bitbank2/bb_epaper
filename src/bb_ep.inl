@@ -1270,6 +1270,12 @@ void bbepFill(BBEPDISP *pBBEP, unsigned char ucData, int iPlane)
         } else if (ucData == BBEP_RED) {
             uc1 = 0x00; uc2 = 0xff;
         }
+    } else { // B/W
+        if (ucData == BBEP_WHITE) {
+            uc1 = uc2 = 0xff;
+	} else {
+            uc1 = uc2 = 0x00;
+	}
     }
     if (pBBEP->ucScreen) { // there's a local framebuffer, use it
         memset(pBBEP->ucScreen, uc1, iSize);

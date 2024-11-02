@@ -1090,7 +1090,7 @@ int bbepWriteString(BBEPDISP *pBBEP, int x, int y, char *szMsg, int iSize, int i
                 }
 #endif
             }
-            pBBEP->iCursorX += iLen;
+            x = pBBEP->iCursorX += iLen;
             if (pBBEP->iCursorX >= pBBEP->width-11 && pBBEP->wrap) // word wrap enabled?
             {
                 x = pBBEP->iCursorX = 0; // start at the beginning of the next line
