@@ -222,6 +222,29 @@ const uint8_t epd29r_init_sequence_full[] PROGMEM = {
     0x00
 };
 
+// for 122x250 BWR
+const uint8_t epd213r_inky_init_sequence_full[] PROGMEM = {
+    0x01, 0x12, // soft reset
+    BUSY_WAIT, 
+    0x02, 0x74, 0x54, // set analog block control
+    0x02, 0x7e, 0x3b, // set digital block control
+    0x03, 0x2b, 0x04, 0x63, // ACVCOM
+    0x05, 0x0c, 0x8f, 0x8f, 0x8f, 0x3f, // Softstart 
+    0x04, 0x01, 249, 0x00, 0x00, // output control
+    0x02, 0x11, 0x03, // data entry mode 
+    0x03, 0x44, 0x00, 0xf, // RAM X start/end
+    0x05, 0x45, 0x00, 0x00, 249, 0x00, // RAM Y start/end
+    0x02, 0x3c, 0x01, // border (0=bk,1=wh,2=red)
+    0x02, 0x18, 0x80, // temp sensor = internal 
+    0x02, 0x21, 0x00, // display update ctrl 1
+    0x02, 0x22, 0xb1, // display update ctrl 2
+    0x01, 0x20, // master activation
+    BUSY_WAIT,
+    0x02, 0x4e, 0x00, // RAM X counter
+    0x03, 0x4f, 249, 0x00, // RAM Y counter
+    0x00
+};
+
 // for 152x152 BWR
 const uint8_t epd154r_init_sequence_full[] PROGMEM = {
     0x01, 0x12, // soft reset
@@ -1040,25 +1063,26 @@ uint8_t u8Cache[128]; // buffer a single line of up to 1024 pixels
 //
 const EPD_PANEL panelDefs[] PROGMEM = {
     {0}, // undefined panel
-    {400, 300, epd42_init_sequence_full, NULL, epd42_init_sequence_part, 0, BBEP_CHIP_UC81xx}, // EPD42_400x300
-    {400, 300, epd42b_init_sequence_full, epd42b_init_sequence_fast, epd42b_init_sequence_part, 0, BBEP_CHIP_SSD16xx}, // EPD42B_400x300
-    {122, 250, epd213_122x250_init_sequence_full, NULL, epd213_122x250_init_sequence_part, 0, BBEP_CHIP_SSD16xx}, // EPD213_122x250 WaveShare
-    {122, 250, epd213b_init_sequence_full, NULL, epd213b_init_sequence_part, 0, BBEP_CHIP_SSD16xx}, // EPD213B_122x250
-    {128, 296, epd293_init_sequence_full, epd293_init_sequence_fast, epd293_init_sequence_part, 0, BBEP_CHIP_SSD16xx}, // EPD293_128x296
-    {128, 296, epd294_init_sequence_full, NULL, NULL, 0, BBEP_CHIP_SSD16xx}, // EPD294_128x296
-    {128, 296, epd293_init_sequence_full, epd293_init_sequence_fast, epd295_init_sequence_part, 0, BBEP_CHIP_SSD16xx}, // EPD295_128x296
-    {152, 296, epd266_init_sequence_full, NULL, epd266_init_sequence_part, 0, BBEP_CHIP_SSD16xx}, // EPD266_152x296
-    {80, 128, epd102_init_sequence_full, NULL, epd102_init_sequence_part, 0, BBEP_CHIP_UC81xx}, // EPD102_80x128
-    {176, 264, epd27_init_sequence_full, NULL, epd27_init_sequence_part, 0, BBEP_CHIP_SSD16xx}, // EPD27B_176x264
-    {128, 296, epd29r_init_sequence_full, NULL, NULL, BBEP_3COLOR, BBEP_CHIP_SSD16xx}, // EPD29R_128x296
-    {192, 176, epd122_init_sequence_full, epd122_init_sequence_fast, epd122_init_sequence_part, 0, BBEP_CHIP_SSD16xx}, // EPD122_192x176
-    {152, 152, epd154r_init_sequence_full, NULL, NULL, BBEP_3COLOR, BBEP_CHIP_SSD16xx}, // EPD154R_152x152
-    {400, 300, epd42r_init_sequence_full, NULL, NULL, BBEP_3COLOR, BBEP_CHIP_SSD16xx}, // EPD42R_400x300
-    {400, 300, epd42r2_init_sequence_full, NULL, NULL, BBEP_3COLOR, BBEP_CHIP_UC81xx}, // EPD42R2_400x300
-    {240, 416, epd37_init_sequence_full, NULL, epd37_init_sequence_part, 0, BBEP_CHIP_UC81xx}, // EPD37_240x416
-    {104, 212, epd213_inky_init_sequence_full, NULL, NULL, 0, BBEP_CHIP_UC81xx}, // EPD213_104x212 InkyPHAT black and white
-    {800, 480, epd75_init_sequence_full, epd75_init_sequence_fast, epd75_init_sequence_partial, 0, BBEP_CHIP_UC81xx}, // EPD75_800x480
-    {128, 296, epd29_init_sequence_full, NULL, epd29_init_sequence_part, 0, BBEP_CHIP_UC81xx}, // Badger 2040 
+    {400, 300, 0, epd42_init_sequence_full, NULL, epd42_init_sequence_part, 0, BBEP_CHIP_UC81xx}, // EPD42_400x300
+    {400, 300, 0, epd42b_init_sequence_full, epd42b_init_sequence_fast, epd42b_init_sequence_part, 0, BBEP_CHIP_SSD16xx}, // EPD42B_400x300
+    {122, 250, 0, epd213_122x250_init_sequence_full, NULL, epd213_122x250_init_sequence_part, 0, BBEP_CHIP_SSD16xx}, // EPD213_122x250 WaveShare
+    {122, 250, 0, epd213b_init_sequence_full, NULL, epd213b_init_sequence_part, 0, BBEP_CHIP_SSD16xx}, // EPD213B_122x250, newer Inky phat 2.13" B/W
+    {128, 296, 0, epd293_init_sequence_full, epd293_init_sequence_fast, epd293_init_sequence_part, 0, BBEP_CHIP_SSD16xx}, // EPD293_128x296
+    {128, 296, 0, epd294_init_sequence_full, NULL, NULL, 0, BBEP_CHIP_SSD16xx}, // EPD294_128x296
+    {128, 296, 0, epd293_init_sequence_full, epd293_init_sequence_fast, epd295_init_sequence_part, 0, BBEP_CHIP_SSD16xx}, // EPD295_128x296
+    {152, 296, 0, epd266_init_sequence_full, NULL, epd266_init_sequence_part, 0, BBEP_CHIP_SSD16xx}, // EPD266_152x296
+    {80, 128, 0, epd102_init_sequence_full, NULL, epd102_init_sequence_part, 0, BBEP_CHIP_UC81xx}, // EPD102_80x128
+    {176, 264, 0, epd27_init_sequence_full, NULL, epd27_init_sequence_part, 0, BBEP_CHIP_SSD16xx}, // EPD27B_176x264
+    {128, 296, 0, epd29r_init_sequence_full, NULL, NULL, BBEP_3COLOR, BBEP_CHIP_SSD16xx}, // EPD29R_128x296
+    {192, 176, 0, epd122_init_sequence_full, epd122_init_sequence_fast, epd122_init_sequence_part, 0, BBEP_CHIP_SSD16xx}, // EPD122_192x176
+    {152, 152, 0, epd154r_init_sequence_full, NULL, NULL, BBEP_3COLOR, BBEP_CHIP_SSD16xx}, // EPD154R_152x152
+    {400, 300, 0, epd42r_init_sequence_full, NULL, NULL, BBEP_3COLOR, BBEP_CHIP_SSD16xx}, // EPD42R_400x300, Inky wHAT 4.2" 400x300 B/W/R
+    {400, 300, 0, epd42r2_init_sequence_full, NULL, NULL, BBEP_3COLOR, BBEP_CHIP_UC81xx}, // EPD42R2_400x300
+    {240, 416, 0, epd37_init_sequence_full, NULL, epd37_init_sequence_part, 0, BBEP_CHIP_UC81xx}, // EPD37_240x416
+    {104, 212, 0, epd213_inky_init_sequence_full, NULL, NULL, 0, BBEP_CHIP_UC81xx}, // EPD213_104x212, older InkyPHAT black and white
+    {800, 480, 0, epd75_init_sequence_full, epd75_init_sequence_fast, epd75_init_sequence_partial, 0, BBEP_CHIP_UC81xx}, // EPD75_800x480
+    {128, 296, 0, epd29_init_sequence_full, NULL, epd29_init_sequence_part, 0, BBEP_CHIP_UC81xx}, // Badger 2040 
+    {122, 250, 1, epd213r_inky_init_sequence_full, NULL, NULL, BBEP_3COLOR, BBEP_CHIP_SSD16xx}, // EPD213R_122x250 Inky phat 2.13" B/W/R
 };
 //
 // Set the e-paper panel type
@@ -1072,6 +1096,7 @@ int bbepSetPanelType(BBEPDISP *pBBEP, int iPanel)
     memset(pBBEP, 0, sizeof(BBEPDISP));
     pBBEP->native_width = pBBEP->width = panelDefs[iPanel].width;
     pBBEP->native_height = pBBEP->height = panelDefs[iPanel].height;
+    pBBEP->x_offset = panelDefs[iPanel].x_offset;
     pBBEP->chip_type = panelDefs[iPanel].chip_type;
     pBBEP->iFlags = panelDefs[iPanel].flags;
     pBBEP->pInitFull = panelDefs[iPanel].pInitFull;
@@ -1161,6 +1186,7 @@ void bbepSetAddrWindow(BBEPDISP *pBBEP, int x, int y, int cx, int cy)
     } else { // SSD16xx
         //        bbepCMD2(pBBEP, SSD1608_DATA_MODE, 0x3);
         bbepWriteCmd(pBBEP, SSD1608_SET_RAMXPOS);
+        tx += pBBEP->x_offset;
         uc[0] = tx; // start x (byte boundary)
         uc[1] = tx+((cx-1)>>3); // end x
         bbepWriteData(pBBEP, uc, 2);

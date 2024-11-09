@@ -84,6 +84,7 @@ enum {
 typedef struct epd_panel {
     uint16_t width;
     uint16_t height;
+    int16_t x_offset;
     const uint8_t *pInitFull;
     const uint8_t *pInitFast;
     const uint8_t *pInitPart;
@@ -97,7 +98,7 @@ enum {
     EPD42_400x300, // WFT0420CZ15
     EPD42B_400x300, // DEPG0420BN / GDEY042T81
     EPD213_122x250, // waveshare
-    EPD213B_122x250, // GDEY0213B74
+    EPD213B_122x250, // GDEY0213B74 (Inky phat 2.13" B/W newer version)
     EPD293_128x296,
     EPD294_128x296, // Waveshare newer 2.9" 1-bit 128x296
     EPD295_128x296, // harvested from Solum 2.9" BW ESLs
@@ -113,6 +114,7 @@ enum {
     EPD213_104x212, // InkyPHAT 2.13 black and white
     EPD75_800x480, // GDEY075T7
     EPD29_128x296, // Pimoroni Badger2040
+    EPD213R_122x250, // Inky phat 2.13 B/W/R
     EPD_PANEL_COUNT
 };
 #ifdef FUTURE
@@ -121,7 +123,6 @@ enum {
   EPD29_128x296,
   EPD29B_128x296,
   EPD29Y_128x296, // DEPG0290YN
-  EPD213R_104x212,
   EPD213R2_122x250, // DEPG0213RW
   EPD213R_104x212_d,
   EPD154_152x152, // GDEW0154M10
