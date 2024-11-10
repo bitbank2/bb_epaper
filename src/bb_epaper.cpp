@@ -61,6 +61,11 @@ void BBEPAPER::setAddrWindow(int x, int y, int w, int h)
     bbepSetAddrWindow(&_bbep, x, y, w, h);
 }
 
+int BBEPAPER::setPanelType(int iPanel)
+{
+    return bbepSetPanelType(&_bbep, iPanel);
+}
+
 #ifdef ARDUINO
 void BBEPAPER::initIO(int iDC, int iReset, int iBusy, int iCS, int iMOSI, int iSCLK, uint32_t u32Speed)
 {
@@ -83,16 +88,22 @@ void BBEPAPER::initIO(int iDC, int iReset, int iBusy, int iCS, int iSPIChannel, 
 #endif
 int BBEPAPER::writePlane(int iPlane)
 {
-    return bbepWritePlane(&_bbep, iPlane);
+    long l = millis();
+    int rc;
+    rc = bbepWritePlane(&_bbep, iPlane);
+    _bbep.iDataTime = (int)(millis() - l);
+    return rc;
 } /* writePlane() */
 
 int BBEPAPER::refresh(int iMode, bool bWait)
 {
     int rc;
+    long l = millis();
     rc = bbepRefresh(&_bbep, iMode);
     if (rc == BBEP_SUCCESS && bWait) {
         bbepWaitBusy(&_bbep);
     }
+    _bbep.iOpTime = (int)(millis() - l);
     return rc;
 } /* refresh() */
 
@@ -166,7 +177,9 @@ int BBEPAPER::getRotation(void)
 
 void BBEPAPER::fillScreen(int iColor, int iPlane)
 {
+  long l = millis();
   bbepFill(&_bbep, iColor, iPlane);
+  _bbep.iDataTime = (int)(millis() - l); // e.g. for bufferless mode
 } /* fillScreen() */
 
 void BBEPAPER::drawRect(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t color)
@@ -182,6 +195,16 @@ void BBEPAPER::fillRect(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t col
 void BBEPAPER::setTextWrap(bool bWrap)
 {
   _bbep.wrap = (int)bWrap;
+}
+
+bool BBEPAPER::hasFastRefresh()
+{
+    return (_bbep.pInitFast != NULL);
+}
+
+bool BBEPAPER::hasPartialRefresh()
+{
+    return (_bbep.pInitPart != NULL);
 }
 
 void BBEPAPER::setTextColor(int iFG, int iBG)
@@ -345,7 +368,7 @@ char ucTemp[4];
 #ifndef __AVR__
 size_t BBEPAPER::write(uint8_t c) {
 char szTemp[2]; // used to draw 1 character at a time to the C methods
-int w=8, h=8;
+int rc, w=8, h=8;
 
   szTemp[0] = c; szTemp[1] = 0;
    if (_bbep.pFont == NULL) { // use built-in fonts
@@ -374,18 +397,16 @@ int w=8, h=8;
       _bbep.iCursorY += pBBF->height;
     } else if (c != '\r') {
       if (c >= pBBF->first && c <= pBBF->last) {
-          BB_GLYPH *pBBG = &pBBF->glyphs[c-pBBF->first];
+          BB_GLYPH *pBBG = &pBBF->glyphs[c - pBBF->first];
         w = pBBG->width;
         h = pBBG->height;
-        if ((w > 0) && (h > 0)) { // Is there an associated bitmap?
-          int16_t xo = pBBG->xOffset;
-          w += xo; // xadvance
-          h = pBBF->height;
-          if (_bbep.wrap && ((_bbep.iCursorX + w) > _bbep.width)) {
+        if (w > 0 && h > 0) { // Is there an associated bitmap?
+          w += pBBG->xOffset;
+          if (_bbep.wrap && (_bbep.iCursorX + w) > _bbep.width) {
             _bbep.iCursorX = 0;
             _bbep.iCursorY += h;
           }
-            bbepWriteStringCustom(&_bbep, (BB_FONT *)_bbep.pFont, -1, -1, szTemp, _bbep.iFG, _bbep.iPlane);
+          rc = bbepWriteStringCustom(&_bbep, (BB_FONT *)_bbep.pFont, -1, -1, szTemp, _bbep.iFG, _bbep.iPlane);
         }
       }
     }

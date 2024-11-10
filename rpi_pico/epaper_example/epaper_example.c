@@ -32,7 +32,7 @@ BBEPDISP bbep; // the main display structure
 
 int main()
 {
-    bbepSetPanelType(&bbep, EPD295_128x296); // must set this first
+    bbepSetPanelType(&bbep, EP295_128x296); // must set this first
     bbepInitIO(&bbep, PIN_DC, PIN_RST, PIN_BUSY, PIN_CS, PIN_MOSI, PIN_SCK, 8000000);
     bbepFill(&bbep, BBEP_WHITE, 0);
     bbepWriteString(&bbep, 0, 0, "RPI Pico2!", FONT_12x16, BBEP_BLACK);

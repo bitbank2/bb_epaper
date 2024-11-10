@@ -20,7 +20,7 @@ int main(void)
     SystemCoreClockUpdate();
     Delay_Init();
 
-    bbepSetPanelType(&bbep, EPD295_128x296);
+    bbepSetPanelType(&bbep, EP295_128x296);
     bbepInitIO(&bbep, PIN_DC, PIN_RST, PIN_BUSY, PIN_CS, -1, -1, 8000000);
     bbepWakeUp(&bbep);
     bbepSendCMDSequence(&bbep, bbep.pInitFull);

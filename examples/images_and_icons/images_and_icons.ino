@@ -6,7 +6,7 @@
 #include "bomb.h" // uncompressed 40x40 image
 #include "bart.h" // compressed 128x64 image
 
-BBEPAPER bbep(EPD295_128x296);
+BBEPAPER bbep(EP295_128x296);
 // Mike Rankin's C3 e-ink PCB
 #define PIN_DC 3
 #define PIN_BUSY 1

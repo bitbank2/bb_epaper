@@ -45,7 +45,7 @@ bool gpio_level_previous = false;
 
 int main (void)
 {
-    bbepSetPanelType(&bbep, EPD102_80x128);
+    bbepSetPanelType(&bbep, EP102_80x128);
     bbepInitIO(&bbep, PIN_DC, PIN_RST, PIN_BUSY, PIN_CS, PIN_MOSI, PIN_SCK, 0);
     bbepWakeUp(&bbep);
     bbepSendCMDSequence(&bbep, bbep.pInitFull);

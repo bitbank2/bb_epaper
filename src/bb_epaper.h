@@ -69,6 +69,7 @@ enum {
     PLANE_BOTH,
     PLANE_DUPLICATE // duplicate 0 to both 0 and 1
 };
+#ifndef __ONEBITDISPLAY__
 // 5 possible font sizes: 8x8, 16x32, 6x8, 12x16 (stretched from 6x8 with smoothing), 16x16 (stretched from 8x8)
 enum {
    FONT_6x8 = 0,
@@ -77,6 +78,8 @@ enum {
    FONT_16x16,
    FONT_COUNT
 };
+#endif
+
 // Centering coordinates to pass to the character drawing functions
 #define CENTER_X 9998
 #define CENTER_Y 9999
@@ -94,28 +97,28 @@ typedef struct epd_panel {
 
 // Display types
 enum {
-    EPD_PANEL_UNDEFINED=0,
-    EPD42_400x300, // WFT0420CZ15
-    EPD42B_400x300, // DEPG0420BN / GDEY042T81
-    EPD213_122x250, // waveshare
-    EPD213B_122x250, // GDEY0213B74 (Inky phat 2.13" B/W newer version)
-    EPD293_128x296,
-    EPD294_128x296, // Waveshare newer 2.9" 1-bit 128x296
-    EPD295_128x296, // harvested from Solum 2.9" BW ESLs
-    EPD266_152x296, // GDEY0266T90
-    EPD102_80x128, // GDEW0102T4
-    EPD27B_176x264, // GDEY027T91
-    EPD29R_128x296,
-    EPD122_192x176, // GDEM0122T61
-    EPD154R_152x152,
-    EPD42R_400x300,
-    EPD42R2_400x300, // GDEQ042Z21
-    EPD37_240x416, // GDEY037T03
-    EPD213_104x212, // InkyPHAT 2.13 black and white
-    EPD75_800x480, // GDEY075T7
-    EPD29_128x296, // Pimoroni Badger2040
-    EPD213R_122x250, // Inky phat 2.13 B/W/R
-    EPD_PANEL_COUNT
+    EP_PANEL_UNDEFINED=0,
+    EP42_400x300, // WFT0420CZ15
+    EP42B_400x300, // DEPG0420BN / GDEY042T81
+    EP213_122x250, // waveshare
+    EP213B_122x250, // GDEY0213B74 (Inky phat 2.13" B/W newer version)
+    EP293_128x296,
+    EP294_128x296, // Waveshare newer 2.9" 1-bit 128x296
+    EP295_128x296, // harvested from Solum 2.9" BW ESLs
+    EP266_152x296, // GDEY0266T90
+    EP102_80x128, // GDEW0102T4
+    EP27B_176x264, // GDEY027T91
+    EP29R_128x296,
+    EP122_192x176, // GDEM0122T61
+    EP154R_152x152,
+    EP42R_400x300,
+    EP42R2_400x300, // GDEQ042Z21
+    EP37_240x416, // GDEY037T03
+    EP213_104x212, // InkyPHAT 2.13 black and white
+    EP75_800x480, // GDEY075T7
+    EP29_128x296, // Pimoroni Badger2040
+    EP213R_122x250, // Inky phat 2.13 B/W/R
+    EP_PANEL_COUNT
 };
 #ifdef FUTURE
     EPD42_4GRAY_400x300, // WFT0420CZ15
@@ -150,7 +153,7 @@ enum {
 };
 #endif // FUTURE
 // flag bits
-#define BBEP_INVERTED 0x0001
+#define BBEP_RED_SWAPPED 0x0001
 #define BBEP_BITBANG  0x0002
 #define BBEP_3COLOR   0x0004
 #define BBEP_4COLOR   0x0008
@@ -168,6 +171,7 @@ enum {
 #define BBEP_GRAY2 2
 #define BBEP_GRAY3 3
 
+#ifndef __ONEBITDISPLAY__
 // (UC81xx commands)
 enum {
     UC8151_PSR      = 0x00,
@@ -248,6 +252,7 @@ enum {
     SSD1608_SET_RAMYCOUNT = 0x4F,
     SSD1608_NOP = 0xFF,
 };
+#endif
 
 #define BUSY_WAIT 0xff
 
@@ -289,6 +294,9 @@ class BBEPAPER
     BBEPAPER(int iPanel);
     int createVirtual(int iWidth, int iHeight, int iFlags);
     void setAddrWindow(int x, int y, int w, int h);
+    int setPanelType(int iPanel);
+    bool hasFastRefresh();
+    bool hasPartialRefresh();
 #ifdef ARDUINO
     void initIO(int iDC, int iReset, int iBusy, int iCS = SS, int iMOSI = MOSI, int iSCLK = SCK, uint32_t u32Speed = 8000000);
 #else

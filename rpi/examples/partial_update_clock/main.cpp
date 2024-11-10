@@ -14,7 +14,7 @@
 #include "../../../src/bb_epaper.h"
 #include "Roboto_Black_78.h"
 #include <time.h>
-BBEPAPER bbep(EPD42_400x300); // 4.2" UC81xx controller
+BBEPAPER bbep(EP42_400x300); // 4.2" UC81xx controller
 // BCM GPIO numbers used by Pimoroni e-paper "HATs"
 #define PIN_DC 22
 #define PIN_RST 27

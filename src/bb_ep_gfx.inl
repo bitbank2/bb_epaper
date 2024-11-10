@@ -210,8 +210,13 @@ void bbepDrawSprite(BBEPDISP *pBBEP, const uint8_t *pSprite, int cx, int cy, int
         int iDestPitch;
         // start writing into the correct plane
         if (pBBEP->chip_type == BBEP_CHIP_UC81xx) {
-            u8CMD1 = UC8151_DTM2;
-            u8CMD2 = UC8151_DTM1;
+            if (pBBEP->iFlags & BBEP_RED_SWAPPED) {
+                u8CMD1 = UC8151_DTM1;
+                u8CMD2 = UC8151_DTM2;
+            } else {
+                u8CMD1 = UC8151_DTM2;
+                u8CMD2 = UC8151_DTM1;
+            }
         } else {
             u8CMD1 = SSD1608_WRITE_RAM;
             u8CMD2 = SSD1608_WRITE_ALTRAM;
@@ -665,7 +670,7 @@ void bbepSetTextWrap(BBEPDISP *pBBEP, int bWrap)
 //
 // Draw a string of BB_FONT characters directly into the EPD framebuffer
 //
-void bbepWriteStringCustom(BBEPDISP *pBBEP, BB_FONT *pFont, int x, int y, char *szMsg, int iColor, uint8_t iPlane)
+int bbepWriteStringCustom(BBEPDISP *pBBEP, BB_FONT *pFont, int x, int y, char *szMsg, int iColor, uint8_t iPlane)
 {
     int rc, i, h, w, j, end_y, dx, dy, tx, ty, iSrcPitch, iPitch;
     signed int n;
@@ -675,10 +680,10 @@ void bbepWriteStringCustom(BBEPDISP *pBBEP, BB_FONT *pFont, int x, int y, char *
     uint8_t *pBits, u8CMD1, u8CMD2, u8CMD, u8EndMask;
     uint8_t first, last;
     
-    if (pBBEP == NULL) return;
+    if (pBBEP == NULL) return BBEP_ERROR_BAD_PARAMETER;
     if (pFont == NULL) {
         pBBEP->last_error = BBEP_ERROR_BAD_PARAMETER;
-        return; // invalid param
+        return BBEP_ERROR_BAD_PARAMETER; // invalid param
     }
     if (x == -1)
         x = pBBEP->iCursorX;
@@ -738,7 +743,7 @@ void bbepWriteStringCustom(BBEPDISP *pBBEP, BB_FONT *pFont, int x, int y, char *
             rc = g5_decode_init(&g5dec, w, h, s, ty);
             if (rc != G5_SUCCESS) {
                 pBBEP->last_error = BBEP_ERROR_BAD_DATA;
-                 return; // corrupt data?
+                 return BBEP_ERROR_BAD_DATA; // corrupt data?
             }
             if (pBBEP->ucScreen) { // backbuffer, draw pixels
 #ifndef NO_RAM
@@ -769,8 +774,13 @@ void bbepWriteStringCustom(BBEPDISP *pBBEP, BB_FONT *pFont, int x, int y, char *
                 iPitch = (w+7)/8;
                 // start writing into the correct plane
                 if (pBBEP->chip_type == BBEP_CHIP_UC81xx) {
-                    u8CMD1 = UC8151_DTM2;
-                    u8CMD2 = UC8151_DTM1;
+                    if (pBBEP->iFlags & BBEP_RED_SWAPPED) {
+                        u8CMD1 = UC8151_DTM1;
+                        u8CMD2 = UC8151_DTM2;
+                    } else {
+                        u8CMD1 = UC8151_DTM2;
+                        u8CMD2 = UC8151_DTM1;
+                    }
                 } else {
                     u8CMD1 = SSD1608_WRITE_RAM;
                     u8CMD2 = SSD1608_WRITE_ALTRAM;
@@ -811,6 +821,7 @@ void bbepWriteStringCustom(BBEPDISP *pBBEP, BB_FONT *pFont, int x, int y, char *
     } // while drawing characters
     pBBEP->iCursorX = x;
     pBBEP->iCursorY = y;
+    return BBEP_SUCCESS;
 } /* EPDWriteStringCustom() */
 //
 // Rotate an 8x8 pixel block (8 bytes) by 90 degrees
@@ -848,8 +859,13 @@ int bbepWriteString(BBEPDISP *pBBEP, int x, int y, char *szMsg, int iSize, int i
         return BBEP_ERROR_BAD_PARAMETER;
     }
     if (pBBEP->chip_type == BBEP_CHIP_UC81xx) {
-        ucCMD1 = UC8151_DTM2;
-        ucCMD2 = UC8151_DTM1;
+        if (pBBEP->iFlags & BBEP_RED_SWAPPED) {
+            ucCMD1 = UC8151_DTM1;
+            ucCMD2 = UC8151_DTM2;
+        } else {
+            ucCMD1 = UC8151_DTM2;
+            ucCMD2 = UC8151_DTM1;
+        }
     } else {
         ucCMD1 = SSD1608_WRITE_RAM;
         ucCMD2 = SSD1608_WRITE_ALTRAM;
@@ -963,8 +979,6 @@ int bbepWriteString(BBEPDISP *pBBEP, int x, int y, char *szMsg, int iSize, int i
             s = (unsigned char *)&ucSmallFont[(int)c*5];
             u8Temp[0] = 0; // first column is blank
             memcpy_P(&u8Temp[1], s, 6);
-            if (iColor == BBEP_BLACK && !pBBEP->ucScreen)
-                InvertBytes(u8Temp, 6);
             // Stretch the font to double width + double height
             memset(&u8Temp[6], 0, 24); // write 24 new bytes
             for (tx=0; tx<6; tx++)
@@ -1070,9 +1084,15 @@ int bbepWriteString(BBEPDISP *pBBEP, int x, int y, char *szMsg, int iSize, int i
             if (!pBBEP->ucScreen) { // bufferless mode
                 bbepSetAddrWindow(pBBEP, pBBEP->native_width-8-pBBEP->iCursorY, pBBEP->iCursorX, 8, iLen);
                 bbepWriteCmd(pBBEP, ucCMD); // write to "new" plane
+                if (iColor == BBEP_BLACK) {
+                    InvertBytes(&u8Temp[6], iLen);
+                }
                 bbepWriteData(pBBEP, &u8Temp[6], iLen);
                 bbepSetAddrWindow(pBBEP, pBBEP->native_width-16-pBBEP->iCursorY, pBBEP->iCursorX, 8, iLen);
                 bbepWriteCmd(pBBEP, ucCMD); // write to "new" plane
+                if (iColor == BBEP_BLACK) {
+                    InvertBytes(&u8Temp[18], iLen);
+                }
                 bbepWriteData(pBBEP, &u8Temp[18], iLen);
             } else { // write to RAM
 #ifndef NO_RAM

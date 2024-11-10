@@ -5,7 +5,7 @@
 //
 #include <bb_epaper.h>
 
-BBEPAPER bbep(EPD29_128x296);
+BBEPAPER bbep(EP29_128x296);
 #define BADGER_CS 17
 #define BADGER_BUSY 26
 #define BADGER_RES 21

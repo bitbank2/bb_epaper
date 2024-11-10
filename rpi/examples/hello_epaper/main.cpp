@@ -5,9 +5,9 @@
 // Copyright (c) 2024 BitBank Software, Inc.
 //
 #include "../../../src/bb_epaper.h"
-//BBEPAPER bbep(EPD213_104x212); // InkyPHAT 2.13"
-BBEPAPER bbep(EPD295_128x296);
-//BBEPAPER bbep(EPD154R_152x152);
+//BBEPAPER bbep(EP213_104x212); // InkyPHAT 2.13"
+BBEPAPER bbep(EP295_128x296);
+//BBEPAPER bbep(EP154R_152x152);
 // BCM GPIO numbers used by Pimoroni e-paper "HATs"
 #define PIN_DC 22
 #define PIN_RST 27

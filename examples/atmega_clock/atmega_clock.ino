@@ -11,8 +11,8 @@
 #include "Roboto_Black_38.h"
 #include "Roboto_Black_78.h"
 #include <bb_epaper.h>
-BBEPAPER bbep(EPD295_128x296);
-//BBEPAPER bbep(EPD42B_400x300);
+BBEPAPER bbep(EP295_128x296);
+//BBEPAPER bbep(EP42B_400x300);
 static int iRunCount = 0;
 static int iSec, iMin, iHour, iWDay, iMDay, iMon;
 int iSleepTime; // number of microseconds to sleep in each wakeup phase

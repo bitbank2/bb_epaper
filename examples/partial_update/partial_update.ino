@@ -28,9 +28,9 @@
 // both old and new data each update.
 //
 #include <bb_epaper.h>
-//BBEPAPER bbep(EPD295_128x296);
-BBEPAPER bbep(EPD42_400x300);
-//BBEPAPER bbep(EPD29_128x296); // Badger2040
+BBEPAPER bbep(EP295_128x296);
+//BBEPAPER bbep(EP213B_122x250);
+//BBEPAPER bbep(EP29_128x296); // Badger2040
 // My Arduino Nano 33 BLE e-paper adapter
 #define DC_PIN 16
 #define BUSY_PIN 15
