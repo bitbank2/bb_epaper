@@ -28,9 +28,9 @@
 // both old and new data each update.
 //
 #include <bb_epaper.h>
-BBEPAPER bbep(EP295_128x296);
+//BBEPAPER bbep(EP27B_176x264);
 //BBEPAPER bbep(EP213B_122x250);
-//BBEPAPER bbep(EP29_128x296); // Badger2040
+BBEPAPER bbep(EP295_128x296);
 // My Arduino Nano 33 BLE e-paper adapter
 #define DC_PIN 16
 #define BUSY_PIN 15
@@ -63,15 +63,15 @@ void setup()
   bbep.initIO(DC_PIN, RESET_PIN, BUSY_PIN, CS_PIN);
   bbep.setRotation(90); // use panel in landscape orientation
   // work in bufferless mode (no memory on MCU needed)
-  DrawScene(i, PLANE_0); // draw "old" data (full refresh only needs "old" data plane)
+  DrawScene(i, PLANE_DUPLICATE); // draw "old" data (full refresh only needs "old" data plane)
   bbep.refresh(REFRESH_FULL); // do a full refresh to start
   bbep.wait();
   bbep.sleep(LIGHT_SLEEP);
   // count from 0 to 9 using partial updates
   while (i<10) {
-    DrawScene(i, 0); // draw scene to old plane 0 (not always needed, but doesn't hurt to do)
+    DrawScene(i, 1); // draw scene to (old) plane 1 (not always needed, but doesn't hurt to do)
     i++;
-    DrawScene(i, 1); // new scene drawn to plane 1
+    DrawScene(i, 0); // new scene drawn to (new) plane 0
     bbep.refresh(REFRESH_PARTIAL);
     bbep.wait();
     bbep.sleep(LIGHT_SLEEP);
