@@ -73,6 +73,8 @@ const char *szPanelNames[] = {
   "EP75_800x480   ",
   "EP29_128x296   ",
   "EP213R_122x250 ",
+  "EP154_200x200  ",
+  "EP154B_200x200 ",
   NULL
 };
 // names of the operating modes
@@ -88,7 +90,7 @@ enum {
 
 // List of supported colors for each panel type
 // 2 = Black/White, 3 = Black/White/Red
-const uint8_t u8PanelColors[] = {2,2,2,2,2,2,2,2,2,2,3,2,3,3,3,2,2,2,2,3};
+const uint8_t u8PanelColors[] = {2,2,2,2,2,2,2,2,2,2,3,2,3,3,3,2,2,2,2,3,2,2};
 
 void epdBegin()
 {

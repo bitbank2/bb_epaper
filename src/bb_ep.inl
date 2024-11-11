@@ -390,6 +390,28 @@ const uint8_t epd154_init_sequence_full[] PROGMEM =
     0x00 // end of table
 };
 
+const uint8_t epd154_init_sequence_fast[] PROGMEM = 
+{
+    0x01, SSD1608_SW_RESET,
+    BUSY_WAIT,
+    0x02, 0x18, 0x80, // read built-in temp sensor
+    0x02, 0x22, 0xb1, // load temp value
+    0x01, 0x20, // execute
+    BUSY_WAIT,
+    0x03, 0x1a, 0x64, 0x00, // write temp register
+    0x02, 0x22, 0x91, // load temp value
+    0x01, 0x20, // execute
+    BUSY_WAIT,
+    0x02, 0x11, 0x03,
+    0x03, 0x44, 0x00, 0x18,
+    0x05, 0x45, 0x00, 0x00, 199, 0x00,
+    0x02, 0x3c, 0x80, // border waveform
+    0x02, 0x4e, 0x00,
+    0x03, 0x4f, 0x00, 0x00,
+    0
+
+};
+
 const uint8_t epd154_init_sequence_part[] PROGMEM =
 {
     0x02, 0x11, 0x03,
@@ -1083,6 +1105,8 @@ const EPD_PANEL panelDefs[] PROGMEM = {
     {800, 480, 0, epd75_init_sequence_full, epd75_init_sequence_fast, epd75_init_sequence_partial, 0, BBEP_CHIP_UC81xx}, // EP75_800x480
     {128, 296, 0, epd29_init_sequence_full, NULL, epd29_init_sequence_part, 0, BBEP_CHIP_UC81xx}, // Badger 2040 
     {122, 250, 1, epd213r_inky_init_sequence_full, NULL, NULL, BBEP_3COLOR, BBEP_CHIP_SSD16xx}, // EP213R_122x250 Inky phat 2.13" B/W/R
+    {200, 200, 0, epd154_init_sequence_full, epd154_init_sequence_fast, epd154_init_sequence_part, 0, BBEP_CHIP_SSD16xx}, // EP154_200x200
+    {200, 200, 0, epd154_init_sequence_full, epd154_init_sequence_fast, epd154b_init_sequence_part, 0, BBEP_CHIP_SSD16xx}, // EP154B_200x200
 };
 //
 // Set the e-paper panel type
