@@ -44,6 +44,10 @@ The current code supports 1-bit black and white epaper displays as well as the B
 See WiKi and example code for how to use the library.<br> 
 <br>
 
+A unique feature of the library is that you can set the panel type at run-time. I created a testing tool which makes use of this feature (photo below). It allows you to run diagnostic tests on any of the supported panels and hot-swap them without restarting.
+<br>
+![bb_epaper](/epd_panel_tester.jpg?raw=true "panel tester")
+<br>
 In the photo below, the custom font and ellipse were drawn without using a local copy of the frame buffer (aka bufferless). bb_epaper offers some unique features like these when working on very constrained devices (insufficient RAM to hold a copy of the graphics). 
 <br>
 ![bb_epaper](/bb_epaper_demo.jpg?raw=true "bb_epaper")
