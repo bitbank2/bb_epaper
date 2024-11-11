@@ -171,19 +171,20 @@ void EPDTest(int iMode)
       return;
     }
     epdBegin();
-//    if (epd.width() < epd.height() || !epd.getBuffer()) {
-//       epd.setRotation(90);
-//    }
+    if (epd.width() < epd.height()) {
+       epd.setRotation(90);
+    }
     epd.allocBuffer();
-    epd.fillScreen(BBEP_WHITE);
+    epd.fillScreen(BBEP_WHITE, PLANE_DUPLICATE);
+    DrawScene(0, PLANE_0);
+    epd.writePlane(PLANE_BOTH);
     epd.refresh(REFRESH_FULL, true);
-    epd.setFont(Roboto_Thin_48);
   // count from 0 to 9 using partial updates
   i = 0;
   while (i<10) {
-    DrawScene(i, 0); // draw scene to old plane 0 (not always needed, but doesn't hurt to do)
+    DrawScene(i, PLANE_1); // draw scene to old plane 1 (not always needed, but doesn't hurt to do)
     i++;
-    DrawScene(i, 1); // new scene drawn to plane 1
+    DrawScene(i, PLANE_0); // new scene drawn to plane 0
     epd.writePlane(PLANE_BOTH);
     epd.refresh(REFRESH_PARTIAL, true);
     epd.sleep(LIGHT_SLEEP);

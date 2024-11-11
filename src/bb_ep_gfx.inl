@@ -343,6 +343,9 @@ int bbepSetPixel(BBEPDISP *pBBEP, int x, int y, unsigned char ucColor)
         }
         return BBEP_SUCCESS;
     } else { // 2-color
+        if (pBBEP->iPlane == PLANE_1) {
+            i += iSize;
+        }
         if (ucColor == BBEP_WHITE) {
             pBBEP->ucScreen[i] |= (0x80 >> (x & 7));
         } else { // must be black

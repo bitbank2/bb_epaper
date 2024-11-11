@@ -1306,13 +1306,20 @@ void bbepFill(BBEPDISP *pBBEP, unsigned char ucData, int iPlane)
     } else { // B/W
         if (ucData == BBEP_WHITE) {
             uc1 = uc2 = 0xff;
-	} else {
+	    } else {
             uc1 = uc2 = 0x00;
-	}
+	    }
     }
     if (pBBEP->ucScreen) { // there's a local framebuffer, use it
-        memset(pBBEP->ucScreen, uc1, iSize);
-        if (pBBEP->iFlags & BBEP_3COLOR) {
+        if ((pBBEP->iFlags & BBEP_3COLOR) || iPlane == PLANE_BOTH) {
+            memset(pBBEP->ucScreen, uc1, iSize);
+            memset(&pBBEP->ucScreen[iSize], uc2, iSize);
+        } else if (iPlane == PLANE_DUPLICATE) {
+            memset(pBBEP->ucScreen, uc1, iSize);
+            memset(&pBBEP->ucScreen[iSize], uc1, iSize);
+        } else if (iPlane == PLANE_0) {
+            memset(pBBEP->ucScreen, uc1, iSize);
+        } else if (iPlane == PLANE_1) {
             memset(&pBBEP->ucScreen[iSize], uc2, iSize);
         }
     } else { // write directly to the EPD's framebuffer
