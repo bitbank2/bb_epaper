@@ -321,6 +321,15 @@ int bbepSetPixel(BBEPDISP *pBBEP, int x, int y, unsigned char ucColor)
     // only available for local buffer operations
     if (!pBBEP || !pBBEP->ucScreen) return BBEP_ERROR_BAD_PARAMETER;
     
+    if (pBBEP->iFlags & BBEP_4COLOR) { // 2-bits per pixel
+        uint8_t ucMask = 0xc0 >> ((x & 3)*2);
+        iPitch = (pBBEP->width+3)>>2;
+        i = (x >> 2) + (y * iPitch);
+        if (i < 0 || i >= (iPitch * pBBEP->height)) return BBEP_ERROR_BAD_PARAMETER;
+        pBBEP->ucScreen[i] &= ~ucMask;
+        pBBEP->ucScreen[i] |= ucColor << ((3-(x & 3))*2);
+        return BBEP_SUCCESS;
+    }
     iPitch = (pBBEP->width+7)>>3;
     iSize = ((pBBEP->native_width+7)>>3) * pBBEP->native_height;
     
@@ -1367,7 +1376,6 @@ static void DrawScaledPixel(BBEPDISP *pBBEP, int iCX, int iCY, int x, int y, int
     int iPitch;
     int iRedOffset = 0;
     
-    iPitch = (pBBEP->width + 7) >> 3;
     if (iXFrac != 0x10000) x = ((x * iXFrac) >> 16);
     if (iYFrac != 0x10000) y = ((y * iYFrac) >> 16);
     x += iCX; y += iCY;
@@ -1375,9 +1383,18 @@ static void DrawScaledPixel(BBEPDISP *pBBEP, int iCX, int iCY, int x, int y, int
         pBBEP->last_error = BBEP_ERROR_BAD_PARAMETER;
         return; // off the screen
     }
+    if (pBBEP->iFlags & BBEP_4COLOR) {
+        iPitch = (pBBEP->width + 3) >> 2;
+        ucMask = 0xc0 >> ((x & 3)*2);
+        d = &pBBEP->ucScreen[(x>>2) + (y * iPitch)];
+        d[0] &= ~ucMask;
+        d[0] |= (ucColor << ((3-(x & 3))*2));
+        return;
+    }
+    iPitch = (pBBEP->width + 7) >> 3;
     ucMask = 0x80 >> (x & 7);
     d = &pBBEP->ucScreen[(x>>3) + (y * iPitch)];
-    if (pBBEP->iFlags & (BBEP_3COLOR | BBEP_4COLOR)) {
+    if (pBBEP->iFlags & BBEP_3COLOR) {
         // use the second half of the image buffer
         iRedOffset = iPitch * pBBEP->height;
         if (ucColor == BBEP_RED) {

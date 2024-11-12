@@ -75,6 +75,9 @@ const char *szPanelNames[] = {
   "EP213R_122x250 ",
   "EP154_200x200  ",
   "EP154B_200x200 ",
+  "EP266YR_184x360", // GDEY0266F51
+  "EP29YR_128x296 ", // GDEY029F51
+  "EP29YR_168x384 ", // GDEY029F51H
   NULL
 };
 // names of the operating modes
@@ -90,7 +93,7 @@ enum {
 
 // List of supported colors for each panel type
 // 2 = Black/White, 3 = Black/White/Red
-const uint8_t u8PanelColors[] = {2,2,2,2,2,2,2,2,2,2,3,2,3,3,3,2,2,2,2,3,2,2};
+const uint8_t u8PanelColors[] = {2,2,2,2,2,2,2,2,2,2,3,2,3,3,3,2,2,2,2,3,2,2,4,4,4};
 
 void epdBegin()
 {
@@ -162,8 +165,7 @@ void EPDTest(int iMode)
   oled.setFont(FONT_8x8);
   oled.println(szMode[iMode]);
   if (iMode == MODE_PARTIAL) {
-    int i, x, y;
-    char szTemp[16];
+    int i;
 
     if (!epd.hasPartialRefresh()) {
       oled.setFont(FONT_8x8);
@@ -230,11 +232,16 @@ void EPDTest(int iMode)
     } else {
       epd.println("No backbuffer (0 RAM)");
     }
-    if (u8PanelColors[iPanel] != 3)
+    if (u8PanelColors[iPanel] == 2)
       epd.println("Two colors (B/W)");
-    else {
+    else if (u8PanelColors[iPanel] == 3) {
       epd.setTextColor(BBEP_RED, BBEP_WHITE);
       epd.println("Three colors (B/W/R)");
+    } else {
+      epd.setTextColor(BBEP_RED, BBEP_WHITE);
+      epd.print("Four ");
+      epd.setTextColor(BBEP_YELLOW, BBEP_WHITE);
+      epd.println("colors (B/W/Y/R)");
     }
     if (epd.getBuffer()) {
       epd.writePlane();

@@ -120,6 +120,9 @@ enum {
     EP213R_122x250, // Inky phat 2.13 B/W/R
     EP154_200x200, // waveshare
     EP154B_200x200, // DEPG01540BN
+    EP266YR_184x360, // GDEY0266F51
+    EP29YR_128x296, // GDEY029F51
+    EP29YR_168x384, // GDEY029F51H
     EP_PANEL_COUNT
 };
 #ifdef FUTURE
@@ -160,8 +163,8 @@ enum {
 #define BBEP_4GRAY    0x0010
 #define BBEP_CS_EVERY_BYTE 0x0020
 
-#define BBEP_WHITE 0
-#define BBEP_BLACK 1
+#define BBEP_BLACK 0
+#define BBEP_WHITE 1
 #define BBEP_YELLOW 2
 #define BBEP_RED 3
 

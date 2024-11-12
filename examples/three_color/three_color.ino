@@ -2,7 +2,8 @@
 // 3 color (Black/White/Red) example
 //
 #include <bb_epaper.h>
-BBEPAPER bbep(EPD154R_152x152); // 1.54" 152x152 B/W/R
+//BBEPAPER bbep(EP154R_152x152); // 1.54" 152x152 B/W/R
+BBEPAPER bbep(EP266YR_184x360); // 1.54" 152x152 B/W/R
 // My Arduino Nano 33 BLE e-paper adapter
 #define DC_PIN 16
 #define BUSY_PIN 15

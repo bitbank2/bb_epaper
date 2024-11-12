@@ -106,11 +106,19 @@ void bbepWriteData(BBEPDISP *pBBEP, uint8_t *pData, int iLen)
 #ifdef ARDUINO_ARCH_ESP32
     SPI.transferBytes(pData, NULL, iLen);
 #else
-    digitalWrite(pBBEP->iCSPin, LOW);
-    for (int i=0; i<iLen; i++) { // Arduino clobbers the data (duplex)
-        SPI.transfer(pData[i]);
+    if (pBBEP->iFlags & BBEP_CS_EVERY_BYTE) {
+        for (int i=0; i<iLen; i++) { // Arduino clobbers the data (duplex)
+            digitalWrite(pBBEP->iCSPin, LOW);
+            SPI.transfer(pData[i]);
+            digitalWrite(pBBEP->iCSPin, HIGH);
+        }
+    } else {
+        digitalWrite(pBBEP->iCSPin, LOW);
+        for (int i=0; i<iLen; i++) { // Arduino clobbers the data (duplex)
+            SPI.transfer(pData[i]);
+        }
+        digitalWrite(pBBEP->iCSPin, HIGH);
     }
-    digitalWrite(pBBEP->iCSPin, HIGH);
 #endif
 } /* bbepWriteData() */
 
