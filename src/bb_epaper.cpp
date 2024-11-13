@@ -128,6 +128,10 @@ void BBEPAPER::setBuffer(uint8_t *pBuffer)
     _bbep.ucScreen = pBuffer;
 }
 
+void BBEPAPER::stretchAndSmooth(uint8_t *pSrc, uint8_t *pDest, int w, int h, int bSmooth)
+{
+    bbepStretchAndSmooth(pSrc, pDest, w, h, bSmooth);
+}
 void BBEPAPER::backupPlane(void)
 {
     int iSize = ((_bbep.native_width+7)>>3) * _bbep.native_height;
@@ -367,7 +371,7 @@ char ucTemp[4];
 #ifndef __AVR__
 size_t BBEPAPER::write(uint8_t c) {
 char szTemp[2]; // used to draw 1 character at a time to the C methods
-int rc, w=8, h=8;
+int w=8, h=8;
 
   szTemp[0] = c; szTemp[1] = 0;
    if (_bbep.pFont == NULL) { // use built-in fonts
@@ -405,7 +409,7 @@ int rc, w=8, h=8;
             _bbep.iCursorX = 0;
             _bbep.iCursorY += h;
           }
-          rc = bbepWriteStringCustom(&_bbep, (BB_FONT *)_bbep.pFont, -1, -1, szTemp, _bbep.iFG, _bbep.iPlane);
+          bbepWriteStringCustom(&_bbep, (BB_FONT *)_bbep.pFont, -1, -1, szTemp, _bbep.iFG, _bbep.iPlane);
         }
       }
     }

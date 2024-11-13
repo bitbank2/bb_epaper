@@ -25,6 +25,7 @@
 static G5DECIMAGE g5dec;
 // forward declarations
 void InvertBytes(uint8_t *pData, uint8_t bLen);
+int bbepSetPixel(BBEPDISP *pBBEP, int x, int y, unsigned char ucColor);
 
 const uint8_t ucFont[]PROGMEM = {
     0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x06,0x5f,0x5f,0x06,0x00,
@@ -186,9 +187,7 @@ const uint8_t ucSmallFont[] PROGMEM = {
 void bbepDrawSprite(BBEPDISP *pBBEP, const uint8_t *pSprite, int cx, int cy, int iPitch, int x, int y, uint8_t iColor)
 {
     int tx, ty, dx, dy, iStartX;
-    uint8_t *s, *d, uc, pix, ucSrcMask, ucDstMask;
-    int iLocalPitch;
-    iLocalPitch = pBBEP->width;
+    uint8_t *s, pix, ucSrcMask;
     
     if (pBBEP == NULL) return;
     if (x+cx < 0 || y+cy < 0 || x >= pBBEP->native_width || y >= pBBEP->native_height) {
@@ -266,43 +265,18 @@ void bbepDrawSprite(BBEPDISP *pBBEP, const uint8_t *pSprite, int cx, int cy, int
         for (ty=0; ty<cy; ty++)
         {
             s = (uint8_t *)&pSprite[(iStartX >> 3)];
-            d = &pBBEP->ucScreen[(dy>>3) * iLocalPitch + dx];
             ucSrcMask = 0x80 >> (iStartX & 7);
             pix = *s++;
-            ucDstMask = 1 << (dy & 7);
-            if (iColor) // priority color is 1
-            {
-                for (tx=0; tx<cx; tx++)
-                {
-                    uc = d[0];
-                    if (pix & ucSrcMask) // set pixel in source, set it in dest
-                        d[0] = (uc | ucDstMask);
-                    d++; // next pixel column
-                    ucSrcMask >>= 1;
-                    if (ucSrcMask == 0) // read next byte
-                    {
-                        ucSrcMask = 0x80;
-                        pix = *s++;
-                    }
-                } // for tx
-            } // priorty color 1
-            else
-            {
-                for (tx=0; tx<cx; tx++)
-                {
-                    uc = d[0];
-                    if (pix & ucSrcMask) // clr pixel in source, clr it in dest
-                        d[0] = (uc & ~ucDstMask);
-                    d++; // next pixel column
-                    ucSrcMask >>= 1;
-                    if (ucSrcMask == 0) // read next byte
-                    {
-                        ucSrcMask = 0x80;
-                        pix = *s++;
-                    }
-                } // for tx
-            } // priority color 0
-            dy++;
+            for (tx=0; tx<cx; tx++) {
+                if (pix & ucSrcMask) { // set pixel in source, set it in dest
+                    bbepSetPixel(pBBEP, dx+tx, dy+ty, iColor); 
+                }
+                ucSrcMask >>= 1;
+                if (ucSrcMask == 0) { // read next byte
+                    ucSrcMask = 0x80;
+                    pix = *s++;
+                }
+            } // for tx
             pSprite += iPitch;
         } // for ty
 #endif // NO_RAM
@@ -856,6 +830,67 @@ void RotateCharBox(uint8_t *pSrc)
     }
     memcpy(pSrc, ucDest, 8); // rotate "in-place"
 } /* RotateCharBox() */
+//
+// Double the size of a 1-bpp image and smooth the jaggies
+//
+void bbepStretchAndSmooth(uint8_t *pSrc, uint8_t *pDest, int w, int h, int bSmooth)
+{
+uint8_t c, uc1, uc2, *s, *d, ucMask;
+int tx, ty, iPitch, iDestPitch;
+
+    iPitch = (w+7)>>3;
+    iDestPitch = ((w*2)+7)>>3;
+// First, double the size of the source bitmap into the destination
+    uc1 = uc2 = 0;
+    memset(pDest, 0, iDestPitch * h*2);
+    for (ty=0; ty<h; ty++) {
+        s = &pSrc[ty * iPitch];
+        d = &pDest[(ty*2) * iDestPitch];
+        c = *s++;
+        ucMask = 0xc0; // destination mask
+        for (tx=0; tx<w; tx++) {
+            if (c & 0x80) // a left-nibble bit is set
+                uc1 |= ucMask;
+            if (c & 0x08) // a right-nibble bit is set
+                uc2 |= ucMask;
+            ucMask >>= 2;
+            c <<= 1;
+            if (ucMask == 0) {
+                c = *s++;
+                d[0] = d[iDestPitch] = uc1;
+                d[1] = d[iDestPitch+1] = uc2;
+                d += 2;
+                ucMask = 0xc0;
+                tx += 4;
+                uc1 = uc2 = 0;
+            }
+        } // for tx
+    } // for ty
+    if (!bSmooth) return;
+    // Now that the image is stretched, go through it and fill in corners
+    // to smooth the blockiness
+    for (ty = 0; ty < h; ty ++) {
+        s = &pSrc[ty * iPitch];
+        d = &pDest[ty*2 * iDestPitch];
+        for (tx=0; tx<w-1; tx++) {
+            uint8_t c00, c10, c01, c11; // 4 pixel group
+            int dx = (tx*2)+1;
+            c00 = s[tx>>3] & (0x80 >> (tx & 7));
+            c10 = s[(tx+1)>>3] & (0x80 >> ((tx+1) & 7));
+            c01 = s[iPitch + (tx>>3)] & (0x80 >> (tx & 7));
+            c11 = s[iPitch + ((tx+1)>>3)] & (0x80 >> ((tx+1) & 7));
+            if (c00 && c11 && (!c10 || !c01)) {
+                // fill in the 'hole'
+                d[(dx>>3)+iDestPitch*2] |= (0x80 >> (dx & 7));
+                d[((dx+1)>>3) + iDestPitch] |= (0x80 >> ((dx+1) & 7));
+            }
+            if (c10 && c01 && (!c11 || !c00)) {
+                d[(dx>>3)+iDestPitch] |= (0x80 >> (dx & 7));
+                d[((dx+1)>>3)+iDestPitch*2] |= (0x80 >> ((dx+1) & 7));
+            }
+        } // for tx
+    } // for ty
+} /* bbepStretchAndSmooth() */
 //
 // Draw a string of normal (8x8), small (6x8) or large (16x32) characters
 // At the given col+row

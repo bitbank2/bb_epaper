@@ -144,9 +144,6 @@ enum {
   EPD583R_600x448,
   EPD74R_640x384,
   EPD583_648x480, // DEPG0583BN
-  EPD29_BWYR_128x296, // GDEY029F51
-  EPD29_BWYR_168x384, // GDEY029F51H
-  EPD266_BWYR_184x360, // GDEY0266F51
   EPD30_BWYR_168x400, // Waveshare 3" B/W/Y/R
   EPD164_BWYR_168x168, // Waveshare 1.64" B/W/Y/R
   EPD236_BWYR_168x296, // Waveshare 2.36" B/W/Y/R
@@ -350,6 +347,7 @@ class BBEPAPER
     void fillCircle(int32_t x, int32_t y, int32_t r, uint32_t color);
     void drawEllipse(int16_t x, int16_t y, int32_t rx, int32_t ry, uint16_t color);
     void fillEllipse(int16_t x, int16_t y, int32_t rx, int32_t ry, uint16_t color);
+    void stretchAndSmooth(uint8_t *pSrc, uint8_t *pDest, int w, int h, int bSmooth = 1);
     void sleep(int bDeep);
     void wait(bool bQuick = false);
     void drawString(const char *pText, int x, int y);

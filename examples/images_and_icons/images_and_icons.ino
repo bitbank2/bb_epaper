@@ -8,12 +8,18 @@
 
 BBEPAPER bbep(EP295_128x296);
 // Mike Rankin's C3 e-ink PCB
-#define PIN_DC 3
-#define PIN_BUSY 1
-#define PIN_RST 10
-#define PIN_CS 7
-#define PIN_MOSI 6
-#define PIN_SCK 4
+//#define PIN_DC 3
+//#define PIN_BUSY 1
+//#define PIN_RST 10
+//#define PIN_CS 7
+//#define PIN_MOSI 6
+//#define PIN_SCK 4
+#define PIN_DC 16
+#define PIN_BUSY 15
+#define PIN_RST 14
+#define PIN_CS 10
+#define PIN_MOSI MOSI
+#define PIN_SCK SCK
 
 void setup()
 {
