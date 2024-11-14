@@ -335,6 +335,7 @@ class BBEPAPER
     void drawPixel(int16_t x, int16_t y, uint8_t color);
     int16_t getCursorX(void);
     int16_t getCursorY(void);
+    int testPanelType(void);
     void getTextBounds(const char *string, int16_t x, int16_t y, int16_t *x1, int16_t *y1, uint16_t *w, uint16_t *h);
 #ifdef ARDUINO
     void getTextBounds(const String &str, int16_t x, int16_t y, int16_t *x1, int16_t *y1, uint16_t *w, uint16_t *h);

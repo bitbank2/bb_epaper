@@ -95,7 +95,26 @@ enum {
 // 2 = Black/White, 3 = Black/White/Red
 const uint8_t u8PanelColors[] = {2,2,2,2,2,2,2,2,2,2,3,2,3,3,3,2,2,2,2,3,2,2,4,4,4};
 
-void epdBegin()
+void WaitForButton(void)
+{
+  oled.setFont(FONT_6x8);
+  oled.setCursor(0,56);
+  oled.println("(Any button to exit)");
+  // wait for button release
+  while (digitalRead(BUTTON1) == 0 || digitalRead(BUTTON2) == 0) {
+    delay(10);
+  }
+  // wait for button press
+  while (digitalRead(BUTTON1) == 1 && digitalRead(BUTTON2) == 1) {
+    delay(10);
+  }
+  // wait for button release
+  while (digitalRead(BUTTON1) == 0 || digitalRead(BUTTON2) == 0) {
+    delay(10);
+  }
+} /* WaitForButton() */
+
+int epdBegin()
 {
   if (POWER_PIN != -1) {
     pinMode(POWER_PIN, OUTPUT);
@@ -103,6 +122,19 @@ void epdBegin()
     delay(100); // allow time to settle
   }
   epd.initIO(DC_PIN, RESET_PIN, BUSY_PIN, CS_PIN, MOSI_PIN, CLK_PIN);
+  // Don't let the user choose the wrong controller type
+  // this can damage some panels because some commands overlap and set the wrong
+  // power settings
+  if (epd.testPanelType() != epd.getChip()) { 
+    oled.fillScreen(OBD_WHITE);
+    oled.setFont(FONT_12x16);
+    oled.println("Panel does");
+    oled.println("not match");
+    oled.println("chip type!");
+    WaitForButton();
+    return 0;
+  }
+  return 1;
 } /* epdBegin() */
 
 // Display info about the currently selected panel
@@ -174,7 +206,6 @@ void EPDTest(int iMode)
       iDataTime = iOpTime = 0;
       return;
     }
-    epdBegin();
     if (epd.width() < epd.height()) {
        epd.setRotation(90);
     }
@@ -199,7 +230,6 @@ void EPDTest(int iMode)
     epd.fillScreen(BBEP_WHITE);
     epd.refresh(REFRESH_FULL, true);
   } else { // slow/fast
-    epdBegin();
     if (epd.width() < epd.height()) {
        epd.setRotation(90);
     }
@@ -262,7 +292,6 @@ void EPDClear(void)
   oled.setFont(FONT_12x16);
   oled.println("Clear EPD");
   oled.println("Starting...");
-  epdBegin();
   if (epd.width() < epd.height() || !epd.getBuffer()) {
        epd.setRotation(90);
   }
@@ -287,23 +316,19 @@ void ShowTime(void)
     oled.print((int)iOpTime, DEC);
     oled.println(" ms");
   }
-  oled.setFont(FONT_6x8);
-  oled.setCursor(0,56);
-  oled.println("(Any button to exit)");
-  while (digitalRead(BUTTON1) == 1 && digitalRead(BUTTON2) == 1) {
-    delay(10);
-  }
-  // wait for button release
-  while (digitalRead(BUTTON1) == 0 || digitalRead(BUTTON2) == 0) {
-    delay(10);
-  }
+  WaitForButton();
 } /* ShowTime() */
 
 void setup() {
+//  Serial.begin(115200);
+//  delay(3000);
+//  Serial.println("Starting...");
   oled.I2Cbegin();
   oled.fillScreen(OBD_WHITE);
   pinMode(BUTTON1, INPUT_PULLUP);
   pinMode(BUTTON2, INPUT_PULLUP);
+  epd.setPanelType(1); // set to first panel type to start
+
 //  Serial.begin(115200);
 //  delay(3000);
 //  Serial.println("EPD BLE Tester");
@@ -350,6 +375,10 @@ void loop() {
        } else {
          // start the operation
          iTime = millis();
+         if (!epdBegin()) {
+          ShowInfo(true);
+          continue; // something went wrong
+         }
          switch (iMode) {
          case MODE_FULL_NO_RAM: // full refresh EPD test without using the back buffer
           case MODE_FULL_RAM:

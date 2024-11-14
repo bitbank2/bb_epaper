@@ -70,8 +70,8 @@ int BBEPAPER::setPanelType(int iPanel)
 void BBEPAPER::initIO(int iDC, int iReset, int iBusy, int iCS, int iMOSI, int iSCLK, uint32_t u32Speed)
 {
     bbepInitIO(&_bbep, iDC, iReset, iBusy, iCS, iMOSI, iSCLK, u32Speed);
-    bbepWakeUp(&_bbep);
-    bbepSendCMDSequence(&_bbep, _bbep.pInitFull);
+//    bbepWakeUp(&_bbep);
+//    bbepSendCMDSequence(&_bbep, _bbep.pInitFull);
 } /* initIO() */
 #else // Linux
 void BBEPAPER::initIO(int iDC, int iReset, int iBusy, int iCS, int iSPIChannel, uint32_t u32Speed)
@@ -480,6 +480,10 @@ void BBEPAPER::fillEllipse(int16_t x, int16_t y, int32_t rx, int32_t ry, uint16_
     bbepEllipse(&_bbep, x, y, rx, ry, 0xf, color, 1);
 }
 
+int BBEPAPER::testPanelType(void)
+{
+    return bbepTestPanelType(&_bbep);
+}
 void BBEPAPER::sleep(int bDeep)
 {
     bbepSleep(&_bbep, bDeep);

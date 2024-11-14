@@ -987,19 +987,29 @@ int bbepWriteString(BBEPDISP *pBBEP, int x, int y, char *szMsg, int iSize, int i
                 } // stretched 2x
             } else { // draw in memory
 #ifndef NO_RAM
-                uint8_t u8Mask;
-                for (int ty=0; ty<8; ty++) {
-                    u8Mask = 1<<ty;
-                    for (int tx = 0; tx<iLen; tx++) {
-                        if (u8Temp[tx] & u8Mask) {
-                            if (iCount == 8) {
+                uint8_t *s, u8Mask;
+                if (iCount == 8) {
+                    for (int ty=0; ty<8; ty++) {
+                        u8Mask = 1<<ty;
+                        for (int tx = 0; tx<iLen; tx++) {
+                            if (u8Temp[tx] & u8Mask) {
                                 bbepSetPixel(pBBEP, x+tx, y+ty, iColor);
-                            } else { // stretched
-                                bbepSetPixel(pBBEP, x+tx*2, y+(ty*2), iColor);
-                                bbepSetPixel(pBBEP, 1+x+tx*2, y+(ty*2), iColor);
-                                bbepSetPixel(pBBEP, x+tx*2, y+1+ty*2, iColor);
-                                bbepSetPixel(pBBEP, 1+x+tx*2, y+1+ty*2, iColor);
                             }
+                        }
+                    }
+                } else { // 16x16
+                    bbepStretchAndSmooth(u8Temp, u8Cache, 8, 8, 1); // smooth too
+                    for (int ty=0; ty<16; ty++) {
+                        s = &u8Cache[2*ty];
+                        u8Mask = 0x80;
+                        for (int tx = 7; tx>=0; tx--) {
+                            if (s[0] & u8Mask) {
+                                bbepSetPixel(pBBEP, x+ty, y+tx+8, iColor);
+                            }
+                            if (s[1] & u8Mask) {
+                                bbepSetPixel(pBBEP, x+ty, y+tx, iColor);
+                            }
+                            u8Mask >>= 1;
                         }
                     }
                 }

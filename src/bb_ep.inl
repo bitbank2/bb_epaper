@@ -1212,12 +1212,15 @@ int bbepCreateVirtual(BBEPDISP *pBBEP, int iWidth, int iHeight, int iFlags)
 //
 void bbepWaitBusy(BBEPDISP *pBBEP)
 {
+    int iTimeout = 0;
+
     if (!pBBEP) return;
     if (pBBEP->iBUSYPin == 0xff) return;
     uint8_t busy_idle =  (pBBEP->chip_type == BBEP_CHIP_UC81xx) ? HIGH : LOW;
     delay(1); // some panels need a short delay before testing the BUSY line
-    while (1) {
+    while (iTimeout < 5000) {
         if (digitalRead(pBBEP->iBUSYPin) == busy_idle) break;
+        delay(1);
     }
 } /* bbepWaitBusy() */
 //
@@ -1367,6 +1370,22 @@ void bbepSendCMDSequence(BBEPDISP *pBBEP, const uint8_t *pSeq)
     } // while more commands to send
 } /* bbepSendCMDSequence() */
 
+//
+// Tests the BUSY line to see if you're connected to a
+// SSD16xx or UC81xx panel
+//
+int bbepTestPanelType(BBEPDISP *pBBEP)
+{
+    if (!pBBEP) return BBEP_CHIP_NOT_DEFINED;
+    digitalWrite(pBBEP->iRSTPin, LOW);
+    delay(40);
+    digitalWrite(pBBEP->iRSTPin, HIGH);
+    delay(50);
+    if (digitalRead(pBBEP->iBUSYPin))
+        return BBEP_CHIP_UC81xx; // high state = UltraChip ready
+    else
+        return BBEP_CHIP_SSD16xx; // low state = Solomon ready
+} /* bbepTestPanelType() */
 //
 // Fill the display with a color or byte pattern
 // e.g. all black (0x00) or all white (0xff)
