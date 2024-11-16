@@ -971,8 +971,6 @@ const uint8_t epd583_init_sequence_part[] PROGMEM = {
     2, 0x50, 0x97, // VCOM
     5, 0x01, 0x03,0x00,0x2b,0x2b, // power setting
     4, 0x06, 0x17,0x17,0x17, // boost soft start
-    1, 0x04, // power on
-    BUSY_WAIT,
     3, 0x00, 0xbf, 0x0b, // panel setting
     2, 0x30, 0x3c, // 3A 100HZ
     5, 0x61, 0x02, 0x88, 0x01, 0xe0, // resolution 648x480
@@ -1018,6 +1016,8 @@ const uint8_t epd583_init_sequence_part[] PROGMEM = {
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    1, 0x04, // power on
+    BUSY_WAIT,
     
     0x00 // end of table
 };
@@ -1169,6 +1169,7 @@ const EPD_PANEL panelDefs[] PROGMEM = {
     {184, 360, 0, epd266yr_init_sequence_full, NULL, NULL, BBEP_4COLOR, BBEP_CHIP_UC81xx}, // EP266YR_184x360
     {128, 296, 0, epd29yr_init_sequence_full, NULL, NULL, BBEP_4COLOR, BBEP_CHIP_UC81xx}, // EP29YR_129x296
     {168, 384, 0, epd29yrh_init_sequence_full, NULL, NULL, BBEP_4COLOR, BBEP_CHIP_UC81xx}, // EP29YR_168x384
+    {648, 480, 0, epd583_init_sequence_full, NULL, epd583_init_sequence_part, 0, BBEP_CHIP_UC81xx}, // EP583_648x480
 };
 //
 // Set the e-paper panel type
@@ -1683,7 +1684,7 @@ static void bbepWriteImage(BBEPDISP *pBBEP, uint8_t ucCMD, uint8_t *pBuffer, int
                 // reassemble every pixel
                 ucDstMask = 0x80;
                 uc = 0xff;
-                ucSrcMask = 0x80 << (tx & 7);
+                ucSrcMask = 0x80 >> (tx & 7);
                 for (ty=0; ty<pBBEP->height; ty++) {
                     s = &pBuffer[(tx>>3) + (ty * iPitch)];
                     if ((s[0] & ucSrcMask) == 0) uc &= ~ucDstMask;

@@ -128,9 +128,9 @@ void BBEPAPER::setBuffer(uint8_t *pBuffer)
     _bbep.ucScreen = pBuffer;
 }
 
-void BBEPAPER::stretchAndSmooth(uint8_t *pSrc, uint8_t *pDest, int w, int h, int bSmooth)
+void BBEPAPER::stretchAndSmooth(uint8_t *pSrc, uint8_t *pDest, int w, int h, int iSmoothType)
 {
-    bbepStretchAndSmooth(pSrc, pDest, w, h, bSmooth);
+    bbepStretchAndSmooth(pSrc, pDest, w, h, iSmoothType);
 }
 void BBEPAPER::backupPlane(void)
 {

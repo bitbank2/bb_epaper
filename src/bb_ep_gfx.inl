@@ -308,7 +308,7 @@ int bbepSetPixel(BBEPDISP *pBBEP, int x, int y, unsigned char ucColor)
     iSize = ((pBBEP->native_width+7)>>3) * pBBEP->native_height;
     
     i = (x >> 3) + (y * iPitch);
-    if (i < 0 || i > iSize-1) { // off the screen
+    if (x < 0 || x >= pBBEP->width || i < 0 || i > iSize-1) { // off the screen
         pBBEP->last_error = BBEP_ERROR_BAD_PARAMETER;
         return BBEP_ERROR_BAD_PARAMETER;
     }
@@ -833,7 +833,7 @@ void RotateCharBox(uint8_t *pSrc)
 //
 // Double the size of a 1-bpp image and smooth the jaggies
 //
-void bbepStretchAndSmooth(uint8_t *pSrc, uint8_t *pDest, int w, int h, int bSmooth)
+void bbepStretchAndSmooth(uint8_t *pSrc, uint8_t *pDest, int w, int h, int iSmooth)
 {
 uint8_t c, uc1, uc2, *s, *d, ucMask;
 int tx, ty, iPitch, iDestPitch;
@@ -866,7 +866,7 @@ int tx, ty, iPitch, iDestPitch;
             }
         } // for tx
     } // for ty
-    if (!bSmooth) return;
+    if (iSmooth == BBEP_SMOOTH_NONE) return;
     // Now that the image is stretched, go through it and fill in corners
     // to smooth the blockiness
     for (ty = 0; ty < h; ty ++) {
@@ -879,14 +879,23 @@ int tx, ty, iPitch, iDestPitch;
             c10 = s[(tx+1)>>3] & (0x80 >> ((tx+1) & 7));
             c01 = s[iPitch + (tx>>3)] & (0x80 >> (tx & 7));
             c11 = s[iPitch + ((tx+1)>>3)] & (0x80 >> ((tx+1) & 7));
-            if (c00 && c11 && (!c10 || !c01)) {
-                // fill in the 'hole'
-                d[(dx>>3)+iDestPitch*2] |= (0x80 >> (dx & 7));
-                d[((dx+1)>>3) + iDestPitch] |= (0x80 >> ((dx+1) & 7));
-            }
-            if (c10 && c01 && (!c11 || !c00)) {
-                d[(dx>>3)+iDestPitch] |= (0x80 >> (dx & 7));
-                d[((dx+1)>>3)+iDestPitch*2] |= (0x80 >> ((dx+1) & 7));
+            if (iSmooth == BBEP_SMOOTH_HEAVY) {
+                if (c00 && c11 && (!c10 || !c01)) {
+                    // fill in the 'hole'
+                    d[(dx>>3)+iDestPitch*2] |= (0x80 >> (dx & 7));
+                    d[((dx+1)>>3) + iDestPitch] |= (0x80 >> ((dx+1) & 7));
+                }
+                if (c10 && c01 && (!c11 || !c00)) {
+                    d[(dx>>3)+iDestPitch] |= (0x80 >> (dx & 7));
+                    d[((dx+1)>>3)+iDestPitch*2] |= (0x80 >> ((dx+1) & 7));
+                }
+            } else { // BBEP_SMOOTH_LIGHT
+                if ((c00 && !c10 && !c01 && c11) || (!c00 && c10 && c01 && !c11)) {
+                    d[(dx>>3)+iDestPitch*2] |= (0x80 >> (dx & 7));
+                    d[((dx+1)>>3) + iDestPitch] |= (0x80 >> ((dx+1) & 7));
+                    d[(dx>>3)+iDestPitch] |= (0x80 >> (dx & 7));
+                    d[((dx+1)>>3)+iDestPitch*2] |= (0x80 >> ((dx+1) & 7));
+                }
             }
         } // for tx
     } // for ty
@@ -1187,22 +1196,22 @@ int bbepWriteString(BBEPDISP *pBBEP, int x, int y, char *szMsg, int iSize, int i
             // we can't directly use the pointer to FLASH memory, so copy to a local buffer
             u8Temp[0] = 0; // first column is blank
             memcpy_P(&u8Temp[1], &ucSmallFont[(int)c*5], 5);
-            if (iColor == BBEP_BLACK) InvertBytes(u8Temp, 6);
             iLen = 6;
             if (pBBEP->iCursorX + iLen > pBBEP->width) // clip right edge
                 iLen = pBBEP->width - pBBEP->iCursorX;
             if (!pBBEP->ucScreen) { // bufferless mode
+                if (iColor == BBEP_BLACK) InvertBytes(u8Temp, 6);
                 bbepSetAddrWindow(pBBEP, pBBEP->iCursorX, pBBEP->iCursorY, 8, iLen);
                 bbepWriteCmd(pBBEP, ucCMD); // write to "new" plane
                 bbepWriteData(pBBEP, u8Temp, iLen);
             } else { // write to RAM
 #ifndef NO_RAM
                 uint8_t u8Mask;
-                for (int ty=y; ty<y+8; ty++) {
-                    u8Mask = 1<<y;
+                for (int ty=0; ty<8; ty++) {
+                    u8Mask = 1<<ty;
                     for (int tx = 0; tx<iLen; tx++) {
                         if (u8Temp[tx] & u8Mask) {
-                            bbepSetPixel(pBBEP, x+tx, ty, iColor);
+                            bbepSetPixel(pBBEP, x+tx, ty+y, iColor);
                         }
                     }
                 }
@@ -1600,36 +1609,10 @@ void bbepRectangle(BBEPDISP *pBBEP, int x1, int y1, int x2, int y2, uint8_t ucCo
     {
 #ifndef NO_RAM
         if (pBBEP->ucScreen) { // has a buffer to fill
-            int x, y, iMiddle;
-            iMiddle = (y2 >> 3) - (y1 >> 3);
-            ucMask = 0xff << (y1 & 7);
-            if (iMiddle == 0) // top and bottom lines are in the same row
-                ucMask &= (0xff >> (7-(y2 & 7)));
-            d = &pBBEP->ucScreen[iRedOffset + (y1 >> 3)*iPitch + x1];
-            // Draw top
-            for (x = x1; x <= x2; x++) {
-                if (ucColor)
-                    *d |= ucMask;
-                else
-                    *d &= ~ucMask;
-                d++;
-            }
-            if (iMiddle > 1) { // need to draw middle part
-                ucMask = (ucColor) ? 0xff : 0x00;
-                for (y=1; y<iMiddle; y++) {
-                    d = &pBBEP->ucScreen[iRedOffset + (y1 >> 3)*iPitch + x1 + (y*iPitch)];
-                    for (x = x1; x <= x2; x++)
-                        *d++ = ucMask;
-                }
-            }
-            if (iMiddle >= 1) { // need to draw bottom part
-                ucMask = 0xff >> (7-(y2 & 7));
-                d = &pBBEP->ucScreen[iRedOffset + (y2 >> 3)*iPitch + x1];
-                for (x = x1; x <= x2; x++) {
-                    if (ucColor)
-                        *d++ |= ucMask;
-                    else
-                        *d++ &= ~ucMask;
+            int tx, ty;
+            for (ty = y1; ty <= y2; ty++) {
+                for (tx = x1; tx <= x2; tx++) {
+                    bbepSetPixel(pBBEP, tx, ty, ucColor);
                 }
             }
         } else

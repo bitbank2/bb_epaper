@@ -30,7 +30,7 @@
 #include <bb_epaper.h>
 //BBEPAPER bbep(EP27B_176x264);
 //BBEPAPER bbep(EP213B_122x250);
-BBEPAPER bbep(EP122_192x176);
+BBEPAPER bbep(EP583_648x480);
 //BBEPAPER bbep(EP295_128x296);
 // My Arduino Nano 33 BLE e-paper adapter
 #define DC_PIN 16

@@ -53,6 +53,11 @@ enum {
 #define REFRESH_FAST 1
 #define REFRESH_PARTIAL 2
 
+// Stretch+smoothing options
+#define BBEP_SMOOTH_NONE  0
+#define BBEP_SMOOTH_HEAVY 1
+#define BBEP_SMOOTH_LIGHT 2
+
 // controller chip types
 enum {
     BBEP_CHIP_NOT_DEFINED = 0,
@@ -123,6 +128,8 @@ enum {
     EP266YR_184x360, // GDEY0266F51
     EP29YR_128x296, // GDEY029F51
     EP29YR_168x384, // GDEY029F51H
+    EP583_648x480, // DEPG0583BN
+//    EP583R_600x448, // 4-bits per pixel needs different support
     EP_PANEL_COUNT
 };
 #ifdef FUTURE
@@ -141,9 +148,7 @@ enum {
   EPD31R_168x296, // DEPG0310RW
   EPD37Y_240x416, // DEPG0370YN
   EPD579_792x272, // GDEY0579T93
-  EPD583R_600x448,
   EPD74R_640x384,
-  EPD583_648x480, // DEPG0583BN
   EPD30_BWYR_168x400, // Waveshare 3" B/W/Y/R
   EPD164_BWYR_168x168, // Waveshare 1.64" B/W/Y/R
   EPD236_BWYR_168x296, // Waveshare 2.36" B/W/Y/R
@@ -348,7 +353,7 @@ class BBEPAPER
     void fillCircle(int32_t x, int32_t y, int32_t r, uint32_t color);
     void drawEllipse(int16_t x, int16_t y, int32_t rx, int32_t ry, uint16_t color);
     void fillEllipse(int16_t x, int16_t y, int32_t rx, int32_t ry, uint16_t color);
-    void stretchAndSmooth(uint8_t *pSrc, uint8_t *pDest, int w, int h, int bSmooth = 1);
+    void stretchAndSmooth(uint8_t *pSrc, uint8_t *pDest, int w, int h, int iSmoothType);
     void sleep(int bDeep);
     void wait(bool bQuick = false);
     void drawString(const char *pText, int x, int y);

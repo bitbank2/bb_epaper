@@ -78,22 +78,24 @@ const char *szPanelNames[] = {
   "EP266YR_184x360", // GDEY0266F51
   "EP29YR_128x296 ", // GDEY029F51
   "EP29YR_168x384 ", // GDEY029F51H
+  "EP583_648x480  ", // DEPG0583BN
   NULL
 };
 // names of the operating modes
-const char *szMode[] = {"Full upd wo/RAM ", "Full upd w/RAM  ", "Fast Update     ", "Partial Update  ", "Clear to white  "};
+const char *szMode[] = {"Full upd wo/RAM ", "Full upd w/RAM  ", "Fast Update     ", "Partial Update  ", "Function test   ", "Clear to white  "};
 enum {
   MODE_FULL_NO_RAM = 0,
   MODE_FULL_RAM,
   MODE_FAST,
   MODE_PARTIAL,
+  MODE_FN_TEST,
   MODE_CLEAR,
   MODE_COUNT
 };
 
 // List of supported colors for each panel type
 // 2 = Black/White, 3 = Black/White/Red
-const uint8_t u8PanelColors[] = {2,2,2,2,2,2,2,2,2,2,3,2,3,3,3,2,2,2,2,3,2,2,4,4,4};
+const uint8_t u8PanelColors[] = {2,2,2,2,2,2,2,2,2,2,3,2,3,3,3,2,2,2,2,3,2,2,4,4,4,2};
 
 void WaitForButton(void)
 {
@@ -286,15 +288,48 @@ void EPDTest(int iMode)
   epd.sleep(DEEP_SLEEP);
 } /* EPDTest() */
 
+void FunctionTest(void)
+{
+  oled.fillScreen(OBD_WHITE);
+  oled.setFont(FONT_12x16);
+  oled.println("Funct Test");
+    epd.allocBuffer();
+    for (int iRot = 0; iRot<360; iRot+= 90) { // test the graphics in every direction
+      oled.setCursor(0,24);
+      oled.print("Rot: ");
+      oled.print(iRot, DEC);
+      epd.setRotation(iRot);
+      epd.fillScreen(BBEP_WHITE);
+      epd.setTextColor(BBEP_BLACK);
+      epd.setFont(FONT_6x8);
+      epd.println("6x8 internal font");
+      epd.setFont(FONT_8x8);
+      epd.println("8x8 font");
+      epd.setTextColor(BBEP_RED);
+      epd.setFont(FONT_12x16);
+      epd.println("12x16 font");
+      epd.setFont(FONT_16x16);
+      epd.println("16x16 font");
+      epd.fillCircle(26, 80, 25, BBEP_BLACK);
+      epd.fillRect(60, 60, 40, 40, BBEP_RED);
+      epd.writePlane();
+      epd.refresh(REFRESH_FULL, true); // display the white buffer and return
+      epd.sleep(LIGHT_SLEEP);
+      delay(5000);
+    } // for iRot
+    epd.fillScreen(BBEP_WHITE);
+    epd.writePlane();
+    epd.refresh(REFRESH_FULL, true);
+    epd.sleep(DEEP_SLEEP);
+    epd.freeBuffer();
+} /* FunctionTest() */
+
 void EPDClear(void)
 {
   oled.fillScreen(OBD_WHITE);
   oled.setFont(FONT_12x16);
   oled.println("Clear EPD");
   oled.println("Starting...");
-  if (epd.width() < epd.height() || !epd.getBuffer()) {
-       epd.setRotation(90);
-  }
   epd.fillScreen(BBEP_WHITE);
   epd.refresh(REFRESH_FULL, true); // display the white buffer and return
   iDataTime = epd.dataTime();
@@ -385,6 +420,9 @@ void loop() {
           case MODE_FAST: // needs backbuffer too
           case MODE_PARTIAL:
             EPDTest(iMode);
+            break;
+         case MODE_FN_TEST:
+            FunctionTest();
             break;
          case MODE_CLEAR:
             EPDClear();
