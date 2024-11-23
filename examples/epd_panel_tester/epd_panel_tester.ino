@@ -311,12 +311,16 @@ void FunctionTest(void)
       epd.setFont(FONT_16x16);
       epd.println("16x16 font");
       epd.fillCircle(26, 80, 25, BBEP_BLACK);
-      epd.fillRect(60, 60, 40, 40, BBEP_RED);
+      epd.drawRect(60, 60, 40, 40, BBEP_RED);
+      epd.drawCircle(26, 134, 25, BBEP_RED);
+      epd.fillRoundRect(60, 114, 40, 40, 8, BBEP_BLACK);
       epd.writePlane();
       epd.refresh(REFRESH_FULL, true); // display the white buffer and return
       epd.sleep(LIGHT_SLEEP);
       delay(5000);
     } // for iRot
+    oled.setCursor(0,24);
+    oled.print("Clear   ");
     epd.fillScreen(BBEP_WHITE);
     epd.writePlane();
     epd.refresh(REFRESH_FULL, true);

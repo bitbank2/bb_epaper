@@ -1703,9 +1703,8 @@ void bbepRectangle(BBEPDISP *pBBEP, int x1, int y1, int x2, int y2, uint8_t ucCo
 void bbepRoundRect(BBEPDISP *pBBEP, int x, int y, int w, int h, int r, uint8_t iColor, int bFilled)
 {
     if (bFilled) {
-        bbepRectangle(pBBEP, x+r, y, w-(2*r), r, iColor, 1);
-        bbepRectangle(pBBEP, x, y+r, w, h-(2*r), iColor, 1);
-        bbepRectangle(pBBEP, x+r, y+h-r, w-(2*r), r, iColor, 1);
+        bbepRectangle(pBBEP, x+r, y, x+w-1-r, y+h, iColor, 1);
+        bbepRectangle(pBBEP, x, y+r, x+w-1, y+h-r, iColor, 1);
         // draw four corners
         bbepEllipse(pBBEP, x+w-r-1, y+r, r, r, 1, iColor, 1);
         bbepEllipse(pBBEP, x+r, y+r, r, r, 2, iColor, 1);
