@@ -52,6 +52,7 @@ enum {
 #define REFRESH_FULL 0
 #define REFRESH_FAST 1
 #define REFRESH_PARTIAL 2
+#define REFRESH_PARTIAL2 3
 
 // Stretch+smoothing options
 #define BBEP_SMOOTH_NONE  0
@@ -129,6 +130,7 @@ enum {
     EP29YR_128x296, // GDEY029F51
     EP29YR_168x384, // GDEY029F51H
     EP583_648x480, // DEPG0583BN
+    EP296_128x296, // Waveshare 2.9" 128x296 B/W V2
 //    EP583R_600x448, // 4-bits per pixel needs different support
     EP_PANEL_COUNT
 };
@@ -164,6 +166,7 @@ enum {
 #define BBEP_4COLOR   0x0008
 #define BBEP_4GRAY    0x0010
 #define BBEP_CS_EVERY_BYTE 0x0020
+#define BBEP_PARTIAL2 0x0040
 
 #define BBEP_BLACK 0
 #define BBEP_WHITE 1
