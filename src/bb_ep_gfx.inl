@@ -25,7 +25,6 @@
 static G5DECIMAGE g5dec;
 // forward declarations
 void InvertBytes(uint8_t *pData, uint8_t bLen);
-int bbepSetPixel(BBEPDISP *pBBEP, int x, int y, unsigned char ucColor);
 
 const uint8_t ucFont[]PROGMEM = {
     0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x06,0x5f,0x5f,0x06,0x00,
@@ -269,7 +268,7 @@ void bbepDrawSprite(BBEPDISP *pBBEP, const uint8_t *pSprite, int cx, int cy, int
             pix = *s++;
             for (tx=0; tx<cx; tx++) {
                 if (pix & ucSrcMask) { // set pixel in source, set it in dest
-                    bbepSetPixel(pBBEP, dx+tx, dy+ty, iColor); 
+                    (*pBBEP->pfnSetPixelFast)(pBBEP, dx+tx, dy+ty, iColor);
                 }
                 ucSrcMask >>= 1;
                 if (ucSrcMask == 0) { // read next byte
@@ -284,26 +283,56 @@ void bbepDrawSprite(BBEPDISP *pBBEP, const uint8_t *pSprite, int cx, int cy, int
 } /* bbepDrawSprite() */
 //
 // Set (or clear) an individual pixel
-// This function only works with a back buffer defined. A bufferless version
+// These functions only works with a back buffer defined. A bufferless version
 // is possible, but would be too impractical.
 //
-int bbepSetPixel(BBEPDISP *pBBEP, int x, int y, unsigned char ucColor)
+int bbepSetPixel4Clr(void *pb, int x, int y, unsigned char ucColor)
 {
-    int i;
-    int iPitch, iSize;
+int i;
+int iPitch;
+uint8_t u8, ucMask;
+BBEPDISP *pBBEP = (BBEPDISP *)pb;
+
+    // only available for local buffer operations
+    if (!pBBEP || !pBBEP->ucScreen) return BBEP_ERROR_BAD_PARAMETER;
+    
+    ucMask = 0xc0 >> ((x & 3)*2);
+    iPitch = (pBBEP->width+3)>>2;
+    i = (x >> 2) + (y * iPitch);
+    if (i < 0 || i >= (iPitch * pBBEP->height)) return BBEP_ERROR_BAD_PARAMETER;
+    u8 = pBBEP->ucScreen[i];
+    u8 &= ~ucMask;
+    u8 |= ucColor << ((3-(x & 3))*2);
+    pBBEP->ucScreen[i] = u8;
+    return BBEP_SUCCESS;
+
+} /* bbepSetPixel4Clr() */
+// Fast version (no pointer verification + no boundary checking)
+void bbepSetPixelFast4Clr(void *pb, int x, int y, unsigned char ucColor)
+{
+int i;
+int iPitch;
+uint8_t u8, ucMask;
+BBEPDISP *pBBEP = (BBEPDISP *)pb;
+    
+    ucMask = 0xc0 >> ((x & 3)*2);
+    iPitch = (pBBEP->width+3)>>2;
+    i = (x >> 2) + (y * iPitch);
+    u8 = pBBEP->ucScreen[i];
+    u8 &= ~ucMask;
+    u8 |= ucColor << ((3-(x & 3))*2);
+    pBBEP->ucScreen[i] = u8;
+} /* bbepSetPixelFast4Clr() */
+
+int bbepSetPixel3Clr(void *pb, int x, int y, unsigned char ucColor)
+{
+int i;
+int iPitch, iSize;
+BBEPDISP *pBBEP = (BBEPDISP *)pb;
     
     // only available for local buffer operations
     if (!pBBEP || !pBBEP->ucScreen) return BBEP_ERROR_BAD_PARAMETER;
     
-    if (pBBEP->iFlags & BBEP_4COLOR) { // 2-bits per pixel
-        uint8_t ucMask = 0xc0 >> ((x & 3)*2);
-        iPitch = (pBBEP->width+3)>>2;
-        i = (x >> 2) + (y * iPitch);
-        if (i < 0 || i >= (iPitch * pBBEP->height)) return BBEP_ERROR_BAD_PARAMETER;
-        pBBEP->ucScreen[i] &= ~ucMask;
-        pBBEP->ucScreen[i] |= ucColor << ((3-(x & 3))*2);
-        return BBEP_SUCCESS;
-    }
     iPitch = (pBBEP->width+7)>>3;
     iSize = ((pBBEP->native_width+7)>>3) * pBBEP->native_height;
     
@@ -312,23 +341,10 @@ int bbepSetPixel(BBEPDISP *pBBEP, int x, int y, unsigned char ucColor)
         pBBEP->last_error = BBEP_ERROR_BAD_PARAMETER;
         return BBEP_ERROR_BAD_PARAMETER;
     }
-    // special case for 3-color e-ink
-    if (pBBEP->iFlags & BBEP_3COLOR) {
-        if (ucColor >= BBEP_YELLOW) { // yellow/red has priority
-            pBBEP->ucScreen[iSize + i] |= (0x80 >> (x & 7));
-        } else {
-            pBBEP->ucScreen[iSize + i] &= ~(0x80 >> (x & 7)); // clear red plane bit
-            if (ucColor == BBEP_WHITE) {
-                pBBEP->ucScreen[i] |= (0x80 >> (x & 7));
-            } else { // must be black
-                pBBEP->ucScreen[i] &= ~(0x80 >> (x & 7));
-            }
-        }
-        return BBEP_SUCCESS;
-    } else { // 2-color
-        if (pBBEP->iPlane == PLANE_1) {
-            i += iSize;
-        }
+    if (ucColor >= BBEP_YELLOW) { // yellow/red has priority
+        pBBEP->ucScreen[iSize + i] |= (0x80 >> (x & 7));
+    } else {
+        pBBEP->ucScreen[iSize + i] &= ~(0x80 >> (x & 7)); // clear red plane bit
         if (ucColor == BBEP_WHITE) {
             pBBEP->ucScreen[i] |= (0x80 >> (x & 7));
         } else { // must be black
@@ -336,7 +352,83 @@ int bbepSetPixel(BBEPDISP *pBBEP, int x, int y, unsigned char ucColor)
         }
     }
     return BBEP_SUCCESS;
-} /* obdSetPixel() */
+} /* bbepSetPixel3Clr() */
+
+void bbepSetPixelFast3Clr(void *pb, int x, int y, unsigned char ucColor)
+{
+int i;
+int iPitch, iSize;
+BBEPDISP *pBBEP = (BBEPDISP *)pb;
+    
+    iPitch = (pBBEP->width+7)>>3;
+    iSize = ((pBBEP->native_width+7)>>3) * pBBEP->native_height;
+    
+    i = (x >> 3) + (y * iPitch);
+    if (ucColor >= BBEP_YELLOW) { // yellow/red has priority
+        pBBEP->ucScreen[iSize + i] |= (0x80 >> (x & 7));
+    } else {
+        pBBEP->ucScreen[iSize + i] &= ~(0x80 >> (x & 7)); // clear red plane bit
+        if (ucColor == BBEP_WHITE) {
+            pBBEP->ucScreen[i] |= (0x80 >> (x & 7));
+        } else { // must be black
+            pBBEP->ucScreen[i] &= ~(0x80 >> (x & 7));
+        }
+    }
+} /* bbepSetPixelFast3Clr() */
+
+int bbepSetPixel2Clr(void *pb, int x, int y, unsigned char ucColor)
+{
+    int i;
+    int iPitch, iSize;
+    uint8_t u8;
+    BBEPDISP *pBBEP = (BBEPDISP *)pb;
+    
+    // only available for local buffer operations
+    if (!pBBEP || !pBBEP->ucScreen) return BBEP_ERROR_BAD_PARAMETER;
+    
+    iPitch = (pBBEP->width+7)>>3;
+    iSize = ((pBBEP->native_width+7)>>3) * pBBEP->native_height;
+    
+    i = (x >> 3) + (y * iPitch);
+    if (x < 0 || x >= pBBEP->width || i < 0 || i > iSize-1) { // off the screen
+        pBBEP->last_error = BBEP_ERROR_BAD_PARAMETER;
+        return BBEP_ERROR_BAD_PARAMETER;
+    }
+    if (pBBEP->iPlane == PLANE_1) {
+        i += iSize;
+    }
+    u8 = pBBEP->ucScreen[i];
+    if (ucColor == BBEP_WHITE) {
+        u8 |= (0x80 >> (x & 7));
+    } else { // must be black
+        u8 &= ~(0x80 >> (x & 7));
+    }
+    pBBEP->ucScreen[i] = u8;
+    return BBEP_SUCCESS;
+} /* bbepSetPixel2Clr() */
+
+void bbepSetPixelFast2Clr(void *pb, int x, int y, unsigned char ucColor)
+{
+    int i;
+    int iPitch, iSize;
+    uint8_t u8;
+    BBEPDISP *pBBEP = (BBEPDISP *)pb;
+    
+    iPitch = (pBBEP->width+7)>>3;
+    iSize = ((pBBEP->native_width+7)>>3) * pBBEP->native_height;
+    
+    i = (x >> 3) + (y * iPitch);
+    if (pBBEP->iPlane == PLANE_1) {
+        i += iSize;
+    }
+    u8 = pBBEP->ucScreen[i];
+    if (ucColor == BBEP_WHITE) {
+        u8 |= (0x80 >> (x & 7));
+    } else { // must be black
+        u8 &= ~(0x80 >> (x & 7));
+    }
+    pBBEP->ucScreen[i] = u8;
+} /* bbepSetPixelFast2Clr() */
 
 //
 // Invert font data
@@ -412,10 +504,10 @@ int bbepLoadG5(BBEPDISP *pBBEP, const uint8_t *pG5, int x, int y, int iFG, int i
                 }
                 if (u8 & src_mask) {
                     if (iFG >= 0)
-                        bbepSetPixel(pBBEP, x+tx, y+ty, (uint8_t)iFG);
+                        (*pBBEP->pfnSetPixelFast)(pBBEP, x+tx, y+ty, (uint8_t)iFG);
                 } else {
                     if (iBG >= 0)
-                        bbepSetPixel(pBBEP, x+tx, y+ty, (uint8_t)iBG);
+                        (*pBBEP->pfnSetPixelFast)(pBBEP, x+tx, y+ty, (uint8_t)iBG);
                 }
                 src_mask >>= 1;
             } // for tx
@@ -517,10 +609,10 @@ int bbepLoadBMP(BBEPDISP *pBBEP, const uint8_t *pBMP, int dx, int dy, int iFG, i
                 }
                 if (b & src_mask) {
                     if (iFG >= 0)
-                        bbepSetPixel(pBBEP, dx+x, dy+y, (uint8_t)iFG);
+                        (*pBBEP->pfnSetPixelFast)(pBBEP, dx+x, dy+y, (uint8_t)iFG);
                 } else {
                     if (iBG >= 0)
-                        bbepSetPixel(pBBEP, dx+x, dy+y, (uint8_t)iBG);
+                        (*pBBEP->pfnSetPixelFast)(pBBEP, dx+x, dy+y, (uint8_t)iBG);
                 }
                 src_mask >>= 1;
             } // for x
@@ -741,7 +833,7 @@ int bbepWriteStringCustom(BBEPDISP *pBBEP, BB_FONT *pFont, int x, int y, char *s
                     u8Count = 8;
                     for (tx=x; tx<x+w; tx++) {
                         if (u8 & 0x80) {
-                            bbepSetPixel(pBBEP, tx, ty, iColor);
+                            (*pBBEP->pfnSetPixelFast)(pBBEP, tx, ty, iColor);
                         }
                         u8 <<= 1;
                         u8Count--;
@@ -1002,7 +1094,7 @@ int bbepWriteString(BBEPDISP *pBBEP, int x, int y, char *szMsg, int iSize, int i
                         u8Mask = 1<<ty;
                         for (int tx = 0; tx<iLen; tx++) {
                             if (u8Temp[tx] & u8Mask) {
-                                bbepSetPixel(pBBEP, x+tx, y+ty, iColor);
+                                (*pBBEP->pfnSetPixelFast)(pBBEP, x+tx, y+ty, iColor);
                             }
                         }
                     }
@@ -1013,10 +1105,10 @@ int bbepWriteString(BBEPDISP *pBBEP, int x, int y, char *szMsg, int iSize, int i
                         u8Mask = 0x80;
                         for (int tx = 7; tx>=0; tx--) {
                             if (s[0] & u8Mask) {
-                                bbepSetPixel(pBBEP, x+ty, y+tx+8, iColor);
+                                (*pBBEP->pfnSetPixelFast)(pBBEP, x+ty, y+tx+8, iColor);
                             }
                             if (s[1] & u8Mask) {
-                                bbepSetPixel(pBBEP, x+ty, y+tx, iColor);
+                                (*pBBEP->pfnSetPixelFast)(pBBEP, x+ty, y+tx, iColor);
                             }
                             u8Mask >>= 1;
                         }
@@ -1167,10 +1259,10 @@ int bbepWriteString(BBEPDISP *pBBEP, int x, int y, char *szMsg, int iSize, int i
                     u8Mask = 1<<ty;
                     for (int tx = 0; tx<iLen; tx++) {
                         if (u8Temp[6+tx] & u8Mask) {
-                            bbepSetPixel(pBBEP, x+tx, y+ty, iColor);
+                            (*pBBEP->pfnSetPixelFast)(pBBEP, x+tx, y+ty, iColor);
                         }
                         if (u8Temp[18+tx] & u8Mask) {
-                            bbepSetPixel(pBBEP, x+tx, y+ty+8, iColor);
+                            (*pBBEP->pfnSetPixelFast)(pBBEP, x+tx, y+ty+8, iColor);
                         }
                     }
                 }
@@ -1211,7 +1303,7 @@ int bbepWriteString(BBEPDISP *pBBEP, int x, int y, char *szMsg, int iSize, int i
                     u8Mask = 1<<ty;
                     for (int tx = 0; tx<iLen; tx++) {
                         if (u8Temp[tx] & u8Mask) {
-                            bbepSetPixel(pBBEP, x+tx, ty+y, iColor);
+                            (*pBBEP->pfnSetPixelFast)(pBBEP, x+tx, ty+y, iColor);
                         }
                     }
                 }
@@ -1612,7 +1704,7 @@ void bbepRectangle(BBEPDISP *pBBEP, int x1, int y1, int x2, int y2, uint8_t ucCo
             int tx, ty;
             for (ty = y1; ty <= y2; ty++) {
                 for (tx = x1; tx <= x2; tx++) {
-                    bbepSetPixel(pBBEP, tx, ty, ucColor);
+                    (*pBBEP->pfnSetPixelFast)(pBBEP, tx, ty, ucColor);
                 }
             }
         } else
@@ -1629,74 +1721,21 @@ void bbepRectangle(BBEPDISP *pBBEP, int x1, int y1, int x2, int y2, uint8_t ucCo
             }
         }
     }
-    else // outline
+    else // outline (only support on backbuffer for now
     {
-        // see if top and bottom lines are within the same byte rows
-        d = &pBBEP->ucScreen[iRedOffset + (y1 >> 3)*iPitch + x1];
-        if ((y1 >> 3) == (y2 >> 3))
-        {
-            ucMask2 = 0xff << (y1 & 7);  // L/R end masks
-            ucMask = 1 << (y1 & 7);
-            ucMask |= 1 << (y2 & 7);
-            ucMask2 &= (0xff >> (7-(y2  & 7)));
-            if (ucColor)
-            {
-                *d++ |= ucMask2; // start
-                x1++;
-                for (; x1 < x2; x1++)
-                    *d++ |= ucMask;
-                if (x1 <= x2)
-                    *d++ |= ucMask2; // right edge
+#ifndef NO_RAM
+        if (pBBEP->ucScreen) { // has a buffer to fill
+            int tx, ty;
+            for (ty = y1; ty <= y2; ty++) {
+                (*pBBEP->pfnSetPixelFast)(pBBEP, x1, ty, ucColor);
+                (*pBBEP->pfnSetPixelFast)(pBBEP, x2, ty, ucColor);
             }
-            else
-            {
-                *d++ &= ~ucMask2;
-                x1++;
-                for (; x1 < x2; x1++)
-                    *d++ &= ~ucMask;
-                if (x1 <= x2)
-                    *d++ &= ~ucMask2; // right edge
+            for (tx = x1; tx <= x2; tx++) {
+                (*pBBEP->pfnSetPixelFast)(pBBEP, tx, y1, ucColor);
+                (*pBBEP->pfnSetPixelFast)(pBBEP, tx, y2, ucColor);
             }
         }
-        else
-        {
-            int y;
-            // L/R sides
-            iOff = (x2 - x1);
-            ucMask = 1 << (y1 & 7);
-            for (y=y1; y <= y2; y++)
-            {
-                if (ucColor) {
-                    *d |= ucMask;
-                    d[iOff] |= ucMask;
-                } else {
-                    *d &= ~ucMask;
-                    d[iOff] &= ~ucMask;
-                }
-                ucMask <<= 1;
-                if  (ucMask == 0) {
-                    ucMask = 1;
-                    d += iPitch;
-                }
-            }
-            // T/B sides
-            ucMask = 1 << (y1 & 7);
-            ucMask2 = 1 << (y2 & 7);
-            x1++;
-            d = &pBBEP->ucScreen[iRedOffset + (y1 >> 3)*iPitch + x1];
-            iOff = (y2 >> 3) - (y1 >> 3);
-            iOff *= iPitch;
-            for (; x1 < x2; x1++) {
-                if (ucColor) {
-                    *d |= ucMask;
-                    d[iOff] |= ucMask2;
-                } else {
-                    *d &= ~ucMask;
-                    d[iOff] &= ~ucMask2;
-                }
-                d++;
-            }
-        }
+#endif
     } // outline
 } /* bbepRectangle() */
 

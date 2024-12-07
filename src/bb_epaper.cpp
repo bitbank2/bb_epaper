@@ -420,7 +420,7 @@ int w=8, h=8;
 
 void BBEPAPER::drawPixel(int16_t x, int16_t y, uint8_t color)
 {
-    bbepSetPixel(&_bbep, x, y, color);
+    (*_bbep.pfnSetPixel)(&_bbep, x, y, color);
 }
 int16_t BBEPAPER::getCursorX(void)
 {

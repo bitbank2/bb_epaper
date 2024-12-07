@@ -19,6 +19,12 @@
 #define __BB_EP__
 // forward declarations
 void InvertBytes(uint8_t *pData, uint8_t bLen);
+void bbepSetPixelFast4Clr(void *pb, int x, int y, unsigned char ucColor);
+void bbepSetPixelFast3Clr(void *pb, int x, int y, unsigned char ucColor);
+void bbepSetPixelFast2Clr(void *pb, int x, int y, unsigned char ucColor);
+int bbepSetPixel4Clr(void *pb, int x, int y, unsigned char ucColor);
+int bbepSetPixel3Clr(void *pb, int x, int y, unsigned char ucColor);
+int bbepSetPixel2Clr(void *pb, int x, int y, unsigned char ucColor);
 
 const uint8_t ucMirror[256] PROGMEM =
 {0, 128, 64, 192, 32, 160, 96, 224, 16, 144, 80, 208, 48, 176, 112, 240,
@@ -1223,6 +1229,17 @@ int bbepSetPanelType(BBEPDISP *pBBEP, int iPanel)
     pBBEP->pInitFast = panelDefs[iPanel].pInitFast;
     pBBEP->pInitPart = panelDefs[iPanel].pInitPart;
     pBBEP->type = iPanel;
+    // select the correct pixel drawing functions (2/3/4 color)
+    if (pBBEP->iFlags & BBEP_4COLOR) {
+        pBBEP->pfnSetPixel = bbepSetPixel4Clr;
+        pBBEP->pfnSetPixelFast = bbepSetPixelFast4Clr;
+    } else if (pBBEP->iFlags & BBEP_3COLOR) {
+        pBBEP->pfnSetPixel = bbepSetPixel3Clr;
+        pBBEP->pfnSetPixelFast = bbepSetPixelFast3Clr;
+    } else { // must be B/W
+        pBBEP->pfnSetPixel = bbepSetPixel2Clr;
+        pBBEP->pfnSetPixelFast = bbepSetPixelFast2Clr;
+    }
     return BBEP_SUCCESS;
 } /* bbepSetPanelType() */
 

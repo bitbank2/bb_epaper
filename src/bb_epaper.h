@@ -264,6 +264,11 @@ enum {
 
 #define BUSY_WAIT 0xff
 
+// Normal pixel drawing function pointer
+typedef int (BB_SET_PIXEL)(void *pBBEP, int x, int y, unsigned char color);
+// Fast pixel drawing function pointer (no boundary checking)
+typedef void (BB_SET_PIXEL_FAST)(void *pBBEP, int x, int y, unsigned char color);
+
 typedef struct bbepstruct
 {
 uint8_t wrap, type, chip_type, last_error;
@@ -283,6 +288,8 @@ uint8_t is_awake, iPlane;
 const uint8_t *pInitFull; // full update init sequence
 const uint8_t *pInitFast; // fast update init sequence
 const uint8_t *pInitPart; // partial update init sequence
+BB_SET_PIXEL *pfnSetPixel;
+BB_SET_PIXEL_FAST *pfnSetPixelFast;
 } BBEPDISP;
 
 #ifdef __cplusplus
@@ -382,6 +389,7 @@ class BBEPAPER
 
   private:
     BBEPDISP _bbep;
+
 }; // class BBEPAPER
 #endif // __cplusplus
 
