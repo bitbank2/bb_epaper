@@ -131,6 +131,7 @@ enum {
     EP29YR_168x384, // GDEY029F51H
     EP583_648x480, // DEPG0583BN
     EP296_128x296, // Waveshare 2.9" 128x296 B/W V2
+    EP26R_152x296, // Solum 2.6" B/W/R harvested panel
 //    EP583R_600x448, // 4-bits per pixel needs different support
     EP_PANEL_COUNT
 };

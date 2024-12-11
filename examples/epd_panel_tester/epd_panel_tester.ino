@@ -79,6 +79,7 @@ const char *szPanelNames[] = {
   "EP29YR_128x296 ", // GDEY029F51
   "EP29YR_168x384 ", // GDEY029F51H
   "EP583_648x480  ", // DEPG0583BN
+  "EP26R_152x296  ", // Solum 2.6" B/W/R ESL harvested panel
   NULL
 };
 // names of the operating modes
@@ -95,7 +96,7 @@ enum {
 
 // List of supported colors for each panel type
 // 2 = Black/White, 3 = Black/White/Red
-const uint8_t u8PanelColors[] = {2,2,2,2,2,2,2,2,2,2,3,2,3,3,3,2,2,2,2,3,2,2,4,4,4,2};
+const uint8_t u8PanelColors[] = {2,2,2,2,2,2,2,2,2,2,3,2,3,3,3,2,2,2,2,3,2,2,4,4,4,2,3};
 
 void WaitForButton(void)
 {

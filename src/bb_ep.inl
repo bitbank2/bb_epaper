@@ -228,6 +228,28 @@ const uint8_t epd29r_init_sequence_full[] PROGMEM = {
     0x00
 };
 
+const uint8_t epd26r_init_sequence_full[] PROGMEM = {
+    0x01, 0x12, // soft reset
+    BUSY_WAIT,
+    0x02, 0x74, 0x54, // set analog block control
+    0x02, 0x7e, 0x3b, // set digital block control
+    0x03, 0x2b, 0x04, 0x63, // ACVCOM
+    0x05, 0x0c, 0x8f, 0x8f, 0x8f, 0x3f, // Softstart
+    0x04, 0x01, 0x27, 0x01, 0x00, // output control
+    0x02, 0x11, 0x03, // data entry mode 
+    0x03, 0x44, 0x00, 0x12, // RAM X start/end
+    0x05, 0x45, 0x00, 0x00, 0x27, 0x01, // RAM Y start/end
+    0x02, 0x3c, 0x01, // border (0=bk,1=wh,2=red)
+    0x02, 0x18, 0x80, // temp sensor = internal
+    0x02, 0x21, 0x00, // display update ctrl 1
+    0x02, 0x22, 0xb1, // display update ctrl 2
+    0x01, 0x20, // master activation
+    BUSY_WAIT,
+    0x02, 0x4e, 0x00, // RAM X counter
+    0x03, 0x4f, 0x27, 0x01, // RAM Y counter
+    0x00
+};
+
 // for 122x250 BWR
 const uint8_t epd213r_inky_init_sequence_full[] PROGMEM = {
     0x01, 0x12, // soft reset
@@ -1208,7 +1230,7 @@ const EPD_PANEL panelDefs[] PROGMEM = {
     {128, 296, 0, epd29yr_init_sequence_full, NULL, NULL, BBEP_4COLOR, BBEP_CHIP_UC81xx}, // EP29YR_128x296
     {168, 384, 0, epd29yrh_init_sequence_full, NULL, NULL, BBEP_4COLOR, BBEP_CHIP_UC81xx}, // EP29YR_168x384
     {648, 480, 0, epd583_init_sequence_full, NULL, epd583_init_sequence_part, 0, BBEP_CHIP_UC81xx}, // EP583_648x480
-    {128, 296, 0, epd293_init_sequence_full, epd293_init_sequence_fast, epd296_init_sequence_part, BBEP_PARTIAL2, BBEP_CHIP_SSD16xx}, // EP296_128x296 Waveshare 2.9" V2 B/W
+    {152, 296, 0, epd26r_init_sequence_full, NULL, NULL, BBEP_3COLOR, BBEP_CHIP_SSD16xx}, // EP26R_152x296 Solum ESL harvested 2.6" panel B/W/R
 };
 //
 // Set the e-paper panel type
@@ -1251,6 +1273,17 @@ int bbepCreateVirtual(BBEPDISP *pBBEP, int iWidth, int iHeight, int iFlags)
         pBBEP->native_height = pBBEP->height = iHeight;
         pBBEP->iFlags = iFlags;
         pBBEP->chip_type = BBEP_CHIP_NONE;
+    // select the correct pixel drawing functions (2/3/4 color)
+        if (iFlags & BBEP_4COLOR) {
+            pBBEP->pfnSetPixel = bbepSetPixel4Clr;
+            pBBEP->pfnSetPixelFast = bbepSetPixelFast4Clr;
+        } else if (iFlags & BBEP_3COLOR) {
+            pBBEP->pfnSetPixel = bbepSetPixel3Clr;
+            pBBEP->pfnSetPixelFast = bbepSetPixelFast3Clr;
+        } else { // must be B/W
+            pBBEP->pfnSetPixel = bbepSetPixel2Clr;
+            pBBEP->pfnSetPixelFast = bbepSetPixelFast2Clr;
+        }
         return BBEP_SUCCESS;
     } else {
         return BBEP_ERROR_BAD_PARAMETER;
