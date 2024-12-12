@@ -294,7 +294,7 @@ BB_SET_PIXEL_FAST *pfnSetPixelFast;
 } BBEPDISP;
 
 #ifdef __cplusplus
-#ifdef _LINUX_
+#if defined( _LINUX_ )
 #include <string>
 using namespace std;
 class BBEPAPER
@@ -372,7 +372,7 @@ class BBEPAPER
     int getPlane(void);
     int getChip(void);
     void drawSprite(const uint8_t *pSprite, int cx, int cy, int iPitch, int x, int y, uint8_t iColor);    
-#ifdef _LINUX_
+#if defined (_LINUX_)
     void print(const char *pString);
     void println(const char *pString);
     void print(int, int);
@@ -403,5 +403,9 @@ typedef enum
 } DC_MODE;
 #endif
 
+// Forward references to core C functions
+void bbepWriteCmd(BBEPDISP *pBBEP, uint8_t cmd);
+void bbepWriteData(BBEPDISP *pBBEP, uint8_t *pData, int iLen);
+void bbepCMD2(BBEPDISP *pBBEP, uint8_t cmd1, uint8_t cmd2);
 #endif // __BB_EPAPER__
 
