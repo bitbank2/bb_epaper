@@ -173,6 +173,7 @@ enum {
 #define BBEP_WHITE 1
 #define BBEP_YELLOW 2
 #define BBEP_RED 3
+#define BBEP_TRANSPARENT 255
 
 // 4 gray levels
 #define BBEP_GRAY0 0
@@ -340,7 +341,7 @@ class BBEPAPER
     void drawRect(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t color);
     void fillRect(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t color);
     void setTextWrap(bool bWrap);
-    void setTextColor(int iFG, int iBG = -1);
+    void setTextColor(int iFG, int iBG = BBEP_TRANSPARENT);
     void setCursor(int x, int y);
     int loadBMP(const uint8_t *pBMP, int x, int y, int iFG, int iBG);
     int loadBMP3(const uint8_t *pBMP, int x, int y);

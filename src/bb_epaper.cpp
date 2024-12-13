@@ -212,8 +212,6 @@ bool BBEPAPER::hasPartialRefresh()
 
 void BBEPAPER::setTextColor(int iFG, int iBG)
 {
-    if (iFG > BBEP_RED) iFG = BBEP_BLACK;
-    if (iBG > BBEP_RED) iBG = BBEP_BLACK;
     if ((_bbep.iFlags & (BBEP_3COLOR | BBEP_4COLOR)) == 0) {
         if (iFG == BBEP_RED || iFG == BBEP_YELLOW) iFG = BBEP_BLACK; // can't set red color
         if (iBG == BBEP_RED || iFG == BBEP_YELLOW) iBG = BBEP_BLACK;

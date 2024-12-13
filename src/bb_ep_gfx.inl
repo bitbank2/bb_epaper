@@ -503,10 +503,10 @@ int bbepLoadG5(BBEPDISP *pBBEP, const uint8_t *pG5, int x, int y, int iFG, int i
                     src_mask = 0x80; // MSB on left
                 }
                 if (u8 & src_mask) {
-                    if (iFG >= 0)
+                    if (iFG != BBEP_TRANSPARENT)
                         (*pBBEP->pfnSetPixelFast)(pBBEP, x+tx, y+ty, (uint8_t)iFG);
                 } else {
-                    if (iBG >= 0)
+                    if (iBG != BBEP_TRANSPARENT)
                         (*pBBEP->pfnSetPixelFast)(pBBEP, x+tx, y+ty, (uint8_t)iBG);
                 }
                 src_mask >>= 1;
@@ -608,10 +608,10 @@ int bbepLoadBMP(BBEPDISP *pBBEP, const uint8_t *pBMP, int dx, int dy, int iFG, i
                     src_mask = 0x80; // MSB on left
                 }
                 if (b & src_mask) {
-                    if (iFG >= 0)
+                    if (iFG != BBEP_TRANSPARENT)
                         (*pBBEP->pfnSetPixelFast)(pBBEP, dx+x, dy+y, (uint8_t)iFG);
                 } else {
-                    if (iBG >= 0)
+                    if (iBG != BBEP_TRANSPARENT)
                         (*pBBEP->pfnSetPixelFast)(pBBEP, dx+x, dy+y, (uint8_t)iBG);
                 }
                 src_mask >>= 1;
@@ -750,7 +750,7 @@ void bbepSetTextWrap(BBEPDISP *pBBEP, int bWrap)
 //
 int bbepWriteStringCustom(BBEPDISP *pBBEP, BB_FONT *pFont, int x, int y, char *szMsg, int iColor, uint8_t iPlane)
 {
-    int rc, i, h, w, j, end_y, dx, dy, tx, ty, iSrcPitch, iPitch;
+    int rc, i, h, w, j, end_y, dx, dy, tx, ty, iSrcPitch, iPitch, iBG;
     signed int n;
     unsigned int c, bInvert = 0;
     uint8_t *s, uc0, uc1;
@@ -763,6 +763,8 @@ int bbepWriteStringCustom(BBEPDISP *pBBEP, BB_FONT *pFont, int x, int y, char *s
         pBBEP->last_error = BBEP_ERROR_BAD_PARAMETER;
         return BBEP_ERROR_BAD_PARAMETER; // invalid param
     }
+    iBG = pBBEP->iBG;
+    if (iBG == -1) iBG = BBEP_TRANSPARENT; // -1 = don't care
     if (x == -1)
         x = pBBEP->iCursorX;
     if (y == -1)
@@ -833,7 +835,11 @@ int bbepWriteStringCustom(BBEPDISP *pBBEP, BB_FONT *pFont, int x, int y, char *s
                     u8Count = 8;
                     for (tx=x; tx<x+w; tx++) {
                         if (u8 & 0x80) {
-                            (*pBBEP->pfnSetPixelFast)(pBBEP, tx, ty, iColor);
+                            if (iColor != BBEP_TRANSPARENT) {
+                                (*pBBEP->pfnSetPixelFast)(pBBEP, tx, ty, iColor);
+                            }
+                        } else if (iBG != BBEP_TRANSPARENT) {
+                            (*pBBEP->pfnSetPixelFast)(pBBEP, tx, ty, iBG);
                         }
                         u8 <<= 1;
                         u8Count--;
@@ -1002,10 +1008,14 @@ int bbepWriteString(BBEPDISP *pBBEP, int x, int y, char *szMsg, int iSize, int i
     uint8_t c, *s, ucCMD, ucCMD1, ucCMD2;
     int iOldFG; // old fg color to make sure red works
     uint8_t u8Temp[40];
+    int iBG;
     
     if (pBBEP == NULL) {
         return BBEP_ERROR_BAD_PARAMETER;
     }
+    iBG = pBBEP->iBG;
+    if (iBG == -1) iBG = BBEP_TRANSPARENT; // -1 = don't care
+    
     if (pBBEP->chip_type == BBEP_CHIP_UC81xx) {
         if (pBBEP->iFlags & BBEP_RED_SWAPPED) {
             ucCMD1 = UC8151_DTM1;
@@ -1094,7 +1104,11 @@ int bbepWriteString(BBEPDISP *pBBEP, int x, int y, char *szMsg, int iSize, int i
                         u8Mask = 1<<ty;
                         for (int tx = 0; tx<iLen; tx++) {
                             if (u8Temp[tx] & u8Mask) {
-                                (*pBBEP->pfnSetPixelFast)(pBBEP, x+tx, y+ty, iColor);
+                                if (iColor != BBEP_TRANSPARENT) {
+                                    (*pBBEP->pfnSetPixelFast)(pBBEP, x+tx, y+ty, iColor);
+                                }
+                            } else if (iBG != BBEP_TRANSPARENT) {
+                                (*pBBEP->pfnSetPixelFast)(pBBEP, x+tx, y+ty, iBG);
                             }
                         }
                     }
@@ -1105,10 +1119,18 @@ int bbepWriteString(BBEPDISP *pBBEP, int x, int y, char *szMsg, int iSize, int i
                         u8Mask = 0x80;
                         for (int tx = 7; tx>=0; tx--) {
                             if (s[0] & u8Mask) {
-                                (*pBBEP->pfnSetPixelFast)(pBBEP, x+ty, y+tx+8, iColor);
+                                if (iColor != BBEP_TRANSPARENT) {
+                                    (*pBBEP->pfnSetPixelFast)(pBBEP, x+ty, y+tx+8, iColor);
+                                }
+                            } else if (iBG != BBEP_TRANSPARENT) {
+                                (*pBBEP->pfnSetPixelFast)(pBBEP, x+ty, y+tx+8, iBG);
                             }
                             if (s[1] & u8Mask) {
-                                (*pBBEP->pfnSetPixelFast)(pBBEP, x+ty, y+tx, iColor);
+                                if (iColor != BBEP_TRANSPARENT) {
+                                    (*pBBEP->pfnSetPixelFast)(pBBEP, x+ty, y+tx, iColor);
+                                }
+                            } else if (iBG != BBEP_TRANSPARENT) {
+                                (*pBBEP->pfnSetPixelFast)(pBBEP, x+ty, y+tx+8, iBG);
                             }
                             u8Mask >>= 1;
                         }
@@ -1259,10 +1281,18 @@ int bbepWriteString(BBEPDISP *pBBEP, int x, int y, char *szMsg, int iSize, int i
                     u8Mask = 1<<ty;
                     for (int tx = 0; tx<iLen; tx++) {
                         if (u8Temp[6+tx] & u8Mask) {
-                            (*pBBEP->pfnSetPixelFast)(pBBEP, x+tx, y+ty, iColor);
+                            if (iColor != BBEP_TRANSPARENT) {
+                                (*pBBEP->pfnSetPixelFast)(pBBEP, x+tx, y+ty, iColor);
+                            }
+                        } else if (iBG != BBEP_TRANSPARENT) {
+                            (*pBBEP->pfnSetPixelFast)(pBBEP, x+tx, y+ty, iBG);
                         }
                         if (u8Temp[18+tx] & u8Mask) {
-                            (*pBBEP->pfnSetPixelFast)(pBBEP, x+tx, y+ty+8, iColor);
+                            if (iColor != BBEP_TRANSPARENT) {
+                                (*pBBEP->pfnSetPixelFast)(pBBEP, x+tx, y+ty+8, iColor);
+                            }
+                        } else if (iBG != BBEP_TRANSPARENT) {
+                            (*pBBEP->pfnSetPixelFast)(pBBEP, x+tx, y+ty+8, iBG);
                         }
                     }
                 }
@@ -1303,7 +1333,11 @@ int bbepWriteString(BBEPDISP *pBBEP, int x, int y, char *szMsg, int iSize, int i
                     u8Mask = 1<<ty;
                     for (int tx = 0; tx<iLen; tx++) {
                         if (u8Temp[tx] & u8Mask) {
-                            (*pBBEP->pfnSetPixelFast)(pBBEP, x+tx, ty+y, iColor);
+                            if (iColor != BBEP_TRANSPARENT) {
+                                (*pBBEP->pfnSetPixelFast)(pBBEP, x+tx, ty+y, iColor);
+                            }
+                        } else if (iBG != BBEP_TRANSPARENT) {
+                            (*pBBEP->pfnSetPixelFast)(pBBEP, x+tx, ty+y, iBG);
                         }
                     }
                 }

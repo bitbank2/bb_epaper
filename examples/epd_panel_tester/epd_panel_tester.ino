@@ -315,6 +315,20 @@ void FunctionTest(void)
       epd.drawRect(60, 60, 40, 40, BBEP_RED);
       epd.drawCircle(26, 134, 25, BBEP_RED);
       epd.fillRoundRect(60, 114, 40, 40, 8, BBEP_BLACK);
+      for (int y=160; y<200; y+=3) {
+        epd.drawLine(0, y, 127, y, BBEP_BLACK);
+      }
+      // Show options for transparent foreground and background of text drawing
+      epd.setFont(FONT_12x16);
+      epd.setCursor(0, 162);
+      epd.setTextColor(BBEP_BLACK);
+      epd.print("AB");
+      epd.setTextColor(BBEP_BLACK, BBEP_WHITE);
+      epd.println("CD");
+      epd.setTextColor(BBEP_WHITE);
+      epd.print("EF");
+      epd.setTextColor(BBEP_TRANSPARENT, BBEP_BLACK);
+      epd.print("GH");
       epd.writePlane();
       epd.refresh(REFRESH_FULL, true); // display the white buffer and return
       epd.sleep(LIGHT_SLEEP);
