@@ -22,6 +22,7 @@
 #include <SPI.h>
 // foreward references
 void bbepWakeUp(BBEPDISP *pBBEP);
+void bbepSendCMDSequence(BBEPDISP *pBBEP, const uint8_t *pSeq);
 //
 // Initialize the GPIO pins and SPI for use by bb_eink
 //
@@ -44,39 +45,57 @@ void bbepInitIO(BBEPDISP *pBBEP, uint8_t u8DC, uint8_t u8RST, uint8_t u8BUSY, ui
         pinMode(pBBEP->iBUSYPin, INPUT);
     }
     pBBEP->iSpeed = u32Speed;
-#ifdef ARDUINO_ARCH_ESP32
-    SPI.begin(pBBEP->iCLKPin, -1, pBBEP->iMOSIPin, pBBEP->iCSPin);
-#else
     pinMode(pBBEP->iCSPin, OUTPUT);
-    digitalWrite(pBBEP->iCSPin, HIGH); // we have to manually control the CS pin
+    digitalWrite(pBBEP->iCSPin, HIGH); // manually control the CS pin
+#ifdef ARDUINO_ARCH_ESP32
+    SPI.begin(pBBEP->iCLKPin, -1, pBBEP->iMOSIPin, -1); //pBBEP->iCSPin);
+#else
     SPI.begin(); // other architectures have fixed SPI pins
 #endif
     SPI.beginTransaction(SPISettings(u32Speed, MSBFIRST, SPI_MODE0));
     SPI.endTransaction(); // N.B. - if you call beginTransaction() again without a matching endTransaction(), it will hang on ESP32
-} /* bbepInitIO() */
-//
-// Convenience function to write a command byte along with a data
-// byte (it's single parameter)
-//
-void bbepCMD2(BBEPDISP *pBBEP, uint8_t cmd1, uint8_t cmd2)
-{
-    if (!pBBEP->is_awake) {
-        // if it's asleep, it can't receive commands
-        bbepWakeUp(pBBEP);
-        pBBEP->is_awake = 1;
+    if (pBBEP->iFlags & BBEP_7COLOR) { // need to send before you can send it data
+        bbepSendCMDSequence(pBBEP, pBBEP->pInitFull);
     }
-    digitalWrite(pBBEP->iDCPin, LOW);
-#ifndef ARDUINO_ARCH_ESP32
+} /* bbepInitIO() */
+
+void bbepWriteIT8951Cmd(BBEPDISP *pBBEP, uint16_t cmd)
+{
+    uint8_t ucTemp[4];
+    ucTemp[0] = 0x60; // command introducer = 0x6000
+    ucTemp[1] = 0;
+    ucTemp[2] = (uint8_t)(cmd >> 8);
+    ucTemp[3] = (uint8_t)cmd;
     digitalWrite(pBBEP->iCSPin, LOW);
+#ifdef ARDUINO_ARCH_ESP32
+    SPI.transferBytes(ucTemp, NULL, 4);
+#else
+    SPI.transfer(ucTemp, 4);
 #endif
-    SPI.transfer(cmd1);
-    digitalWrite(pBBEP->iDCPin, HIGH);
-    SPI.transfer(cmd2); // second byte is data
-#ifndef ARDUINO_ARCH_ESP32
     digitalWrite(pBBEP->iCSPin, HIGH);
+} /* bbepWriteIT8951Cmd() */
+
+void bbepWriteIT8951Data(BBEPDISP *pBBEP, uint8_t *pData, int iLen)
+{
+    digitalWrite(pBBEP->iCSPin, LOW);
+    SPI.transfer(0);
+    SPI.transfer(0); // 0x0000 is the data introducer
+#ifdef ARDUINO_ARCH_ESP32
+    SPI.transferBytes(pData, NULL, iLen);
+#else
+    SPI.transfer(pData, iLen);
 #endif
-//    digitalWrite(pBBEP->iDCPin, HIGH); // leave data mode as the default
-} /* bbepCMD2() */
+    digitalWrite(pBBEP->iCSPin, HIGH);
+} /* bbepWriteIT8951Data() */
+
+void bbepWriteIT8951CmdArgs(BBEPDISP *pBBEP, uint16_t cmd, uint16_t *pArgs, int iCount)
+{
+    bbepWriteIT8951Cmd(pBBEP, cmd);
+    for (int i=0; i<iCount; i++) {
+        pArgs[i] = __builtin_bswap16(pArgs[i]);
+    }
+    bbepWriteIT8951Data(pBBEP, (uint8_t *)pArgs, iCount * 2);
+} /* bbepWriteIT8951CmdArgs() */
 //
 // Write a single byte as a COMMAND (D/C set low)
 //
@@ -88,13 +107,10 @@ void bbepWriteCmd(BBEPDISP *pBBEP, uint8_t cmd)
         pBBEP->is_awake = 1;
     }
     digitalWrite(pBBEP->iDCPin, LOW);
-#ifndef ARDUINO_ARCH_ESP32
+    delay(1);
     digitalWrite(pBBEP->iCSPin, LOW);
-#endif
     SPI.transfer(cmd);
-#ifndef ARDUINO_ARCH_ESP32
     digitalWrite(pBBEP->iCSPin, HIGH);
-#endif
     digitalWrite(pBBEP->iDCPin, HIGH); // leave data mode as the default
 } /* bbepWriteCmd() */
 //
@@ -104,7 +120,17 @@ void bbepWriteData(BBEPDISP *pBBEP, uint8_t *pData, int iLen)
 {
 //    digitalWrite(pBBEP->iDCPin, HIGH);
 #ifdef ARDUINO_ARCH_ESP32
-    SPI.transferBytes(pData, NULL, iLen);
+    if (pBBEP->iFlags & BBEP_CS_EVERY_BYTE) {
+        for (int i=0; i<iLen; i++) {
+            digitalWrite(pBBEP->iCSPin, LOW);
+            SPI.transfer(pData[i]);
+            digitalWrite(pBBEP->iCSPin, HIGH);
+        }
+    } else {
+        digitalWrite(pBBEP->iCSPin, LOW);
+        SPI.transferBytes(pData, NULL, iLen);
+        digitalWrite(pBBEP->iCSPin, HIGH);
+    }
 #else
     if (pBBEP->iFlags & BBEP_CS_EVERY_BYTE) {
         for (int i=0; i<iLen; i++) { // Arduino clobbers the data (duplex)
@@ -121,5 +147,15 @@ void bbepWriteData(BBEPDISP *pBBEP, uint8_t *pData, int iLen)
     }
 #endif
 } /* bbepWriteData() */
+
+//
+// Convenience function to write a command byte along with a data
+// byte (it's single parameter)
+//
+void bbepCMD2(BBEPDISP *pBBEP, uint8_t cmd1, uint8_t cmd2)
+{
+    bbepWriteCmd(pBBEP, cmd1);
+    bbepWriteData(pBBEP, &cmd2, 1);
+} /* bbepCMD2() */
 
 #endif // __BB_EP_IO__

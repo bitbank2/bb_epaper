@@ -141,13 +141,7 @@ void BBEPAPER::backupPlane(void)
 }
 int BBEPAPER::allocBuffer(void)
 {
-    int iSize = ((_bbep.native_width+7)>>3) * _bbep.native_height;
-    iSize *= 2; // 2 bit planes
-    _bbep.ucScreen = (uint8_t *)malloc(iSize);
-    if (_bbep.ucScreen != NULL) {
-        return BBEP_SUCCESS;
-    }
-    return BBEP_ERROR_NO_MEMORY; // failed
+    return bbepAllocBuffer(&_bbep);
 } /* allocBuffer() */
 
 void * BBEPAPER::getBuffer(void)
@@ -212,7 +206,7 @@ bool BBEPAPER::hasPartialRefresh()
 
 void BBEPAPER::setTextColor(int iFG, int iBG)
 {
-    if ((_bbep.iFlags & (BBEP_3COLOR | BBEP_4COLOR)) == 0) {
+    if ((_bbep.iFlags & (BBEP_3COLOR | BBEP_4COLOR | BBEP_7COLOR)) == 0) {
         if (iFG == BBEP_RED || iFG == BBEP_YELLOW) iFG = BBEP_BLACK; // can't set red color
         if (iBG == BBEP_RED || iFG == BBEP_YELLOW) iBG = BBEP_BLACK;
     }
