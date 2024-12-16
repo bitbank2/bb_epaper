@@ -18,16 +18,16 @@ It's the first epaper library I've ever seen which can draw text and graphics wi
 Features:<br>
 ---------<br>
 - C API and C++ wrapper class with all of the usual graphics functions<br>
+- Supports any bit depth of graphics (currently 2/3/7/16 color & grayscale)<br>
 - Supports a large number of panels in a consistent way, without tons of repeated code<br>
 - Supports any number of simultaneous displays of any type (mix and match)<br>
-- Includes a unique compressed bitmap font format<br>
+- Includes support for a unique compressed font and bitmap format<br>
+- Includes command line tools to convert and compress TTF fonts and WinBMP files<br>
 - Text cursor position with optional line wrap<br>
 - A function to load a Windows BMP file<br>
-- Optimized Bresenham line drawing<br>
-- Optimized Bresenham outline and filled ellipse drawing<br>
-- Optimized outline and filled rectangle drawing<br>
+- Optimized pixel pipeline customized for each supported bit depth<br>
 <br>
-This code depends on my Group5 data compression library (included).<br>
+The compmressed font handling depends on my Group5 data compression library (included).<br>
 See the Wiki for help getting started<br>
 https://github.com/bitbank2/bb_epaper/wiki <br>
 <br>
@@ -35,7 +35,7 @@ https://github.com/bitbank2/bb_epaper/wiki <br>
 A few words about fonts<br>
 -----------------------<br>
 
-The library includes 3 fixed fonts (6x8, 8x8 and 12x16). The 12x16 is really a stretched+smoothed version of the 6x8 to save FLASH space. To use more elaborate fonts with more extensive character support, use my BB_FONT format compressed bitmap fonts. This functionality is part of my Group5 compression library.<br>
+The library includes 4 fixed fonts (6x8, 8x8, 16x16 and 12x16). The 16x16 and 12x16 are really a stretched+smoothed version of the 6x8 to save FLASH space. To use more elaborate fonts with more extensive character support, use my BB_FONT format compressed bitmap fonts. This functionality is part of my Group5 compression library.<br>
 
 Black & White (& Red)<br>
 ------------------------<br>
