@@ -133,9 +133,9 @@ enum {
     EP583_648x480, // DEPG0583BN
     EP296_128x296, // Waveshare 2.9" 128x296 B/W V2
     EP26R_152x296, // Solum 2.6" B/W/R harvested panel
-    EP47_540x960, // M5Paper
     EP73_800x480, // GEDY073D46 (slower, EOL 7-color)
     EP73_SPECTRA_800x480, // Spectra 6 7-color 800x480
+    EP097R_88x184, // GDEM0097F51 B/W/R B/W/YY
 //    EP583R_600x448, // 4-bits per pixel needs different support
     EP_PANEL_COUNT
 };
@@ -171,9 +171,9 @@ enum {
 #define BBEP_4COLOR   0x0008
 #define BBEP_4GRAY    0x0010
 #define BBEP_7COLOR   0x0020
-#define BBEP_16GRAY   0x0040
-#define BBEP_CS_EVERY_BYTE 0x0080
-#define BBEP_PARTIAL2 0x0100
+#define BBEP_16GRAY   0x0020
+#define BBEP_CS_EVERY_BYTE 0x0040
+#define BBEP_PARTIAL2 0x0080
 
 #define BBEP_BLACK 0
 #define BBEP_WHITE 1

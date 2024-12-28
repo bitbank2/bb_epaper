@@ -61,6 +61,19 @@ const uint8_t epd35r_init_sequence_full[] PROGMEM = {
     0x00
 };
 
+// init sequence for GDEM0097F51
+const uint8_t epd097r_init_sequence_full[] PROGMEM = {
+    0x03, UC8151_PSR, 0xcf, 0x8d,
+    0x06, UC8151_PWR, 0x03, 0x10, 0x3f, 0x3f, 0x0d,
+    0x01, UC8151_PON, // power on
+    BUSY_WAIT,
+    0x03, UC8151_TRES, 88, 184, // resolution
+    0x04, UC8151_BTST, 0x17,0x17,0x17, // booster soft-start config - START_10MS | STRENGTH_3 | OFF_6_58US
+    //    0x02, 0x00, 0x0f, // LUT from OTP
+    0x02, UC8151_CDI, 0x5c, // inverted, white border
+    0x00
+};
+
 // init sequence for GDEW042Z15
 const uint8_t epd42r2_init_sequence_full[] PROGMEM = {
     0x03, UC8151_PSR, 0xcf, 0x8d,
@@ -1297,9 +1310,10 @@ const EPD_PANEL panelDefs[] PROGMEM = {
     {648, 480, 0, epd583_init_sequence_full, NULL, epd583_init_sequence_part, 0, BBEP_CHIP_UC81xx}, // EP583_648x480
     {128, 296, 0, epd293_init_sequence_full, epd293_init_sequence_fast, epd296_init_sequence_part, BBEP_PARTIAL2, BBEP_CHIP_SSD16xx}, // EP296_128x296 Waveshare 2.9" V2 B/W
     {152, 296, 0, epd26r_init_sequence_full, NULL, NULL, BBEP_3COLOR, BBEP_CHIP_SSD16xx}, // EP26R_152x296 Solum ESL harvested 2.6" panel B/W/R
-    {540, 960, 0, (const uint8_t *)epd47_it8951_init, NULL, NULL, 0, BBEP_CHIP_IT8951}, // EP47_540x960 = M5Paper (original)
+//    {540, 960, 0, (const uint8_t *)epd47_it8951_init, NULL, NULL, 0, BBEP_CHIP_IT8951}, // EP47_540x960 = M5Paper (original)
     {800, 480, 0, epd73_init, NULL, NULL,  BBEP_7COLOR, BBEP_CHIP_UC81xx}, // EP73_800x480 GEDY073D4 6 7-color 800x480
     {800, 480, 0, epd73_spectra_init, NULL, NULL,  BBEP_7COLOR, BBEP_CHIP_UC81xx}, // EP73_800x480 Spectra 6 7-color 800x480
+    {88, 184, 0, epd097r_init_sequence_full, NULL, NULL, BBEP_3COLOR, BBEP_CHIP_UC81xx}, // EP097R_88x184 B/W/R and B/W/Y
 };
 //
 // Set the e-paper panel type

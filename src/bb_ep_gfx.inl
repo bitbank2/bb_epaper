@@ -547,17 +547,17 @@ int bbepLoadG5(BBEPDISP *pBBEP, const uint8_t *pG5, int x, int y, int iFG, int i
 #ifndef NO_RAM
             src_mask = 0; // make it read a byte to start
             s = u8Cache;
-            for (tx=0; tx<cx; tx++) {
+            for (tx=x; tx<x+cx; tx++) {
                 if (src_mask == 0) { // need to load the next byte
                     u8 = *s++;
                     src_mask = 0x80; // MSB on left
                 }
                 if (u8 & src_mask) {
                     if (iFG != BBEP_TRANSPARENT)
-                        (*pBBEP->pfnSetPixelFast)(pBBEP, x+tx, y+ty, (uint8_t)iFG);
+                        (*pBBEP->pfnSetPixelFast)(pBBEP, tx, ty, (uint8_t)iFG);
                 } else {
                     if (iBG != BBEP_TRANSPARENT)
-                        (*pBBEP->pfnSetPixelFast)(pBBEP, x+tx, y+ty, (uint8_t)iBG);
+                        (*pBBEP->pfnSetPixelFast)(pBBEP, tx, ty, (uint8_t)iBG);
                 }
                 src_mask >>= 1;
             } // for tx
@@ -800,7 +800,7 @@ void bbepSetTextWrap(BBEPDISP *pBBEP, int bWrap)
 //
 int bbepWriteStringCustom(BBEPDISP *pBBEP, BB_FONT *pFont, int x, int y, char *szMsg, int iColor, uint8_t iPlane)
 {
-    int rc, i, h, w, j, end_y, dx, dy, tx, ty, iSrcPitch, iPitch, iBG;
+    int rc, i, h, w, j, end_y, dx, dy, tx, ty, tw, iSrcPitch, iPitch, iBG;
     signed int n;
     unsigned int c, bInvert = 0;
     uint8_t *s, uc0, uc1;
@@ -877,27 +877,31 @@ int bbepWriteStringCustom(BBEPDISP *pBBEP, BB_FONT *pFont, int x, int y, char *s
             }
             if (pBBEP->ucScreen) { // backbuffer, draw pixels
 #ifndef NO_RAM
+                tw = w;
+                if (x+tw > pBBEP->width) tw = pBBEP->width - x; // clip to right edge
                 for (ty=dy; ty<end_y && ty < pBBEP->height; ty++) {
                     uint8_t u8, u8Count;
                     g5_decode_line(&g5dec, u8Cache);
                     s = u8Cache;
                     u8 = *s++;
                     u8Count = 8;
-                    for (tx=x; tx<x+w; tx++) {
-                        if (u8 & 0x80) {
-                            if (iColor != BBEP_TRANSPARENT) {
-                                (*pBBEP->pfnSetPixelFast)(pBBEP, tx, ty, iColor);
+                    if (ty >= 0) {
+                        for (tx=x; tx<x+tw; tx++) {
+                            if (u8 & 0x80) {
+                                if (iColor != BBEP_TRANSPARENT) {
+                                    (*pBBEP->pfnSetPixelFast)(pBBEP, tx, ty, iColor);
+                                }
+                            } else if (iBG != BBEP_TRANSPARENT) {
+                                (*pBBEP->pfnSetPixelFast)(pBBEP, tx, ty, iBG);
                             }
-                        } else if (iBG != BBEP_TRANSPARENT) {
-                            (*pBBEP->pfnSetPixelFast)(pBBEP, tx, ty, iBG);
+                            u8 <<= 1;
+                            u8Count--;
+                            if (u8Count == 0) {
+                                u8Count = 8;
+                                u8 = *s++;
+                            }
                         }
-                        u8 <<= 1;
-                        u8Count--;
-                        if (u8Count == 0) {
-                            u8Count = 8;
-                            u8 = *s++;
-                        }
-                    }
+                    } // on the screen
                 }
 #endif // NO_RAM
             } else { // draw directly into EPD memory

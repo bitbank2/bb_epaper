@@ -30,13 +30,24 @@
 #include <bb_epaper.h>
 //BBEPAPER bbep(EP27B_176x264);
 //BBEPAPER bbep(EP213B_122x250);
-BBEPAPER bbep(EP583_648x480);
-//BBEPAPER bbep(EP295_128x296);
+//BBEPAPER bbep(EP583_648x480);
+BBEPAPER bbep(EP295_128x296);
 // My Arduino Nano 33 BLE e-paper adapter
+#ifdef ARDUINO_ARCH_NRF52840
 #define DC_PIN 16
 #define BUSY_PIN 15
 #define RESET_PIN 14
 #define CS_PIN 10
+#define MOSI_PIN MOSI
+#define SCK_PIN SCK
+#else // Fasani/Bank C6 epaper PCB
+#define DC_PIN 3
+#define BUSY_PIN 4
+#define RESET_PIN 5
+#define CS_PIN 2
+#define MOSI_PIN 0
+#define SCK_PIN 1
+#endif
 // Badger2040
 //#define CS_PIN 17
 //#define BUSY_PIN 26
@@ -61,7 +72,7 @@ void DrawScene(int i, int iPlane)
 void setup()
 {
   int i = 0;
-  bbep.initIO(DC_PIN, RESET_PIN, BUSY_PIN, CS_PIN);
+  bbep.initIO(DC_PIN, RESET_PIN, BUSY_PIN, CS_PIN, MOSI_PIN, SCK_PIN, 8000000);
   bbep.setRotation(90); // use panel in landscape orientation
   // work in bufferless mode (no memory on MCU needed)
   DrawScene(i, PLANE_DUPLICATE); // draw "old" data (full refresh only needs "old" data plane)

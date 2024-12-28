@@ -18,6 +18,20 @@ int iDataTime, iOpTime;
 #define CLK_PIN 36
 #define MOSI_PIN 35
 #define POWER_PIN 39
+#define BUTTON1 1
+#define BUTTON2 3
+#elif defined (ARDUINO_ESP32C6_DEV) // Our C6 epaper PCB
+#define CS_PIN 2
+#define DC_PIN 3
+#define RESET_PIN 5
+#define BUSY_PIN 4
+#define CLK_PIN 1
+#define MOSI_PIN 0
+#define POWER_PIN -1
+#define BUTTON1 18
+#define BUTTON2 19
+#define SDA_PIN 7
+#define SCL_PIN 6
 #else // must be Laska_Kit ESPInk
 #define CS_PIN 5
 #define DC_PIN 17
@@ -26,10 +40,10 @@ int iDataTime, iOpTime;
 #define CLK_PIN 18
 #define MOSI_PIN 23
 #define POWER_PIN 2
-#endif
-
 #define BUTTON1 1
 #define BUTTON2 3
+#endif
+
 #else
 // These pin assignments are for a custom e-paper
 // adapter add-on with 2 push buttons
@@ -80,6 +94,9 @@ const char *szPanelNames[] = {
   "EP29YR_168x384 ", // GDEY029F51H
   "EP583_648x480  ", // DEPG0583BN
   "EP26R_152x296  ", // Solum 2.6" B/W/R ESL harvested panel
+  "EP73_800x480   ", // GEDY073D46
+  "EP73_SPECTRA   ", // 800x480 Spectra 6 (faster)
+  "EP097R_88x184  ", // GDEM0097F51 B/W/R
   NULL
 };
 // names of the operating modes
@@ -96,7 +113,7 @@ enum {
 
 // List of supported colors for each panel type
 // 2 = Black/White, 3 = Black/White/Red
-const uint8_t u8PanelColors[] = {2,2,2,2,2,2,2,2,2,2,3,2,3,3,3,2,2,2,2,3,2,2,4,4,4,2,3};
+const uint8_t u8PanelColors[] = {2,2,2,2,2,2,2,2,2,2,3,2,3,3,3,2,2,2,2,3,2,2,4,4,4,2,3,7,7,3};
 
 void WaitForButton(void)
 {
@@ -377,6 +394,9 @@ void setup() {
 //  Serial.begin(115200);
 //  delay(3000);
 //  Serial.println("Starting...");
+#ifdef SDA_PIN
+  oled.setI2CPins(SDA_PIN, SCL_PIN);
+#endif
   oled.I2Cbegin();
   oled.fillScreen(OBD_WHITE);
   pinMode(BUTTON1, INPUT_PULLUP);
