@@ -90,18 +90,57 @@ uint8_t * ReadBMP(const char *fname, int *width, int *height, int *bpp, unsigned
     
 } /* ReadBMP() */
 
+//
+// Create the comments and const array boilerplate for the hex data bytes
+//
+void StartHexFile(FILE *f, int iLen, int w, int h, const char *fname)
+{
+    int i;
+    char szTemp[256];
+    fprintf(f, "//\n// Created with imageconvert, written by Larry Bank\n");
+    fprintf(f, "// %d x %d x 1-bit per pixel\n", w, h);
+    fprintf(f, "// compressed image data size = %d bytes\n//\n", iLen);
+    strcpy(szTemp, fname);
+    i = strlen(szTemp);
+    if (szTemp[i-2] == '.') szTemp[i-2] = 0; // get the leaf name for the data
+    fprintf(f, "const uint8_t %s[] = {\n", szTemp);
+} /* StartHexFile() */
+//
+// Add N bytes of hex data to the output
+// The data will be arranged in rows of 16 bytes each
+//
+void AddHexBytes(FILE *f, void *pData, int iLen, int bLast)
+{
+    static int iCount = 0; // number of bytes processed so far
+    int i;
+    uint8_t *s = (uint8_t *)pData;
+    for (i=0; i<iLen; i++) { // process the given data
+        fprintf(f, "0x%02x", *s++);
+        iCount++;
+        if (i < iLen-1 || !bLast) fprintf(f, ",");
+        if ((iCount & 15) == 0) fprintf(f, "\n"); // next row of 16
+    }
+    if (bLast) {
+        fprintf(f, "};\n");
+    }
+} /* AddHexBytes() */
+
 int main(int argc, const char * argv[]) {
     uint8_t *pBMP, *pOut;
     int rc, w, h, y, bpp;
     int iOutSize, iPitch;
     G5ENCIMAGE g5enc;
     BB_BITMAP bbbm;
- 
+    int bHFile; // flag indicating if the output will be a .H file of hex data
+
     printf("Group5 image conversion tool\n");
     if (argc != 3) {
         printf("Usage: ./imgconvert <WinBMP image> <g5 compressed image>\n");
         return -1;
     }
+    pOut = (uint8_t *)argv[2] + strlen(argv[2]) - 1;
+    bHFile = (pOut[0] == 'H' || pOut[0] == 'h'); // output an H file?
+    
     pBMP = ReadBMP(argv[1], &w, &h, &bpp, NULL);
     if (bpp == 1) {
         uint8_t *s = pBMP;
@@ -128,8 +167,14 @@ int main(int argc, const char * argv[]) {
             if (!f) {
                 printf("Error opening: %s\n", argv[2]);
             } else {
-                fwrite(&bbbm, 1, sizeof(BB_BITMAP), f);
-                fwrite(pOut, 1, iOutSize, f);
+                if (bHFile) { // generate HEX file to include in a project
+                    StartHexFile(f, iOutSize+sizeof(BB_BITMAP), w, h, argv[2]);
+                    AddHexBytes(f, &bbbm, sizeof(BB_BITMAP), 0);
+                    AddHexBytes(f, pOut, iOutSize, 1);
+                } else { // generate a binary file
+                    fwrite(&bbbm, 1, sizeof(BB_BITMAP), f);
+                    fwrite(pOut, 1, iOutSize, f);
+                }
                 fflush(f);
                 fclose(f);
             }
