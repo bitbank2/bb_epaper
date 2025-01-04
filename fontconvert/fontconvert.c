@@ -88,6 +88,39 @@ int RotateBitmap(int iAngle, uint8_t *pSrc, int iWidth, int iHeight, int iSrcPit
     }
     return iDstPitch;
 } /* RotateBitmap() */
+//
+// Create the comments and const array boilerplate for the hex data bytes
+//
+void StartHexFile(FILE *f, int iLen, const char *fname)
+{
+    int i;
+    char szTemp[256];
+    fprintf(f, "//\n// Created with fontconvert, written by Larry Bank\n");
+    fprintf(f, "// compressed font data size = %d bytes\n//\n", iLen);
+    strcpy(szTemp, fname);
+    i = strlen(szTemp);
+    if (szTemp[i-2] == '.') szTemp[i-2] = 0; // get the leaf name for the data
+    fprintf(f, "const uint8_t %s[] = {\n", szTemp);
+} /* StartHexFile() */
+//
+// Add N bytes of hex data to the output
+// The data will be arranged in rows of 16 bytes each
+//
+void AddHexBytes(FILE *f, void *pData, int iLen, int bLast)
+{
+    static int iCount = 0; // number of bytes processed so far
+    int i;
+    uint8_t *s = (uint8_t *)pData;
+    for (i=0; i<iLen; i++) { // process the given data
+        fprintf(f, "0x%02x", *s++);
+        iCount++;
+        if (i < iLen-1 || !bLast) fprintf(f, ",");
+        if ((iCount & 15) == 0) fprintf(f, "\n"); // next row of 16
+    }
+    if (bLast) {
+        fprintf(f, "};\n");
+    }
+} /* AddHexBytes() */
 
 int main(int argc, char *argv[])
 {
@@ -105,13 +138,16 @@ int main(int argc, char *argv[])
     // BitBank Font structures
     BB_GLYPH *pGlyphs;
     BB_FONT bbff;
+    int bHFile; // flag indicating if the output will be a .H file of hex data
     
     if (argc < 4) {
-        printf("Usage: %s <in.ttf> <out.bbf> point_size [first_char] [last_char] [rotation (90/180/270)]\n", argv[0]);
+        printf("Usage: %s <in.ttf> <out.bbf or out.h> point_size [first_char] [last_char] [rotation (90/180/270)]\n", argv[0]);
         return 1;
     }
     size = atoi(argv[3]);
-    
+    pTemp = (uint8_t *)argv[2] + strlen(argv[2]) - 1;
+    bHFile = (pTemp[0] == 'H' || pTemp[0] == 'h'); // output an H file?
+
     if (argc == 5) {
         last = atoi(argv[4]); // only ending character was provided
     } else if (argc >= 6) {
@@ -255,13 +291,20 @@ int main(int argc, char *argv[])
     } else {
         bbff.height = (face->size->metrics.height >> 6);
     }
-    fwrite(&bbff, 1, sizeof(bbff), fOut);
-    // Write the glyph table
-    fwrite(pGlyphs, (last-first+1), sizeof(BB_GLYPH), fOut);
-    // Write the compressed bitmap data
-    fwrite(pBitmap, 1, iOffset, fOut);
+    iLen = sizeof(bbff) + (last-first+1)*sizeof(BB_GLYPH) + iOffset;
+    if (bHFile) { // create an H file of hex values
+        StartHexFile(fOut, iLen, argv[2]);
+        AddHexBytes(fOut, &bbff, sizeof(bbff), 0);
+        AddHexBytes(fOut, pGlyphs, (last-first+1) * sizeof(BB_GLYPH), 0);
+        AddHexBytes(fOut, pBitmap, iOffset, 1);
+    } else {
+        fwrite(&bbff, 1, sizeof(bbff), fOut);
+        // Write the glyph table
+        fwrite(pGlyphs, (last-first+1), sizeof(BB_GLYPH), fOut);
+        // Write the compressed bitmap data
+        fwrite(pBitmap, 1, iOffset, fOut);
+    }
     fflush(fOut);
-    iLen = ftell(fOut);
     fclose(fOut); // done!
     FT_Done_FreeType(library);
     printf("Success!\nFont file size: %d bytes\n", iLen);
