@@ -495,6 +495,8 @@ void BBEPAPER::drawString(const char *pText, int x, int y)
 
 void BBEPAPER::setPlane(int iPlane)
 {
+    if (_bbep.iFlags & (BBEP_3COLOR | BBEP_4COLOR | BBEP_4GRAY | BBEP_7COLOR)) return; // only valid for 1-bit mode
+
     _bbep.iPlane = iPlane;
 }
 int BBEPAPER::getPlane(void)

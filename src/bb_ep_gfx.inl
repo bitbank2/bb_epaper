@@ -1455,10 +1455,10 @@ int bbepAllocBuffer(BBEPDISP *pBBEP)
         iSize *= 2; // 2 bit planes
     }
 #if defined (HAL_ESP32_HAL_H_) && !defined(__riscv)
-    if (iSize > 90000) { // need to use PSRAM
-#ifndef BOARD_HAS_PSRAM
-#error "Please enable PSRAM!"
-#endif
+    if (iSize > 98000) { // need to use PSRAM
+//#ifndef BOARD_HAS_PSRAM
+//#error "Please enable PSRAM!"
+//#endif
         pBBEP->ucScreen = (uint8_t *)ps_malloc(iSize);
     } else {
         pBBEP->ucScreen = (uint8_t *)malloc(iSize);
