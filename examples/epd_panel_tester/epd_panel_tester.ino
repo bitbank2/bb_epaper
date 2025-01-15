@@ -93,10 +93,12 @@ const char *szPanelNames[] = {
   "EP29YR_128x296 ", // GDEY029F51
   "EP29YR_168x384 ", // GDEY029F51H
   "EP583_648x480  ", // DEPG0583BN
+  "EP296_128x296  ", // Waveshare 2.9" B/W
   "EP26R_152x296  ", // Solum 2.6" B/W/R ESL harvested panel
   "EP73_800x480   ", // GEDY073D46
   "EP73_SPECTRA   ", // 800x480 Spectra 6 (faster)
-  "EP097R_88x184  ", // GDEM0097F51 B/W/R
+  "EP74R_640x384  ",
+  "EP583R_600x448 ",
   NULL
 };
 // names of the operating modes
@@ -113,7 +115,7 @@ enum {
 
 // List of supported colors for each panel type
 // 2 = Black/White, 3 = Black/White/Red
-const uint8_t u8PanelColors[] = {2,2,2,2,2,2,2,2,2,2,3,2,3,3,3,2,2,2,2,3,2,2,4,4,4,2,3,7,7,3};
+const uint8_t u8PanelColors[] = {2,2,2,2,2,2,2,2,2,2,3,2,3,3,3,2,2,2,2,3,2,2,4,4,4,2,3,7,7,3,3,3};
 
 void WaitForButton(void)
 {
