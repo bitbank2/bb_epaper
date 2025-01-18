@@ -1381,7 +1381,7 @@ const EPD_PANEL panelDefs[] PROGMEM = {
     {800, 480, 0, epd73_spectra_init, NULL, NULL,  BBEP_7COLOR, BBEP_CHIP_UC81xx}, // EP73_800x480 Spectra 6 7-color 800x480
     {640, 384, 0, epd74r_init, NULL, NULL,  BBEP_3COLOR | BBEP_4BPP_DATA, BBEP_CHIP_UC81xx}, // EP74R_640x384, 3-color 640x384
     {600, 448, 0, epd583r_init, NULL, NULL,  BBEP_3COLOR | BBEP_4BPP_DATA, BBEP_CHIP_UC81xx}, // EP583R_600x448, 3-color 600x448
-    {800, 480, 0, epd75r_init, NULL, NULL, BBEP_3COLOR, BBEP_CHIP_UC81xx}, // EP75R_800x480, waveshare 7.5 800x480 B/W/R
+    {800, 480, 0, epd75r_init, NULL, NULL, BBEP_3COLOR | BBEP_RED_SWAPPED, BBEP_CHIP_UC81xx}, // EP75R_800x480, waveshare 7.5 800x480 B/W/R
 };
 //
 // Set the e-paper panel type
