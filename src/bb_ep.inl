@@ -1306,6 +1306,20 @@ const uint8_t epd73_spectra_init[] PROGMEM = {
     BUSY_WAIT,
     0
 };
+
+const uint8_t epd75r_init[] PROGMEM = {
+    5, 0x01, 0x07,0x07,0x3f,0x3f, // power setting
+    1, 0x04, // power on
+    BUSY_WAIT,
+    2, 0x00, 0x0f, // panel setting
+    5, 0x61, 0x03,0x20,0x01,0xe0, // resolution 800x480
+    2, 0x15, 0x00,
+    3, 0x50, 0x11, 0x07, // VCOM
+    2, 0x60, 0x22, // TCON
+    5, 0x65, 0x00, 0x00, 0x00, 0x00, // start row/col
+    0
+};
+
 const uint8_t epd583r_init[] PROGMEM = {
     0x03, 0x01, 0x37, 0x00, // power setting
     0x03, 0x00, 0xcf, 0x08, // panel setting
@@ -1367,6 +1381,7 @@ const EPD_PANEL panelDefs[] PROGMEM = {
     {800, 480, 0, epd73_spectra_init, NULL, NULL,  BBEP_7COLOR, BBEP_CHIP_UC81xx}, // EP73_800x480 Spectra 6 7-color 800x480
     {640, 384, 0, epd74r_init, NULL, NULL,  BBEP_3COLOR | BBEP_4BPP_DATA, BBEP_CHIP_UC81xx}, // EP74R_640x384, 3-color 640x384
     {600, 448, 0, epd583r_init, NULL, NULL,  BBEP_3COLOR | BBEP_4BPP_DATA, BBEP_CHIP_UC81xx}, // EP583R_600x448, 3-color 600x448
+    {800, 480, 0, epd75r_init, NULL, NULL, BBEP_3COLOR, BBEP_CHIP_UC81xx}, // EP75R_800x480, waveshare 7.5 800x480 B/W/R
 };
 //
 // Set the e-paper panel type

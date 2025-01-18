@@ -99,6 +99,7 @@ const char *szPanelNames[] = {
   "EP73_SPECTRA   ", // 800x480 Spectra 6 (faster)
   "EP74R_640x384  ",
   "EP583R_600x448 ",
+  "EP75R_800x480  ", // Waveshare 7.5" 800x480 B/W/R
   NULL
 };
 // names of the operating modes
@@ -115,7 +116,7 @@ enum {
 
 // List of supported colors for each panel type
 // 2 = Black/White, 3 = Black/White/Red
-const uint8_t u8PanelColors[] = {2,2,2,2,2,2,2,2,2,2,3,2,3,3,3,2,2,2,2,3,2,2,4,4,4,2,3,7,7,3,3,3};
+const uint8_t u8PanelColors[] = {2,2,2,2,2,2,2,2,2,2,3,2,3,3,3,2,2,2,2,3,2,2,4,4,4,2,3,7,7,3,3,3,3};
 
 void WaitForButton(void)
 {

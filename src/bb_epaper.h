@@ -137,6 +137,7 @@ enum {
     EP73_SPECTRA_800x480, // Spectra 6 7-color 800x480
     EP74R_640x384,
     EP583R_600x448, // 4-bits per pixel needs different support
+    EP75R_800x480, // Waveshare 800x480 3-color
     EP_PANEL_COUNT
 };
 #ifdef FUTURE
