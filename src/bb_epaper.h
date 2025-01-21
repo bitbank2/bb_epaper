@@ -193,6 +193,8 @@ enum {
 #define BBEP_SPECTRA_ORANGE  0x06
 #define BBEP_SPECTRA_CLEAN   0x07
 
+#define BBEP_DITHERING_FLAG   0x80 //if set, draws a 2x2 dithering pattern (every second pixels skipped)
+
 // 4 gray levels
 #define BBEP_GRAY0 0
 #define BBEP_GRAY1 1

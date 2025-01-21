@@ -467,6 +467,15 @@ void bbepSetPixelFast16Clr(void *pb, int x, int y, unsigned char ucColor)
     uint8_t u8;
     BBEPDISP *pBBEP = (BBEPDISP *)pb;
     
+    if (ucColor & BBEP_DITHERING_FLAG) {
+        // if dithering requested, unset the bit to get the correct color
+        ucColor &= ~BBEP_DITHERING_FLAG;
+        if (x % 2 == (y % 2 == 0) ? 0 : 1) {
+            // skip pixel
+            return;
+        }
+    }
+
     iPitch = pBBEP->width >> 1;
     i = (x >> 1) + (y * iPitch);
     u8 = pBBEP->ucScreen[i];
