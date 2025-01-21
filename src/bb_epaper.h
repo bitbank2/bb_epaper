@@ -186,11 +186,10 @@ enum {
 // colors for Spectra 6
 #define BBEP_SPECTRA_BLACK   0x00
 #define BBEP_SPECTRA_WHITE   0x01
-#define BBEP_SPECTRA_GREEN   0x02
-#define BBEP_SPECTRA_BLUE    0x03
-#define BBEP_SPECTRA_RED     0x04
-#define BBEP_SPECTRA_YELLOW  0x05
-#define BBEP_SPECTRA_ORANGE  0x06
+#define BBEP_SPECTRA_YELLOW  0x02
+#define BBEP_SPECTRA_RED     0x03
+#define BBEP_SPECTRA_BLUE    0x05
+#define BBEP_SPECTRA_GREEN   0x06
 #define BBEP_SPECTRA_CLEAN   0x07
 
 // 4 gray levels
