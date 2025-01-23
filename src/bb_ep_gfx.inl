@@ -193,6 +193,8 @@ void bbepDrawSprite(BBEPDISP *pBBEP, const uint8_t *pSprite, int cx, int cy, int
         pBBEP->last_error = BBEP_ERROR_BAD_PARAMETER;
         return; // out of bounds
     }
+    iColor = pBBEP->pColorLookup[iColor & 0xf]; // translate the color for this display type
+
     dy = y; // destination y
     if (y < 0) // skip the invisible parts
     {
@@ -295,7 +297,8 @@ BBEPDISP *pBBEP = (BBEPDISP *)pb;
 
     // only available for local buffer operations
     if (!pBBEP || !pBBEP->ucScreen) return BBEP_ERROR_BAD_PARAMETER;
-    
+    ucColor = pBBEP->pColorLookup[ucColor & 0xf]; // translate the color for this display type
+
     ucMask = 0xc0 >> ((x & 3)*2);
     iPitch = (pBBEP->width+3)>>2;
     i = (x >> 2) + (y * iPitch);
@@ -332,7 +335,8 @@ BBEPDISP *pBBEP = (BBEPDISP *)pb;
     
     // only available for local buffer operations
     if (!pBBEP || !pBBEP->ucScreen) return BBEP_ERROR_BAD_PARAMETER;
-    
+    ucColor = pBBEP->pColorLookup[ucColor & 0xf]; // translate the color for this display type
+
     iPitch = (pBBEP->width+7)>>3;
     iSize = ((pBBEP->native_width+7)>>3) * pBBEP->native_height;
     
@@ -385,7 +389,8 @@ int bbepSetPixel2Clr(void *pb, int x, int y, unsigned char ucColor)
     
     // only available for local buffer operations
     if (!pBBEP || !pBBEP->ucScreen) return BBEP_ERROR_BAD_PARAMETER;
-    
+    ucColor = pBBEP->pColorLookup[ucColor & 0xf]; // translate the color for this display type
+
     iPitch = (pBBEP->width+7)>>3;
     iSize = ((pBBEP->native_width+7)>>3) * pBBEP->native_height;
     
@@ -439,7 +444,8 @@ int bbepSetPixel16Clr(void *pb, int x, int y, unsigned char ucColor)
     
     // only available for local buffer operations
     if (!pBBEP || !pBBEP->ucScreen) return BBEP_ERROR_BAD_PARAMETER;
-    
+    ucColor = pBBEP->pColorLookup[ucColor & 0xf]; // translate the color for this display type
+
     iPitch = pBBEP->width >> 1;
     iSize = (pBBEP->native_width >> 1) * pBBEP->native_height;
     
@@ -505,6 +511,8 @@ int bbepLoadG5(BBEPDISP *pBBEP, const uint8_t *pG5, int x, int y, int iFG, int i
     BB_BITMAP *pbbb;
     
     if (pBBEP == NULL || pG5 == NULL) return BBEP_ERROR_BAD_PARAMETER;
+    iFG = pBBEP->pColorLookup[iFG & 0xf]; // translate the color for this display type
+    iBG = pBBEP->pColorLookup[iBG & 0xf];
     pbbb = (BB_BITMAP *)pG5;
     if (pgm_read_word(&pbbb->u16Marker) != BB_BITMAP_MARKER) return BBEP_ERROR_BAD_DATA;
     cx = pgm_read_word(&pbbb->width);
@@ -582,6 +590,9 @@ int bbepLoadBMP(BBEPDISP *pBBEP, const uint8_t *pBMP, int dx, int dy, int iFG, i
     uint8_t src_mask;
     uint8_t bFlipped = 0;
     
+    if (pBBEP == NULL || pBMP == NULL) return BBEP_ERROR_BAD_PARAMETER;
+    iFG = pBBEP->pColorLookup[iFG & 0xf]; // translate the color for this display type
+    iBG = pBBEP->pColorLookup[iBG & 0xf];
     // Don't use pgm_read_word because it can cause an unaligned
     // access on RP2040 for odd addresses
     i16 = pgm_read_byte(pBMP);
@@ -687,6 +698,7 @@ int bbepLoadBMP3(BBEPDISP *pBBEP, const uint8_t *pBMP, int dx, int dy)
     uint8_t bFlipped = 0;
     uint8_t ucColorMap[16];
     
+    if (pBBEP == NULL || pBMP == NULL) return BBEP_ERROR_BAD_PARAMETER;
     if (!(pBBEP->iFlags & BBEP_3COLOR) || pBBEP->ucScreen == 0) {
         pBBEP->last_error = BBEP_ERROR_NOT_SUPPORTED;
         return BBEP_ERROR_NOT_SUPPORTED; // if not 3-color EPD or no back buffer
@@ -813,8 +825,14 @@ int bbepWriteStringCustom(BBEPDISP *pBBEP, BB_FONT *pFont, int x, int y, char *s
         pBBEP->last_error = BBEP_ERROR_BAD_PARAMETER;
         return BBEP_ERROR_BAD_PARAMETER; // invalid param
     }
+    if (iColor != BBEP_TRANSPARENT) {
+        iColor = pBBEP->pColorLookup[iColor & 0xf]; // translate the color for this display type
+    }
     iBG = pBBEP->iBG;
     if (iBG == -1) iBG = BBEP_TRANSPARENT; // -1 = don't care
+    if (iBG != BBEP_TRANSPARENT) {
+        iBG = pBBEP->pColorLookup[iBG & 0xf];
+    }
     if (x == -1)
         x = pBBEP->iCursorX;
     if (y == -1)
@@ -1060,16 +1078,20 @@ int bbepWriteString(BBEPDISP *pBBEP, int x, int y, char *szMsg, int iSize, int i
 {
     int i, iFontOff, iLen;
     uint8_t c, *s, ucCMD, ucCMD1, ucCMD2;
-    int iOldFG; // old fg color to make sure red works
     uint8_t u8Temp[40];
     int iBG;
     
     if (pBBEP == NULL) {
         return BBEP_ERROR_BAD_PARAMETER;
     }
+    if (iColor != BBEP_TRANSPARENT) {
+        iColor = pBBEP->pColorLookup[iColor & 0xf];
+    }
     iBG = pBBEP->iBG;
     if (iBG == -1) iBG = BBEP_TRANSPARENT; // -1 = don't care
-    
+    if (iBG != BBEP_TRANSPARENT) {
+        iBG = pBBEP->pColorLookup[iBG & 0xf];
+    }
     if (pBBEP->chip_type == BBEP_CHIP_UC81xx) {
         if (pBBEP->iFlags & BBEP_RED_SWAPPED) {
             ucCMD1 = UC8151_DTM1;
@@ -1097,10 +1119,6 @@ int bbepWriteString(BBEPDISP *pBBEP, int x, int y, char *szMsg, int iSize, int i
         return BBEP_ERROR_BAD_PARAMETER; // can't draw off the display
     }
     
-    iOldFG = pBBEP->iFG; // save old fg color
-    if (iColor >= BBEP_YELLOW) {
-        pBBEP->iFG = iColor;
-    }
     if (iSize == FONT_8x8 || iSize == FONT_16x16) // 8x8 font (and stretched)
     {
         int iCount = (iSize == FONT_8x8) ? 8 : 16;
@@ -1199,7 +1217,6 @@ int bbepWriteString(BBEPDISP *pBBEP, int x, int y, char *szMsg, int iSize, int i
             }
             i++;
         } // while
-        pBBEP->iFG = iOldFG; // restore color
         pBBEP->iCursorX = x;
         pBBEP->iCursorY = y;
         return BBEP_SUCCESS;
@@ -1360,7 +1377,6 @@ int bbepWriteString(BBEPDISP *pBBEP, int x, int y, char *szMsg, int iSize, int i
             }
             i++;
         } // while
-        pBBEP->iFG = iOldFG; // restore color
         return BBEP_SUCCESS;
     } // 12x16
     else if (iSize == FONT_6x8)
@@ -1405,10 +1421,8 @@ int bbepWriteString(BBEPDISP *pBBEP, int x, int y, char *szMsg, int iSize, int i
             }
             i++;
         }
-        pBBEP->iFG = iOldFG; // restore color
         return BBEP_SUCCESS;
     } // 6x8
-    pBBEP->iFG = iOldFG; // restore color
     pBBEP->last_error = BBEP_ERROR_BAD_PARAMETER;
     return BBEP_ERROR_BAD_PARAMETER; // invalid size
 } /* bbepWriteString() */
@@ -1491,11 +1505,11 @@ void bbepDrawLine(BBEPDISP *pBBEP, int x1, int y1, int x2, int y2, uint8_t ucCol
     if (pBBEP == NULL) {
         return;
     }
-    
     if (x1 < 0 || x2 < 0 || y1 < 0 || y2 < 0 || x1 >= pBBEP->width || x2 >= pBBEP->width || y1 >= pBBEP->height || y2 >= pBBEP->height) {
         pBBEP->last_error = BBEP_ERROR_BAD_PARAMETER;
         return;
     }
+    ucColor = pBBEP->pColorLookup[ucColor & 0xf];
     if(abs(dx) > abs(dy)) {
         // X major case
         if(x2 < x1) {
@@ -1646,6 +1660,7 @@ void bbepEllipse(BBEPDISP *pBBEP, int iCenterX, int iCenterY, int32_t iRadiusX, 
         pBBEP->last_error = BBEP_ERROR_BAD_PARAMETER;
         return; // invalid radii
     }
+    ucColor = pBBEP->pColorLookup[ucColor & 0xf];
     if (iRadiusX > iRadiusY) {// use X as the primary radius
         iRadius = iRadiusX;
         iXFrac = 65536;
@@ -1678,6 +1693,11 @@ void bbepRectangle(BBEPDISP *pBBEP, int x1, int y1, int x2, int y2, uint8_t ucCo
     int iPitch;
     int iRedOffset = 0;
     
+    if (pBBEP == NULL) {
+        return; // invalid - must have BBEPDISP structure
+    }
+    ucColor = pBBEP->pColorLookup[ucColor & 0xf];
+
     if (!(pBBEP->iFlags & BBEP_7COLOR) && ucColor >= BBEP_YELLOW) {
         if (pBBEP->iFlags & (BBEP_3COLOR | BBEP_4COLOR)) {
             // use the second half of the image buffer
@@ -1686,11 +1706,7 @@ void bbepRectangle(BBEPDISP *pBBEP, int x1, int y1, int x2, int y2, uint8_t ucCo
             ucColor = BBEP_BLACK;
         }
     }
-    
-    if (pBBEP == NULL) {
-        return; // invalid - must have BBEPDISP structure
-    }
-    
+        
     if (x1 < 0 || y1 < 0 || x2 < 0 || y2 < 0 ||
         x1 >= pBBEP->width || y1 >= pBBEP->height || x2 >= pBBEP->width || y2 >= pBBEP->height) {
         pBBEP->last_error = BBEP_ERROR_BAD_PARAMETER;
@@ -1755,6 +1771,7 @@ void bbepRectangle(BBEPDISP *pBBEP, int x1, int y1, int x2, int y2, uint8_t ucCo
 
 void bbepRoundRect(BBEPDISP *pBBEP, int x, int y, int w, int h, int r, uint8_t iColor, int bFilled)
 {
+    if (pBBEP == NULL) return;
     if (bFilled) {
         bbepRectangle(pBBEP, x+r, y, x+w-1-r, y+h, iColor, 1);
         bbepRectangle(pBBEP, x, y+r, x+w-1, y+h-r, iColor, 1);

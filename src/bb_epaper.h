@@ -100,6 +100,7 @@ typedef struct epd_panel {
     const uint8_t *pInitPart;
     uint16_t flags;
     uint8_t chip_type;
+    const uint8_t *pColorLookup; // color translation table
 } EPD_PANEL;
 
 // Display types
@@ -181,17 +182,10 @@ enum {
 #define BBEP_WHITE 1
 #define BBEP_YELLOW 2
 #define BBEP_RED 3
+#define BBEP_BLUE 4
+#define BBEP_GREEN 5
+#define BBEP_ORANGE 6
 #define BBEP_TRANSPARENT 255
-
-// colors for Spectra 6
-#define BBEP_SPECTRA_BLACK   0x00
-#define BBEP_SPECTRA_WHITE   0x01
-#define BBEP_SPECTRA_GREEN   0x02
-#define BBEP_SPECTRA_BLUE    0x03
-#define BBEP_SPECTRA_RED     0x04
-#define BBEP_SPECTRA_YELLOW  0x05
-#define BBEP_SPECTRA_ORANGE  0x06
-#define BBEP_SPECTRA_CLEAN   0x07
 
 // 4 gray levels
 #define BBEP_GRAY0 0
@@ -387,6 +381,7 @@ uint32_t iTimeout; // for e-paper panels
 uint8_t iDCPin, iMOSIPin, iCLKPin, iCSPin, iRSTPin, iBUSYPin;
 uint8_t x_offset, y_offset; // memory offsets
 uint8_t is_awake, iPlane;
+const uint8_t *pColorLookup; // color translation table
 const uint8_t *pInitFull; // full update init sequence
 const uint8_t *pInitFast; // fast update init sequence
 const uint8_t *pInitPart; // partial update init sequence
