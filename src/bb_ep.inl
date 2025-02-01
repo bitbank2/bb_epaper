@@ -251,6 +251,20 @@ const uint8_t epd42r_init_sequence_full[] PROGMEM = {
     0x03, 0x4f, 0x2b, 0x01, // RAM Y counter
     0x00
 };
+
+const uint8_t epd29r2_init_sequence_full[] PROGMEM = {
+    6, UC8151_PWR, 0x03, 0x00, 0x2b, 0x2b, 0x09,
+    4, UC8151_BTST, 0x17, 0x17, 0x17,
+    1, UC8151_PON,
+    BUSY_WAIT,
+    2, UC8151_PSR, 0xcf,
+    2, UC8151_CDI, 0x37,
+    2, UC8151_PLL, 0x29,
+    2, UC8151_VDCS, 0x0a,
+    BUSY_WAIT, 
+    4, UC8151_TRES, 0x80, 0x01, 0x28,
+    0
+};
 const uint8_t epd29r_init_sequence_full[] PROGMEM = {
     0x01, 0x12, // soft reset
     BUSY_WAIT,
@@ -926,6 +940,26 @@ const uint8_t epd27_init_sequence_part[] PROGMEM =
     0x00 // end of table
 };
 
+const uint8_t epd426_init_full[] PROGMEM =
+{   
+    0x01, SSD1608_SW_RESET, 
+    BUSY_WAIT,
+    0x02, 0x18, 0x80, // read built-in temp sensor
+    
+    0x06, 0x0c, 0xae, 0xc7, 0xc3, 0xc0, 0x80, // set soft start
+    0x04, 0x01, 0xdf, 0x01, 0x02, // driver output control
+//    0x03, 0x21, 0x40, 0x00, // display update control
+    0x02, 0x11, 0x03, // data entry mode
+    0x05, 0x44, 0x00, 0x00, 0xdf, 0x01, // ram start/end
+    0x05, 0x45, 0x00, 0x00, 0x1f, 0x03,
+    0x02, 0x3c, 0x01, // border waveform
+    
+    0x03, 0x4e, 0x00, 0x00,
+    0x03, 0x4f, 0x00, 0x00,
+    BUSY_WAIT, 
+    0x00 // end of table
+};
+
 const uint8_t epd42b_init_sequence_full[] PROGMEM =
 {
     0x01, SSD1608_SW_RESET,
@@ -963,6 +997,26 @@ const uint8_t epd42b_init_sequence_fast[] PROGMEM =
     BUSY_WAIT,
     0
 };
+
+const uint8_t epd426_init_fast[] PROGMEM =
+{
+    0x01, SSD1608_SW_RESET,
+    BUSY_WAIT,
+    3, 0x21, 0x40, 0x00,
+    2, 0x3c, 0x05,
+    2, 0x1a, 0x6e, // temp register
+    2, 0x22, 0x91, // load temp
+    1, 0x20,
+    BUSY_WAIT,
+    2, 0x11, 0x3, // data entry mode
+    0x03, 0x44, 0x00, 0x3b, // ram start/end
+    0x05, 0x45, 0x00, 0x00, 0x1f, 0x03,
+    0x02, 0x4e, 0x00,
+    0x03, 0x4f, 0x00, 0x00,
+    BUSY_WAIT,
+    0
+};
+
 const uint8_t epd42b_init_sequence_part[] PROGMEM =
 {
     0x03, 0x21, 0x00, 0x00,
@@ -973,6 +1027,19 @@ const uint8_t epd42b_init_sequence_part[] PROGMEM =
     0x02, 0x4e, 0x00, // ram counter x
     0x03, 0x4f, 0x00, 0x00, // ram counter y
     
+    0x00 // end of table
+};
+
+const uint8_t epd426_init_part[] PROGMEM =
+{
+    0x03, 0x21, 0x00, 0x00,
+    0x02, 0x11, 0x03, // data entry mode
+    0x02, 0x3c, 0x80, // border color
+    0x03, 0x44, 0x00, 0x3b, // ram address
+    0x05, 0x45, 0x00, 0x00, 0x1f, 0x03,
+    0x02, 0x4e, 0x00, // ram counter x
+    0x03, 0x4f, 0x00, 0x00, // ram counter y
+
     0x00 // end of table
 };
 
@@ -1412,6 +1479,8 @@ const EPD_PANEL panelDefs[] PROGMEM = {
     {640, 384, 0, epd74r_init, NULL, NULL,  BBEP_3COLOR | BBEP_4BPP_DATA, BBEP_CHIP_UC81xx, u8Colors_3clr}, // EP74R_640x384, 3-color 640x384
     {600, 448, 0, epd583r_init, NULL, NULL,  BBEP_3COLOR | BBEP_4BPP_DATA, BBEP_CHIP_UC81xx, u8Colors_3clr}, // EP583R_600x448, 3-color 600x448
     {800, 480, 0, epd75r_init, NULL, NULL, BBEP_3COLOR | BBEP_RED_SWAPPED, BBEP_CHIP_UC81xx, u8Colors_3clr}, // EP75R_800x480, waveshare 7.5 800x480 B/W/R
+    {480, 800, 0, epd426_init_full, epd426_init_fast, epd426_init_part, 0, BBEP_CHIP_SSD16xx, u8Colors_2clr},
+    {128, 296, 0, epd29r2_init_sequence_full, NULL, NULL, BBEP_3COLOR, BBEP_CHIP_UC81xx, u8Colors_3clr}, // EP29R2_128x296 Adafruit 2.9" 128x296 Tricolor FeatherWing
 };
 //
 // Set the e-paper panel type
