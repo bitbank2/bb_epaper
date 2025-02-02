@@ -258,7 +258,7 @@ const uint8_t epd29r2_init_sequence_full[] PROGMEM = {
     1, UC8151_PON,
     BUSY_WAIT,
     2, UC8151_PSR, 0xcf,
-    2, UC8151_CDI, 0x37,
+    2, UC8151_CDI, 0x5c, // inverted, white border
     2, UC8151_PLL, 0x29,
     2, UC8151_VDCS, 0x0a,
     BUSY_WAIT, 
