@@ -1529,15 +1529,19 @@ int bbepCreateVirtual(BBEPDISP *pBBEP, int iWidth, int iHeight, int iFlags)
         pBBEP->chip_type = BBEP_CHIP_NONE;
     // select the correct pixel drawing functions (2/3/4 color)
         if (iFlags & BBEP_4COLOR) {
+            pBBEP->pColorLookup = u8Colors_4clr;
             pBBEP->pfnSetPixel = bbepSetPixel4Clr;
             pBBEP->pfnSetPixelFast = bbepSetPixelFast4Clr;
         } else if (iFlags & BBEP_3COLOR) {
+            pBBEP->pColorLookup = u8Colors_3clr;
             pBBEP->pfnSetPixel = bbepSetPixel3Clr;
             pBBEP->pfnSetPixelFast = bbepSetPixelFast3Clr;
         } else if (pBBEP->iFlags & BBEP_7COLOR) {
+            pBBEP->pColorLookup = u8Colors_7clr;
             pBBEP->pfnSetPixel = bbepSetPixel16Clr;
             pBBEP->pfnSetPixelFast = bbepSetPixelFast16Clr;
         } else { // must be B/W
+            pBBEP->pColorLookup = u8Colors_2clr;
             pBBEP->pfnSetPixel = bbepSetPixel2Clr;
             pBBEP->pfnSetPixelFast = bbepSetPixelFast2Clr;
         }
