@@ -24,6 +24,17 @@
 void bbepWakeUp(BBEPDISP *pBBEP);
 void bbepSendCMDSequence(BBEPDISP *pBBEP, const uint8_t *pSeq);
 //
+// Set the second CS pin for dual-controller displays
+//
+void bbepSetCS2(BBEPDISP *pBBEP, uint8_t cs)
+{
+    pBBEP->iCS1Pin = pBBEP->iCSPin;
+    pBBEP->iCS2Pin = cs;
+    pinMode(cs, OUTPUT);
+    digitalWrite(cs, HIGH); // disable second CS for now
+} /* bbepSetCS2() */
+
+//
 // Initialize the GPIO pins and SPI for use by bb_eink
 //
 void bbepInitIO(BBEPDISP *pBBEP, uint8_t u8DC, uint8_t u8RST, uint8_t u8BUSY, uint8_t u8CS, uint8_t u8MOSI, uint8_t u8SCK, uint32_t u32Speed)

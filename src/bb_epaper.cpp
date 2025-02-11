@@ -65,13 +65,16 @@ int BBEPAPER::setPanelType(int iPanel)
 {
     return bbepSetPanelType(&_bbep, iPanel);
 }
+// Special setup for dual-cable displays
+void BBEPAPER::setCS2(uint8_t cs)
+{
+    bbepSetCS2(&_bbep, cs);
+}
 
 #ifdef ARDUINO
 void BBEPAPER::initIO(int iDC, int iReset, int iBusy, int iCS, int iMOSI, int iSCLK, uint32_t u32Speed)
 {
     bbepInitIO(&_bbep, iDC, iReset, iBusy, iCS, iMOSI, iSCLK, u32Speed);
-//    bbepWakeUp(&_bbep);
-//    bbepSendCMDSequence(&_bbep, _bbep.pInitFull);
 } /* initIO() */
 #else // Linux
 void BBEPAPER::initIO(int iDC, int iReset, int iBusy, int iCS, int iSPIChannel, uint32_t u32Speed)
@@ -82,8 +85,6 @@ void BBEPAPER::initIO(int iDC, int iReset, int iBusy, int iCS, int iSPIChannel, 
 	_bbep.iRSTPin = iReset;
 	_bbep.iMOSIPin = iSPIChannel;
 	bbepInitIO(&_bbep, u32Speed);
-	bbepWakeUp(&_bbep);
-	bbepSendCMDSequence(&_bbep, _bbep.pInitFull);
 } /* initIO() */
 #endif
 int BBEPAPER::writePlane(int iPlane)

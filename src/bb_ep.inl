@@ -53,7 +53,7 @@ const uint8_t u8Colors_7clr[16] = {  // ACeP 7-color
 };
 
 const uint8_t u8Colors_spectra[16] = {  // Spectra 6
-    BBEP_BLACK, BBEP_WHITE, BBEP_YELLOW, BBEP_RED, BBEP_BLACK, BBEP_BLUE, BBEP_GREEN, BBEP_BLACK,
+    BBEP_BLACK, BBEP_WHITE, BBEP_YELLOW, BBEP_RED, 0x05, 0x06, BBEP_BLACK, BBEP_BLACK,
     BBEP_BLACK, BBEP_BLACK, BBEP_BLACK, BBEP_BLACK, BBEP_BLACK, BBEP_BLACK, BBEP_BLACK, BBEP_BLACK
 };
 
@@ -1417,6 +1417,27 @@ const uint8_t epd75r_init[] PROGMEM = {
     0
 };
 
+const uint8_t epd41_init_sequence_full[] PROGMEM = {
+    BUSY_WAIT,
+    3, UC8151_PSR, 0x2f, 0x00,
+    5, UC8151_PWR, 0x37, 0x00, 0x05, 0x05,
+    2, UC8151_PFS, 0x00,
+    4, UC8151_BTST, 0xc7, 0xc7, 0x1d,
+    2, UC8151_PLL, 0x3c,
+    2, UC8151_TSE, 0x00,
+    2, UC8151_CDI, 0x37,
+    2, UC8151_TCON, 0x22,
+    5, UC8151_TRES, 0x02, 0x80, 0x01, 0x90,
+    2, UC8151_PWS, 0xaa, 
+// second set of commands from example (seems unnecessary)
+    3, UC8151_PSR, 0x2f, 0x08,
+    6, UC8151_PWR, 0x37, 0x00, 0x05, 0x05, 0x00,
+    5, UC8151_TRES, 0x02, 0x80, 0x01, 0x90,
+    1, UC8151_PON, // power on
+    BUSY_WAIT,
+    0x00
+};
+
 const uint8_t epd583r_init[] PROGMEM = {
     0x03, 0x01, 0x37, 0x00, // power setting
     0x03, 0x00, 0xcf, 0x08, // panel setting
@@ -1432,6 +1453,30 @@ const uint8_t epd583r_init[] PROGMEM = {
     BUSY_WAIT,
     0x00
 };          
+
+const uint8_t epd81c_init_full[] PROGMEM = {
+    BUSY_WAIT,
+    7, 0xaa, 0x49, 0x55, 0x20, 0x08, 0x09, 0x18,
+    2, UC8151_PWR, 0x3f,
+    3, UC8151_PSR, 0x5f, 0x69,
+    BUSY_WAIT,
+    5, 0x05, 0x40, 0x1f, 0x1f, 0x2c,
+    5, 0x08, 0x6f, 0x1f, 0x1f, 0x22,
+    5, UC8151_BTST, 0x6f, 0x1f, 0x16, 0x16,
+    5, UC8151_PFS, 0x00, 0x54, 0x00, 0x44,
+    3, UC8151_TCON, 0x02, 0x00,
+    2, UC8151_PLL, 0x08,
+    5, UC8151_TRES, 0x02, 0x00, 0x02, 0x40,
+    BUSY_WAIT,
+    2, UC8151_CDI, 0x3f,
+    2, UC8151_PWS, 0x2f,
+    2, UC8151_VDCS, 0x01,
+    2, 0xe0, 0x01,
+    5, UC8151_BTST, 0x6f, 0x1f, 0x16, 0x25,
+    1, UC8151_PON,
+    BUSY_WAIT, 
+    0x00
+};
 
 #ifdef NO_RAM
 uint8_t u8Cache[128]; // buffer a single line of up to 1024 pixels
@@ -1481,6 +1526,8 @@ const EPD_PANEL panelDefs[] PROGMEM = {
     {800, 480, 0, epd75r_init, NULL, NULL, BBEP_3COLOR | BBEP_RED_SWAPPED, BBEP_CHIP_UC81xx, u8Colors_3clr}, // EP75R_800x480, waveshare 7.5 800x480 B/W/R
     {480, 800, 0, epd426_init_full, epd426_init_fast, epd426_init_part, 0, BBEP_CHIP_SSD16xx, u8Colors_2clr},
     {128, 296, 0, epd29r2_init_sequence_full, NULL, NULL, BBEP_RED_SWAPPED | BBEP_3COLOR, BBEP_CHIP_UC81xx, u8Colors_3clr}, // EP29R2_128x296 Adafruit 2.9" 128x296 Tricolor FeatherWing
+    {640, 400, 0, epd41_init_sequence_full, NULL, NULL, BBEP_4BPP_DATA, BBEP_CHIP_UC81xx, u8Colors_2clr}, // EP41_640x400 Eink ED040TC1
+    {1024, 576, 0, epd81c_init_full, NULL, NULL, BBEP_SPLIT_BUFFER | BBEP_7COLOR, BBEP_CHIP_UC81xx, u8Colors_spectra}, // 8.1" 1024x576 dual cable Spectra 6 EP81_SPECTRA_1024x576
 };
 //
 // Set the e-paper panel type
@@ -1816,6 +1863,16 @@ void bbepFill(BBEPDISP *pBBEP, unsigned char ucColor, int iPlane)
             if (ucColor == BBEP_WHITE) ucColor = 0xff;
             else if (ucColor == BBEP_BLACK) ucColor = 0;
             uc1 = uc2 = ucColor;
+            if (pBBEP->iFlags & BBEP_4BPP_DATA) { // special case
+                 // EInk 4.1" 640x400 uses 4-bpp data for 1-bpp images
+                 uc1 = (ucColor == BBEP_WHITE) ? 0x00 : 0x11;
+                 memset(u8Cache, uc1, pBBEP->native_width/2);
+                 bbepWriteCmd(pBBEP, 0x10);
+                 for (y=0; y<pBBEP->native_height; y++) {
+                     bbepWriteData(pBBEP, u8Cache, pBBEP->native_width/2);
+                 }
+                 return;
+            }
         }
         if (pBBEP->chip_type == BBEP_CHIP_UC81xx) {
             if (pBBEP->iFlags & (BBEP_RED_SWAPPED | BBEP_4COLOR)) {
@@ -1857,6 +1914,12 @@ int bbepRefresh(BBEPDISP *pBBEP, int iMode)
     switch (iMode) {
         case REFRESH_FULL:
             bbepSendCMDSequence(pBBEP, pBBEP->pInitFull);
+            if (pBBEP->iFlags & BBEP_SPLIT_BUFFER) {
+               // Send the same sequence to the second controller
+               pBBEP->iCSPin = pBBEP->iCS2Pin;
+               bbepSendCMDSequence(pBBEP, pBBEP->pInitFull);
+               pBBEP->iCSPin = pBBEP->iCS1Pin;
+            }
             break;
         case REFRESH_FAST:
             if (!pBBEP->pInitFast)
@@ -1873,7 +1936,13 @@ int bbepRefresh(BBEPDISP *pBBEP, int iMode)
     } // switch on mode
     if (pBBEP->chip_type == BBEP_CHIP_UC81xx) {
         if (pBBEP->iFlags & (BBEP_4COLOR | BBEP_7COLOR)) {
-            bbepCMD2(pBBEP, 0x12, 0x00);
+            bbepCMD2(pBBEP, UC8151_DRF, 0x00);
+            if (pBBEP->iFlags & BBEP_SPLIT_BUFFER) {
+               // Send the same sequence to the second controller
+               pBBEP->iCSPin = pBBEP->iCS2Pin;
+               bbepCMD2(pBBEP, UC8151_DRF, 0);
+               pBBEP->iCSPin = pBBEP->iCS1Pin;
+            }
         } else {
             bbepWriteCmd(pBBEP, UC8151_PTOU); // partial out (update the entire panel, not just the last memory window)
             bbepWriteCmd(pBBEP, UC8151_DRF);
@@ -2037,6 +2106,84 @@ void bbepWriteImage4bppSpecial(BBEPDISP *pBBEP, uint8_t ucCMD)
   } // 270
 } /* bbepWriteImage4bppSpecial() */
 
+// special case for panels with 2 controllers
+void bbepWriteImage4bppDual(BBEPDISP *pBBEP, uint8_t ucCMD)
+{
+    int tx, ty, iPitch;
+    uint8_t uc, *s, *d;
+        
+    if (ucCMD) {
+        pBBEP->iCSPin = pBBEP->iCS1Pin;
+        bbepWriteCmd(pBBEP, ucCMD); // start write
+        pBBEP->iCSPin = pBBEP->iCS2Pin;
+        bbepWriteCmd(pBBEP, ucCMD);
+    }
+    if (pBBEP->iOrientation == 0) {
+        iPitch = pBBEP->native_width / 2;
+        s = pBBEP->ucScreen;
+        for (ty=0; ty<pBBEP->height; ty++) {
+            pBBEP->iCSPin = pBBEP->iCS1Pin;
+            bbepWriteData(pBBEP, s, iPitch/2);
+            pBBEP->iCSPin = pBBEP->iCS2Pin;
+            bbepWriteData(pBBEP, &s[iPitch/2], iPitch/2);
+            s += iPitch; // 2 pixels per byte
+        } // for ty
+    } else if (pBBEP->iOrientation == 180) {
+        iPitch = pBBEP->native_width / 2;
+        for (ty=pBBEP->height-1; ty>=0; ty--) {
+            s = &pBBEP->ucScreen[(ty * iPitch) + iPitch - 1];
+            // reverse the pixel direction
+            for (tx=0; tx<pBBEP->native_width; tx+=2) {
+                uc = *s--;
+                uc = (uc >> 4) | (uc << 4); // swap nibbles
+                u8Cache[tx/2] = uc;
+            }
+            pBBEP->iCSPin = pBBEP->iCS1Pin;
+            bbepWriteData(pBBEP, u8Cache, iPitch/2);
+            pBBEP->iCSPin = pBBEP->iCS2Pin;
+            bbepWriteData(pBBEP, &u8Cache[iPitch/2], iPitch/2);
+        } // for ty
+    } else if (pBBEP->iOrientation == 90) {
+        iPitch = pBBEP->native_height / 2;
+        for (tx=0; tx<pBBEP->width; tx++) {
+            d = u8Cache;
+            for (ty=pBBEP->height-1; ty > 0; ty-=2) {
+                s = &pBBEP->ucScreen[(tx>>1) + (ty * iPitch)];
+                if (tx & 1) {
+                    uc = (s[0] << 4) | (s[-iPitch] & 0x0f);
+                } else {
+                    uc = (s[0] & 0xf0) | (s[-iPitch] >> 4);
+                }
+                s -= iPitch*2;
+                *d++ = uc; // store 4 pixels
+            } // for ty
+            pBBEP->iCSPin = pBBEP->iCS1Pin;
+            bbepWriteData(pBBEP, u8Cache, pBBEP->height/4);
+            pBBEP->iCSPin = pBBEP->iCS2Pin;
+            bbepWriteData(pBBEP, &u8Cache[pBBEP->height/4], pBBEP->height/4);
+        } // for tx
+    } else if (pBBEP->iOrientation == 270) {
+        iPitch = pBBEP->native_height / 2;
+        for (tx=pBBEP->width-1; tx>= 0; tx--) {
+            d = u8Cache;
+            for (ty=0; ty < pBBEP->height; ty+=2) {
+                s = &pBBEP->ucScreen[(tx>>1) + (ty * iPitch)];
+                if (tx & 1) {
+                    uc = (s[0] << 4) | (s[iPitch] & 0x0f);
+                } else {
+                    uc = (s[0] & 0xf0) | (s[iPitch] >> 4);
+                }
+                s += iPitch*2;
+                *d++ = uc; // store 4 pixels
+            } // for ty
+            pBBEP->iCSPin = pBBEP->iCS1Pin;
+            bbepWriteData(pBBEP, u8Cache, pBBEP->height/4);
+            pBBEP->iCSPin = pBBEP->iCS2Pin;
+            bbepWriteData(pBBEP, &u8Cache[pBBEP->height/4], pBBEP->height/4);     
+        } // for tx
+    }
+} /* bbepWriteImage4bppDual() */
+
 void bbepWriteImage4bpp(BBEPDISP *pBBEP, uint8_t ucCMD)
 {
     int tx, ty, iPitch;
@@ -2169,7 +2316,46 @@ uint8_t *pBuffer;
 } /* bbepWriteImage2bpp() */
 
 //
-// Write Image data (entire plane) from RAM to the e-paper
+// Write 1-bpp graphics to a display which wants to receive it as 4-bpp
+//
+static void bbepWriteImage1to4bpp(BBEPDISP *pBBEP, uint8_t ucCMD, uint8_t *pBuffer, int bInvert)
+{
+    int tx, ty;
+    uint8_t *s, *d, ucSrcMask, ucDstMask, uc;
+    uint8_t ucInvert = 0;
+    int iPitch;
+// lookup table to convert 2 bits into 8
+    const uint8_t u8Lookup[4] = {0x00, 0x01, 0x10, 0x11};
+
+    iPitch = (pBBEP->width + 7) >> 3;
+    if (bInvert) {
+        ucInvert = 0xff; // red logic is inverted
+    }
+    if (ucCMD) {
+        bbepWriteCmd(pBBEP, ucCMD); // start write
+    }
+    // Convert the bit direction and write the data to the EPD
+    switch (pBBEP->iOrientation) {
+        case 0:
+            for (ty=0; ty<pBBEP->native_height; ty++) {
+                d = u8Cache;
+                s = &pBuffer[ty * iPitch];
+                for (tx=0; tx<iPitch; tx++) {
+                    uc = *s++;
+                    *d++ = u8Lookup[uc >> 6];
+                    *d++ = u8Lookup[(uc >> 4) & 3];
+                    *d++ = u8Lookup[(uc >> 2) & 3];
+                    *d++ = u8Lookup[uc & 3];
+                }
+                if (ucInvert) InvertBytes(u8Cache, iPitch*4);
+                bbepWriteData(pBBEP, u8Cache, iPitch*4);
+            } // for ty
+            break;
+    } // switch
+} /* bbepWriteImage1to4bpp() */
+
+//
+// Write Image data (1-bpp entire plane) from RAM to the e-paper
 // Rotate the pixels if necessary
 //
 static void bbepWriteImage(BBEPDISP *pBBEP, uint8_t ucCMD, uint8_t *pBuffer, int bInvert)
@@ -2264,12 +2450,20 @@ int bbepWritePlane(BBEPDISP *pBBEP, int iPlane)
     }
     bbepSetAddrWindow(pBBEP, 0,0, pBBEP->native_width, pBBEP->native_height);
 
-    if (pBBEP->iFlags & BBEP_4BPP_DATA) { // special case for some 3-color panels
-        bbepWriteImage4bppSpecial(pBBEP, 0x10);
+    if (pBBEP->iFlags & BBEP_4BPP_DATA) { // special case for some 2 and 3-color panels
+        if (pBBEP->iFlags & BBEP_3COLOR) {
+            bbepWriteImage4bppSpecial(pBBEP, 0x10);
+        } else {
+            bbepWriteImage1to4bpp(pBBEP, 0x10, pBBEP->ucScreen, 0);
+        }
         return BBEP_SUCCESS;
     }
     if (pBBEP->iFlags & BBEP_7COLOR) {
-        bbepWriteImage4bpp(pBBEP, 0x10);
+        if (pBBEP->iFlags & BBEP_SPLIT_BUFFER) { // dual cable EPD
+           bbepWriteImage4bppDual(pBBEP, 0x10);
+        } else {
+           bbepWriteImage4bpp(pBBEP, 0x10);
+        }
         return BBEP_SUCCESS;
     }
     if (pBBEP->iFlags & BBEP_4COLOR) { // 4-color only has 1 way to go

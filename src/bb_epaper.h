@@ -141,6 +141,8 @@ enum {
     EP75R_800x480, // Waveshare 800x480 3-color
     EP426_480x800, // Waveshare 4.26" B/W 480x800
     EP29R2_128x296, // Adafruit 2.9" 128x296 Tricolor FeatherWing
+    EP41_640x400, // EInk ED040TC1 SPI UC81xx
+    EP81_SPECTRA_1024x576, // Spectra 8.1" 1024x576 6-colors
     EP_PANEL_COUNT
 };
 #ifdef FUTURE
@@ -179,6 +181,7 @@ enum {
 #define BBEP_CS_EVERY_BYTE 0x0040
 #define BBEP_PARTIAL2 0x0080
 #define BBEP_4BPP_DATA 0x0100
+#define BBEP_SPLIT_BUFFER 0x0200
 
 #define BBEP_BLACK 0
 #define BBEP_WHITE 1
@@ -381,6 +384,7 @@ int iDataTime, iOpTime; // time in milliseconds for data transmission and operat
 uint32_t iSpeed;
 uint32_t iTimeout; // for e-paper panels
 uint8_t iDCPin, iMOSIPin, iCLKPin, iCSPin, iRSTPin, iBUSYPin;
+uint8_t iCS1Pin, iCS2Pin;
 uint8_t x_offset, y_offset; // memory offsets
 uint8_t is_awake, iPlane;
 const uint8_t *pColorLookup; // color translation table
@@ -409,6 +413,7 @@ class BBEPAPER
     int createVirtual(int iWidth, int iHeight, int iFlags);
     void setAddrWindow(int x, int y, int w, int h);
     int setPanelType(int iPanel);
+    void setCS2(uint8_t cs);
     bool hasFastRefresh();
     bool hasPartialRefresh();
 #ifdef ARDUINO
