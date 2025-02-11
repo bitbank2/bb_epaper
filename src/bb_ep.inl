@@ -2182,6 +2182,7 @@ void bbepWriteImage4bppDual(BBEPDISP *pBBEP, uint8_t ucCMD)
             bbepWriteData(pBBEP, &u8Cache[pBBEP->height/4], pBBEP->height/4);     
         } // for tx
     }
+    pBBEP->iCSPin = pBBEP->iCS1Pin; // reset CS to #1
 } /* bbepWriteImage4bppDual() */
 
 void bbepWriteImage4bpp(BBEPDISP *pBBEP, uint8_t ucCMD)
