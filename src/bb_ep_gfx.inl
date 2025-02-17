@@ -505,18 +505,30 @@ void InvertBytes(uint8_t *pData, uint8_t bLen)
 // draw the 1's bits as the FG color and leave
 // the background (0 pixels) unchanged - aka transparent.
 //
-int bbepLoadG5(BBEPDISP *pBBEP, const uint8_t *pG5, int x, int y, int iFG, int iBG)
+int bbepLoadG5(BBEPDISP *pBBEP, const uint8_t *pG5, int x, int y, int iFG, int iBG, float fScale)
 {
-    uint16_t rc, tx, ty, cx, cy, size;
+    uint16_t rc, tx, ty, cx, cy, dx, dy, size;
+    int width, height;
     BB_BITMAP *pbbb;
-    
-    if (pBBEP == NULL || pG5 == NULL) return BBEP_ERROR_BAD_PARAMETER;
-    iFG = pBBEP->pColorLookup[iFG & 0xf]; // translate the color for this display type
-    iBG = pBBEP->pColorLookup[iBG & 0xf];
+    uint32_t u32Frac, u32XAcc, u32YAcc; // integer fraction vars
+
+    if (pBBEP == NULL || pG5 == NULL || fScale < 0.01) return BBEP_ERROR_BAD_PARAMETER;
+    if (iFG != BBEP_TRANSPARENT) {
+        iFG = pBBEP->pColorLookup[iFG & 0xf]; // translate the color for this display type
+    }
+    if (iBG != BBEP_TRANSPARENT) {
+        iBG = pBBEP->pColorLookup[iBG & 0xf];
+    }
     pbbb = (BB_BITMAP *)pG5;
     if (pgm_read_word(&pbbb->u16Marker) != BB_BITMAP_MARKER) return BBEP_ERROR_BAD_DATA;
+    u32Frac = (uint32_t)(65536.0f / fScale); // calculate the fraction to advance the destination x/y
     cx = pgm_read_word(&pbbb->width);
     cy = pgm_read_word(&pbbb->height);
+    width = pBBEP->width;
+    height = pBBEP->height;
+    // Calculate scaled destination size
+    dx = (int)(fScale * (float)cx);
+    dy = (int)(fScale * (float)cy);
     size = pgm_read_word(&pbbb->size);
     if (iFG == -1) iFG = BBEP_WHITE;
     if (iBG == -1) iBG = BBEP_BLACK;
@@ -525,10 +537,16 @@ int bbepLoadG5(BBEPDISP *pBBEP, const uint8_t *pG5, int x, int y, int iFG, int i
     if (!pBBEP->ucScreen) { // no back buffer
         bbepSetAddrWindow(pBBEP, x, y, cx+(x&7), cy);
         bbepStartWrite(pBBEP, pBBEP->iPlane); // get ready to write
+        dy = cy; // scaling is only supported on internal framebuffers
+        u32Frac = 65536; // force to 1.0 scale
     }
-    for (ty=y; ty<y+cy && ty < pBBEP->height; ty++) {
+    u32YAcc = 65536; // force first line to get decoded
+    for (ty=y; ty<y+dy && ty < height; ty++) {
         uint8_t u8, *s, src_mask;
-        g5_decode_line(&g5dec, u8Cache);
+        while (u32YAcc >= 65536) { // advance to next source line
+            g5_decode_line(&g5dec, u8Cache);
+            u32YAcc -= 65536;
+        }
         if (!pBBEP->ucScreen) {
             if (x & 7) { // need to shift it over by 1-7 bits
                 uint8_t *d = s = u8Cache, uc1, uc0; // last shifted byte
@@ -553,13 +571,11 @@ int bbepLoadG5(BBEPDISP *pBBEP, const uint8_t *pG5, int x, int y, int iFG, int i
             bbepWriteData(pBBEP, u8Cache, (cx+(x&7)+7)>>3);
         } else { // use the setPixel function for more features
 #ifndef NO_RAM
-            src_mask = 0; // make it read a byte to start
             s = u8Cache;
-            for (tx=x; tx<x+cx; tx++) {
-                if (src_mask == 0) { // need to load the next byte
-                    u8 = *s++;
-                    src_mask = 0x80; // MSB on left
-                }
+            u32XAcc = 0;
+            u8 = *s++; // grab first source byte (8 pixels)
+            src_mask = 0x80;
+            for (tx=x; tx<x+dx && tx < width; tx++) {
                 if (u8 & src_mask) {
                     if (iFG != BBEP_TRANSPARENT)
                         (*pBBEP->pfnSetPixelFast)(pBBEP, tx, ty, (uint8_t)iFG);
@@ -567,10 +583,19 @@ int bbepLoadG5(BBEPDISP *pBBEP, const uint8_t *pG5, int x, int y, int iFG, int i
                     if (iBG != BBEP_TRANSPARENT)
                         (*pBBEP->pfnSetPixelFast)(pBBEP, tx, ty, (uint8_t)iBG);
                 }
-                src_mask >>= 1;
+                u32XAcc += u32Frac;
+                while (u32XAcc >= 65536) {
+                    u32XAcc -= 65536; // whole source pixel horizontal movement
+                    src_mask >>= 1;
+                    if (src_mask == 0) { // need to load the next byte
+                        u8 = *s++;
+                        src_mask = 0x80;
+                    }
+                }
             } // for tx
 #endif // NO_RAM
         }
+        u32YAcc += u32Frac;
     } // for y
     return BBEP_SUCCESS;
 } /* bbepLoadG5() */

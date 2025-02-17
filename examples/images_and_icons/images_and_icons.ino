@@ -5,25 +5,19 @@
 #include <bb_epaper.h>
 #include "bomb.h" // uncompressed 40x40 image
 #include "bart.h" // compressed 128x64 image
+#include "smiley.h" // 100x100 compressed image
 
 BBEPAPER bbep(EP295_128x296);
-// Mike Rankin's C3 e-ink PCB
-//#define PIN_DC 3
-//#define PIN_BUSY 1
-//#define PIN_RST 10
-//#define PIN_CS 7
-//#define PIN_MOSI 6
-//#define PIN_SCK 4
-#define PIN_DC 16
-#define PIN_BUSY 15
-#define PIN_RST 14
-#define PIN_CS 10
-#define PIN_MOSI MOSI
-#define PIN_SCK SCK
+#define CS_PIN 2
+#define DC_PIN 3
+#define RESET_PIN 5
+#define BUSY_PIN 4
+#define CLK_PIN 1
+#define MOSI_PIN 0
 
 void setup()
 {
-  bbep.initIO(PIN_DC, PIN_RST, PIN_BUSY, PIN_CS, PIN_MOSI, PIN_SCK, 8000000);
+  bbep.initIO(DC_PIN, RESET_PIN, BUSY_PIN, CS_PIN, MOSI_PIN, CLK_PIN, 8000000);
   // Do everything with no local buffer
   bbep.fillScreen(BBEP_WHITE);
   bbep.setCursor(0,4); // start a few pixels away from the top edge
@@ -39,6 +33,22 @@ void setup()
   for (int y=80; y<272; y+=64) {
       bbep.loadG5Image(bart, 0, y, BBEP_BLACK, BBEP_WHITE); // draw 3x 128x64 compressed Bart image at 0,y
   }
+  bbep.refresh(REFRESH_FULL);
+  bbep.wait();
+  delay(3000);
+  // Scaled drawing requires a back buffer
+  bbep.allocBuffer();
+  bbep.setRotation(270);
+  bbep.fillScreen(BBEP_WHITE);
+  bbep.setFont(FONT_12x16);
+  bbep.setCursor(0,0);
+  bbep.print("Scaled G5 needs RAM");
+  float f = 0.5;
+  for (int i=0; i<5; i++) {
+    bbep.loadG5Image(smiley, (int)(i*50), 16+(int)(i*12.5*f), BBEP_TRANSPARENT, BBEP_BLACK, f);
+    f += 0.25;
+  }
+  bbep.writePlane();
   bbep.refresh(REFRESH_FULL);
   bbep.wait();
   bbep.sleep(DEEP_SLEEP);

@@ -223,9 +223,9 @@ void BBEPAPER::setCursor(int x, int y)
     _bbep.iCursorY = y;
 } /* setCursor() */
 
-int BBEPAPER::loadG5Image(const uint8_t *pG5, int x, int y, int iFG, int iBG)
+int BBEPAPER::loadG5Image(const uint8_t *pG5, int x, int y, int iFG, int iBG, float fScale)
 {
-    return bbepLoadG5(&_bbep, pG5, x, y, iFG, iBG);
+    return bbepLoadG5(&_bbep, pG5, x, y, iFG, iBG, fScale);
 } /* loadG5Image() */
 
 int BBEPAPER::loadBMP(const uint8_t *pBMP, int x, int y, int iFG, int iBG)

@@ -447,7 +447,7 @@ class BBEPAPER
     void setCursor(int x, int y);
     int loadBMP(const uint8_t *pBMP, int x, int y, int iFG, int iBG);
     int loadBMP3(const uint8_t *pBMP, int x, int y);
-    int loadG5Image(const uint8_t *pG5, int x, int y, int iFG, int iBG);
+    int loadG5Image(const uint8_t *pG5, int x, int y, int iFG, int iBG, float fScale = 1.0f);
     void setFont(int iFont);
     void setFont(const void *pFont);
     void drawLine(int x1, int y1, int x2, int y2, int iColor);
