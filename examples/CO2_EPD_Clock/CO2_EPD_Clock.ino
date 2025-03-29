@@ -94,7 +94,14 @@ void setup() {
   } else { // can't find the sensor, stop
   } // no sensor connected or some error
   rtc.getTime(&myTime); // see if the clock is set
-  if (myTime.tm_hour == 0 && myTime.tm_min == 0) { // time is not set, give it a time/date
+  // If the time is not set, give it a time/date
+  // This can obviously be improved with a way to get user input
+  // to set/correct the time. I like to use temperature compensated RTCs
+  // like the DS3231 and RV3032. Both will only drift by a few seconds after
+  // a few months of continuous usage. Lower cost RTCs like the BM8563 can drift
+  // several seconds per day and should not be relied upon to keep accurate time for
+  // long periods.
+  if (myTime.tm_hour == 0 && myTime.tm_min == 0) {
     myTime.tm_sec = 0;
     myTime.tm_hour = 19;
     myTime.tm_min = 10;
@@ -120,9 +127,14 @@ int iCount = 0;
     delay(60000); // update once a minute
     epd.backupPlane(); // copy last data to "old plane"
     ShowInfo(0); // update plane 0 (with new data)
-    epd.writePlane(PLANE_BOTH); // UC8151 needs both planes written to do partial updates
-    // Do 15 partial (non-flashing) updates followed by a full update to remove ghosting
-    epd.refresh(((iCount & 15) == 0) ? REFRESH_FULL : REFRESH_PARTIAL);
+    if ((iCount & 15) == 0) { // do a full refresh
+      epd.writePlane(PLANE_DUPLICATE);
+      epd.refresh(REFRESH_FULL);
+    } else { // partial refresh
+      epd.writePlane(PLANE_BOTH); // UC8151 needs both planes written to do partial updates
+      // Do 15 partial (non-flashing) updates followed by a full update to remove ghosting
+      epd.refresh(REFRESH_PARTIAL);
+    }
     epd.wait();
     epd.sleep(LIGHT_SLEEP); // extends the life of the panel to sleep it between updates
     iCount++;
