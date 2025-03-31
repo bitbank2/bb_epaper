@@ -60,7 +60,7 @@ void ShowInfo(int iPlane)
   epd.setCursor((epd.width() - w)/2,124);
   epd.print(szDays[myTime.tm_wday]);
 
-  sprintf(szTemp, "%s %02d", szMonths[myTime.tm_mon-1], myTime.tm_mday); //myTime.tm_year-100
+  sprintf(szTemp, "%s %02d", szMonths[myTime.tm_mon], myTime.tm_mday); //myTime.tm_year-100
   epd.getTextBounds(szTemp, 0, 0, &x1, &y1, &w, &h); // need to center the text
   epd.setCursor((epd.width() - w)/2, 188);
   epd.print(szTemp);
@@ -103,12 +103,12 @@ void setup() {
   // long periods.
   if (myTime.tm_hour == 0 && myTime.tm_min == 0) {
     myTime.tm_sec = 0;
-    myTime.tm_hour = 19;
-    myTime.tm_min = 10;
+    myTime.tm_hour = 16;
+    myTime.tm_min = 48;
     myTime.tm_year = 2025;
-    myTime.tm_mon = 3;
-    myTime.tm_mday = 29;
-    myTime.tm_wday = 6;
+    myTime.tm_mon = 2; // Month (January = 0)
+    myTime.tm_mday = 31;
+    myTime.tm_wday = 1; // week day (Sunday = 0)
     rtc.setTime(&myTime);
   }
 } /* setup() */
