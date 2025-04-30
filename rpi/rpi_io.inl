@@ -86,6 +86,17 @@ void delay(int iMS)
   usleep(iMS * 1000);
 } /* delay() */
 
+long millis(void)
+{
+int iTime;
+struct timespec res;
+
+    clock_gettime(CLOCK_MONOTONIC, &res);
+    iTime = 1000*res.tv_sec + res.tv_nsec/1000000;
+
+    return (long)iTime;
+} /* millis() */
+
 static void delayMicroseconds(int iMS)
 {
   usleep(iMS);
@@ -133,6 +144,17 @@ void bbepCMD2(BBEPDISP *pBBEP, uint8_t cmd1, uint8_t cmd2)
     digitalWrite(pBBEP->iCSPin, HIGH);
     digitalWrite(pBBEP->iDCPin, HIGH); // leave data mode as the default
 } /* bbepCMD2() */
+//
+// Set the second CS pin for dual-controller displays
+//
+void bbepSetCS2(BBEPDISP *pBBEP, uint8_t cs)
+{
+    pBBEP->iCS1Pin = pBBEP->iCSPin;
+    pBBEP->iCS2Pin = cs;
+    pinMode(cs, OUTPUT);
+    digitalWrite(cs, HIGH); // disable second CS for now
+} /* bbepSetCS2() */
+
 //
 // Write a single byte as a COMMAND (D/C set low)
 //

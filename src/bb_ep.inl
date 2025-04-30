@@ -1639,6 +1639,7 @@ void bbepSetAddrWindow(BBEPDISP *pBBEP, int x, int y, int cx, int cy)
     if (!pBBEP) return;
     if (pBBEP->iFlags & (BBEP_4COLOR | BBEP_7COLOR)) return;
     
+#ifdef FUTURE
     if (pBBEP->chip_type == BBEP_CHIP_IT8951) {
         uint16_t u16Temp[6];
         u16Temp[0] = 0; // DEBUG (_endian_type << 8 | _pix_bpp << 4 | _rotate);
@@ -1649,6 +1650,7 @@ void bbepSetAddrWindow(BBEPDISP *pBBEP, int x, int y, int cx, int cy)
         bbepWriteIT8951CmdArgs(pBBEP, IT8951_TCON_LD_IMG_AREA, u16Temp, 5);
         return;
     }
+#endif
     tx = x/8; // round down to next lower byte
     ty = y;
     cx = (cx + 7) & 0xfff8; // make width an even number of bytes
