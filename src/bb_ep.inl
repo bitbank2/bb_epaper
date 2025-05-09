@@ -1478,6 +1478,11 @@ const uint8_t epd81c_init_full[] PROGMEM = {
     0x00
 };
 
+#ifndef _BB_EPAPER_CPP_
+// needed by some linkers that don't allow the same global to be defined
+// in multiple .c / .cpp source files.
+extern
+#endif
 #ifdef NO_RAM
 uint8_t u8Cache[128]; // buffer a single line of up to 1024 pixels
 #else // we need a larger cache for 4-bit panels

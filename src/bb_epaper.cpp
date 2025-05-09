@@ -31,8 +31,14 @@ void delay(int);
 
 #endif // _LINUX_
 
+#define _BB_EPAPER_CPP_
 #include "bb_epaper.h"
-#ifdef _LINUX_
+
+#ifdef _CUSTOM_IO_
+#define xstr(s) str(s)
+#define str(s) #s
+#include xstr(_CUSTOM_IO_)
+#elif defined _LINUX_
 #include "rpi_io.inl"
 #else
 #include "arduino_io.inl" // I/O (non-portable) code is in here
