@@ -103,7 +103,7 @@ void I2CInit(uint32_t iSpeed)
     gpio_pull_up(I2C_SCL);
  }
 
-static void bbepWriteData(BBEPDISP *pBBEP, uint8_t *pData, int iLen)
+void bbepWriteData(BBEPDISP *pBBEP, uint8_t *pData, int iLen)
 {
       digitalWrite(pBBEP->iCSPin, LOW);
       spi_write_blocking(spi0, pData, iLen);
