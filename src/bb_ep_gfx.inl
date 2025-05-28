@@ -1099,12 +1099,11 @@ int tx, ty, iPitch, iDestPitch;
 // Draw a string of normal (8x8), small (6x8) or large (16x32) characters
 // At the given col+row
 //
-int bbepWriteString(BBEPDISP *pBBEP, int x, int y, char *szMsg, int iSize, int iColor)
+int bbepWriteString(BBEPDISP *pBBEP, int x, int y, char *szMsg, int iSize, int iColor, int iBG)
 {
     int i, iFontOff, iLen;
     uint8_t c, *s, ucCMD, ucCMD1, ucCMD2;
     uint8_t u8Temp[40];
-    int iBG;
     
     if (pBBEP == NULL) {
         return BBEP_ERROR_BAD_PARAMETER;
@@ -1112,7 +1111,6 @@ int bbepWriteString(BBEPDISP *pBBEP, int x, int y, char *szMsg, int iSize, int i
     if (iColor != BBEP_TRANSPARENT) {
         iColor = pBBEP->pColorLookup[iColor & 0xf];
     }
-    iBG = pBBEP->iBG;
     if (iBG == -1) iBG = BBEP_TRANSPARENT; // -1 = don't care
     if (iBG != BBEP_TRANSPARENT) {
         iBG = pBBEP->pColorLookup[iBG & 0xf];

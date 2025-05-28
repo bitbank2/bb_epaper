@@ -280,8 +280,8 @@ const uint8_t epd29r_init_sequence_full[] PROGMEM = {
     0x02, 0x18, 0x80, // temp sensor = internal
     0x02, 0x21, 0x00, // display update ctrl 1
     0x02, 0x22, 0xb1, // display update ctrl 2
-    0x01, 0x20, // master activation
-    BUSY_WAIT,
+//    0x01, 0x20, // master activation
+//    BUSY_WAIT,
     0x02, 0x4e, 0x00, // RAM X counter
     0x03, 0x4f, 0x27, 0x01, // RAM Y counter
     0x00

@@ -384,7 +384,7 @@ int w=8, h=8;
             _bbep.iCursorX = 0;               // Reset x to zero,
             _bbep.iCursorY += h; // advance y one line
         }
-        bbepWriteString(&_bbep, -1, -1, szTemp, _bbep.iFont, _bbep.iFG);
+        bbepWriteString(&_bbep, -1, -1, szTemp, _bbep.iFont, _bbep.iFG, _bbep.iBG);
     }
   } else { // Custom font
       BB_FONT *pBBF = (BB_FONT *)_bbep.pFont;
@@ -490,7 +490,7 @@ void BBEPAPER::drawString(const char *pText, int x, int y)
     if (_bbep.pFont) {
         bbepWriteStringCustom(&_bbep, (BB_FONT *)_bbep.pFont, x, y, (char *)pText, _bbep.iFG, 0); // iPlane);
     } else if (_bbep.iFont >= FONT_6x8 && _bbep.iFont < FONT_COUNT) {
-        bbepWriteString(&_bbep, x, y, (char *)pText, _bbep.iFont, _bbep.iFG);
+        bbepWriteString(&_bbep, x, y, (char *)pText, _bbep.iFont, _bbep.iFG, _bbep.iBG);
     }
 } /* drawString() */
 
