@@ -1617,6 +1617,18 @@ void bbepWaitBusy(BBEPDISP *pBBEP)
     }
 } /* bbepWaitBusy() */
 //
+// Return if panel is busy
+//
+bool bbepIsBusy(BBEPDISP *pBBEP)
+{
+    if (!pBBEP) return false;
+    if (pBBEP->iBUSYPin == 0xff) return false;
+    delay(10); // give time for the busy status to be valid
+    uint8_t busy_idle =  (pBBEP->chip_type == BBEP_CHIP_UC81xx) ? HIGH : LOW;
+    delay(1); // some panels need a short delay before testing the BUSY line
+    return (digitalRead(pBBEP->iBUSYPin) != busy_idle);
+} /* bbepWaitBusy() */
+//
 // Toggle the reset line to wake up the eink from deep sleep
 //
 void bbepWakeUp(BBEPDISP *pBBEP)
