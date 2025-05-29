@@ -1725,6 +1725,11 @@ void bbepSleep(BBEPDISP *pBBEP, int bDeep)
     if (pBBEP->chip_type == BBEP_CHIP_UC81xx) {
         if (pBBEP->iFlags & BBEP_7COLOR) {
             bbepCMD2(pBBEP, UC8151_POFF, 0x00); // power off
+            if (pBBEP->iFlags & BBEP_SPLIT_BUFFER) { // dual cable EPD
+               pBBEP->iCSPin = pBBEP->iCS2Pin;
+               bbepCMD2(pBBEP, UC8151_POFF, 0x00); // second controller
+               pBBEP->iCSPin = pBBEP->iCS1Pin;
+            }
         } else {
             bbepCMD2(pBBEP, UC8151_CDI, 0x17); // border floating
             bbepWriteCmd(pBBEP, UC8151_POFF); // power off

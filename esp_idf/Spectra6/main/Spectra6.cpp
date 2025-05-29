@@ -37,6 +37,16 @@ extern "C" void app_main(void)
     bbep.writePlane();
     bbep.refresh(REFRESH_FULL);
     bbep.sleep(1); // deep sleep
+    vTaskDelay(200); // wait 2 seconds
+// try different content
+    bbep.fillScreen(BBEP_YELLOW);
+    bbep.setTextColor(BBEP_GREEN);
+    bbep.setCursor(200, 300);
+    bbep.print("Second time is broken?");
+    bbep.writePlane();
+    bbep.refresh(REFRESH_FULL);
+    bbep.sleep(1);
+
     while (1) {
         vTaskDelay(1);
     }

@@ -200,6 +200,14 @@ void bbepWriteCmd(BBEPDISP *pBBEP, uint8_t cmd)
         // if it's asleep, it can't receive commands
         bbepWakeUp(pBBEP);
         pBBEP->is_awake = 1;
+        if (pBBEP->iFlags & BBEP_7COLOR) { // need to send before you can send it data
+            bbepSendCMDSequence(pBBEP, pBBEP->pInitFull);
+            if (pBBEP->iFlags & BBEP_SPLIT_BUFFER) { // dual cable EPD
+                pBBEP->iCSPin = pBBEP->iCS2Pin;
+                bbepSendCMDSequence(pBBEP, pBBEP->pInitFull); // second controller
+                pBBEP->iCSPin = pBBEP->iCS1Pin;
+            }
+        }
     }
     digitalWrite(pBBEP->iDCPin, LOW);
     delay(1);
@@ -281,8 +289,15 @@ void bbepInitIO(BBEPDISP *pBBEP, uint8_t u8DC, uint8_t u8RST, uint8_t u8BUSY, ui
     assert(ret==ESP_OK);
     
     if (pBBEP->iFlags & BBEP_7COLOR) { // need to send before you can send it data
+        pBBEP->is_awake = 1;
         bbepSendCMDSequence(pBBEP, pBBEP->pInitFull);
+        if (pBBEP->iFlags & BBEP_SPLIT_BUFFER) { 
+           // Send the same sequence to the second controller
+           pBBEP->iCSPin = pBBEP->iCS2Pin;
+           bbepSendCMDSequence(pBBEP, pBBEP->pInitFull);
+           pBBEP->iCSPin = pBBEP->iCS1Pin;
+        }
     }
-} /* spi_init() */
+} /* bbepInitIO() */
 
 #endif // __ESP_IDF_IO__
