@@ -35,8 +35,12 @@ void delay(int);
 #ifdef _LINUX_
 #include "rpi_io.inl"
 #else
+#ifdef ARDUINO
 #include "arduino_io.inl" // I/O (non-portable) code is in here
-#endif
+#else
+#include "../esp_idf/esp_generic.inl" // ESP-IDF specific
+#endif // ARDUINO
+#endif // _LINUX_
 #include "bb_ep.inl" // All of the display interface code is in here
 #include "bb_ep_gfx.inl" // drawing code
 
@@ -71,7 +75,7 @@ void BBEPAPER::setCS2(uint8_t cs)
     bbepSetCS2(&_bbep, cs);
 }
 
-#ifdef ARDUINO
+#ifndef _LINUX_
 void BBEPAPER::initIO(int iDC, int iReset, int iBusy, int iCS, int iMOSI, int iSCLK, uint32_t u32Speed)
 {
     bbepInitIO(&_bbep, iDC, iReset, iBusy, iCS, iMOSI, iSCLK, u32Speed);
@@ -260,7 +264,7 @@ void BBEPAPER::drawLine(int x1, int y1, int x2, int y2, int iColor)
     bbepDrawLine(&_bbep, x1, y1, x2, y2, iColor);
 } /* drawLine() */
 
-#ifdef _LINUX_
+#ifndef ARDUINO
 void BBEPAPER::print(const string &str)
 {
    print(str.c_str());
@@ -357,11 +361,11 @@ char ucTemp[4];
 	print((const char *)ucTemp);
 } /* println() */
 
-#endif // _LINUX_
+#endif // !ARDUINO_
 //
 // write (Arduino Print friend class)
 //
-#ifndef __AVR__
+#if !defined( __AVR__ )
 size_t BBEPAPER::write(uint8_t c) {
 char szTemp[2]; // used to draw 1 character at a time to the C methods
 int w=8, h=8;
@@ -409,7 +413,7 @@ int w=8, h=8;
   }
   return 1;
 } /* write() */
-#endif // !__AVR__
+#endif // ARDUINO && !__AVR__
 
 void BBEPAPER::drawPixel(int16_t x, int16_t y, uint8_t color)
 {

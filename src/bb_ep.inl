@@ -1489,7 +1489,7 @@ uint8_t u8Cache[512];
 // ** ONLY ADD NEW PANELS TO THE END OF THE LIST **
 //
 const EPD_PANEL panelDefs[] PROGMEM = {
-    {0}, // undefined panel
+    {0,0,0,NULL,NULL,NULL,0,0,NULL}, // undefined panel
     {400, 300, 0, epd42_init_sequence_full, NULL, epd42_init_sequence_part, 0, BBEP_CHIP_UC81xx, u8Colors_2clr}, // EP42_400x300
     {400, 300, 0, epd42b_init_sequence_full, epd42b_init_sequence_fast, epd42b_init_sequence_part, 0, BBEP_CHIP_SSD16xx, u8Colors_2clr}, // EP42B_400x300
     {122, 250, 0, epd213_122x250_init_sequence_full, NULL, epd213_122x250_init_sequence_part, 0, BBEP_CHIP_SSD16xx, u8Colors_2clr}, // EP213_122x250 WaveShare
@@ -1527,7 +1527,7 @@ const EPD_PANEL panelDefs[] PROGMEM = {
     {480, 800, 0, epd426_init_full, epd426_init_fast, epd426_init_part, 0, BBEP_CHIP_SSD16xx, u8Colors_2clr},
     {128, 296, 0, epd29r2_init_sequence_full, NULL, NULL, BBEP_RED_SWAPPED | BBEP_3COLOR, BBEP_CHIP_UC81xx, u8Colors_3clr}, // EP29R2_128x296 Adafruit 2.9" 128x296 Tricolor FeatherWing
     {640, 400, 0, epd41_init_sequence_full, NULL, NULL, BBEP_4BPP_DATA, BBEP_CHIP_UC81xx, u8Colors_2clr}, // EP41_640x400 Eink ED040TC1
-    {1024, 576, 0, epd81c_init_full, NULL, NULL, BBEP_SPLIT_BUFFER | BBEP_7COLOR, BBEP_CHIP_UC81xx, u8Colors_spectra}, // 8.1" 1024x576 dual cable Spectra 6 EP81_SPECTRA_1024x576
+    {1024, 576, 0, epd81c_init_full, NULL, NULL, BBEP_SPLIT_BUFFER | BBEP_7COLOR, BBEP_CHIP_UC81xx, u8Colors_spectra} // 8.1" 1024x576 dual cable Spectra 6 EP81_SPECTRA_1024x576
 };
 //
 // Set the e-paper panel type

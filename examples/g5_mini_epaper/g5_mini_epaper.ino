@@ -9,7 +9,7 @@
 #include <bb_epaper.h>
 #include "bart_80x128.h" // a pre-compressed image made with the Linux CLI tool in this repo
 
-BBEPAPER bbep(EPD102_80x128);
+BBEPAPER bbep(EP102_80x128);
 G5DECODER g5dec;
 #define IMAGE_WIDTH 80
 #define IMAGE_HEIGHT 128

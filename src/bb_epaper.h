@@ -396,7 +396,7 @@ BB_SET_PIXEL_FAST *pfnSetPixelFast;
 } BBEPDISP;
 
 #ifdef __cplusplus
-#if defined( _LINUX_ )
+#ifndef ARDUINO
 #include <string>
 using namespace std;
 class BBEPAPER
@@ -416,9 +416,13 @@ class BBEPAPER
     void setCS2(uint8_t cs);
     bool hasFastRefresh();
     bool hasPartialRefresh();
+#ifndef _LINUX_
 #ifdef ARDUINO
     void initIO(int iDC, int iReset, int iBusy, int iCS = SS, int iMOSI = MOSI, int iSCLK = SCK, uint32_t u32Speed = 8000000);
-#else
+#else // esp-idf?
+    void initIO(int iDC, int iReset, int iBusy, int iCS, int iMOSI, int iSCLK, uint32_t u32Speed);
+#endif // ARDUINO
+#else // _LINUX_
     void initIO(int iDC, int iReset, int iBusy, int iCS, int iSPIChannel, uint32_t u32Speed = 8000000);
 #endif
     int writePlane(int iPlane = PLANE_DUPLICATE);
@@ -475,7 +479,7 @@ class BBEPAPER
     int getPlane(void);
     int getChip(void);
     void drawSprite(const uint8_t *pSprite, int cx, int cy, int iPitch, int x, int y, uint8_t iColor);    
-#if defined (_LINUX_)
+#if !defined (ARDUINO)
     void print(const char *pString);
     void println(const char *pString);
     void print(int, int);
@@ -489,7 +493,7 @@ class BBEPAPER
     using Print::write;
     virtual size_t write(uint8_t);
 #endif // __AVR__
-#endif // _LINUX_
+#endif // !ARDUINO
 
   private:
     BBEPDISP _bbep;

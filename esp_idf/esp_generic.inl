@@ -6,6 +6,8 @@
 #ifndef __ESP_IDF_IO__
 #define __ESP_IDF_IO__
 
+#include "esp_timer.h"
+#include "driver/gpio.h"
 #include "driver/spi_master.h"
 
 #define INPUT 0
@@ -41,13 +43,13 @@ void pinMode(int iPin, int iMode)
 {
     gpio_config_t io_conf = {};
 
-    gpio_reset_pin(iPin);
+    gpio_reset_pin((gpio_num_t)iPin);
     if (iMode == DISABLED) return;
     io_conf.intr_type = GPIO_INTR_DISABLE; //disable interrupt
     //bit mask of the pins that you want to set,e.g.GPIO18/19
     io_conf.pin_bit_mask = (1ULL << iPin);
-    io_conf.pull_down_en = 0; //disable pull-down mode
-    io_conf.pull_up_en = (iMode == INPUT_PULLUP); // pull-up mode
+    io_conf.pull_down_en = GPIO_PULLDOWN_DISABLE;
+    io_conf.pull_up_en = (iMode == INPUT_PULLUP) ? GPIO_PULLUP_ENABLE : GPIO_PULLUP_DISABLE; // pull-up mode
     if (iMode == INPUT || iMode == INPUT_PULLUP) {
         io_conf.mode = GPIO_MODE_INPUT;
     } else { // must be output
@@ -59,6 +61,12 @@ int digitalRead(int iPin)
 {
   return (int)gpio_get_level((gpio_num_t)iPin);
 } /* digitalRead() */
+
+long millis(void)
+{
+    return (long)(esp_timer_get_time() / 1000L);
+} /* millis() */
+
 void delayMicroseconds(long l)
 {
     l *= 40;
