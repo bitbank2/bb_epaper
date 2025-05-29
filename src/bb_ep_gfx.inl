@@ -1642,6 +1642,8 @@ int bbepAllocBuffer(BBEPDISP *pBBEP)
 //
 // Draw a line from x1,y1 to x2,y2 in the given color
 // This function supports both buffered and bufferless drawing
+// (bufferless is barely functional for 1-bit displays and should not be
+// relied upon for full functionality).
 //
 void bbepDrawLine(BBEPDISP *pBBEP, int x1, int y1, int x2, int y2, uint8_t ucColor)
 {
