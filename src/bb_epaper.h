@@ -474,6 +474,7 @@ class BBEPAPER
     void stretchAndSmooth(uint8_t *pSrc, uint8_t *pDest, int w, int h, int iSmoothType);
     void sleep(int bDeep);
     void wait(bool bQuick = false);
+    bool isBusy(void);
     void drawString(const char *pText, int x, int y);
     void setPlane(int iPlane);
     int getPlane(void);

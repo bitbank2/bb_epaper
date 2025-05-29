@@ -517,6 +517,10 @@ void BBEPAPER::wait(bool bQuick)
 {
     bbepWaitBusy(&_bbep);
 }
+bool BBEPAPER::isBusy(void)
+{
+    return bbepIsBusy(&_bbep);
+}
 void BBEPAPER::drawString(const char *pText, int x, int y)
 {
     if (_bbep.pFont) {
