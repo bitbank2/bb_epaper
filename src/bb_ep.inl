@@ -2324,7 +2324,7 @@ uint8_t *pBuffer;
 static void bbepWriteImage1to4bpp(BBEPDISP *pBBEP, uint8_t ucCMD, uint8_t *pBuffer, int bInvert)
 {
     int tx, ty;
-    uint8_t *s, *d, ucSrcMask, ucDstMask, uc;
+    uint8_t *s, *d, uc;
     uint8_t ucInvert = 0;
     int iPitch;
 // lookup table to convert 2 bits into 8

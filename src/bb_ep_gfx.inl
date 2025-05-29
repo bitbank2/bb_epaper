@@ -1649,11 +1649,7 @@ void bbepDrawLine(BBEPDISP *pBBEP, int x1, int y1, int x2, int y2, uint8_t ucCol
     int dx = x2 - x1;
     int dy = y2 - y1;
     int error;
-    uint8_t *p, *pStart, ucFill = 0, mask, bOld, bNew;
     int xinc, yinc;
-    int y, x;
-    int iPitch;
-    int iRedOffset = 0;
     
     if (pBBEP == NULL) {
         return;
@@ -1675,7 +1671,6 @@ void bbepDrawLine(BBEPDISP *pBBEP, int x1, int y1, int x2, int y2, uint8_t ucCol
             y2 = temp;
         }
         
-        y = y1;
         dy = (y2 - y1);
         error = dx >> 1;
         yinc = 1;
@@ -1727,10 +1722,6 @@ void bbepDrawLine(BBEPDISP *pBBEP, int x1, int y1, int x2, int y2, uint8_t ucCol
 //
 static void DrawScaledPixel(BBEPDISP *pBBEP, int iCX, int iCY, int x, int y, int32_t iXFrac, int32_t iYFrac, uint8_t ucColor)
 {
-    uint8_t *d, ucMask;
-    int iPitch;
-    int iRedOffset = 0;
-    
     if (iXFrac != 0x10000) x = ((x * iXFrac) >> 16);
     if (iYFrac != 0x10000) y = ((y * iYFrac) >> 16);
     x += iCX; y += iCY;
@@ -1841,31 +1832,18 @@ void bbepEllipse(BBEPDISP *pBBEP, int iCenterX, int iCenterY, int32_t iRadiusX, 
 //
 void bbepRectangle(BBEPDISP *pBBEP, int x1, int y1, int x2, int y2, uint8_t ucColor, uint8_t bFilled)
 {
-    uint8_t *d, ucMask, ucMask2;
-    int tmp, iOff;
-    int iPitch;
-    int iRedOffset = 0;
+    int tmp;
     
     if (pBBEP == NULL) {
         return; // invalid - must have BBEPDISP structure
     }
     ucColor = pBBEP->pColorLookup[ucColor & 0xf];
 
-    if (!(pBBEP->iFlags & BBEP_7COLOR) && ucColor >= BBEP_YELLOW) {
-        if (pBBEP->iFlags & (BBEP_3COLOR | BBEP_4COLOR)) {
-            // use the second half of the image buffer
-            iRedOffset = pBBEP->width * ((pBBEP->height+7)/8);
-        } else { // force red to black if not present
-            ucColor = BBEP_BLACK;
-        }
-    }
-        
     if (x1 < 0 || y1 < 0 || x2 < 0 || y2 < 0 ||
         x1 >= pBBEP->width || y1 >= pBBEP->height || x2 >= pBBEP->width || y2 >= pBBEP->height) {
         pBBEP->last_error = BBEP_ERROR_BAD_PARAMETER;
         return; // invalid coordinates
     }
-    iPitch = pBBEP->width;
     // Make sure that X1/Y1 is above and to the left of X2/Y2
     // swap coordinates as needed to make this true
     if (x2 < x1)
