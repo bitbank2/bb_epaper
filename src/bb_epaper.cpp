@@ -509,6 +509,20 @@ int BBEPAPER::testPanelType(void)
 {
     return bbepTestPanelType(&_bbep);
 }
+void BBEPAPER::wake(void)
+{
+    bbepWakeUp(&_bbep);
+    if (_bbep.iFlags & BBEP_7COLOR) { // need to send before you can send it data
+        bbepSendCMDSequence(&_bbep, _bbep.pInitFull);
+        if (_bbep.iFlags & BBEP_SPLIT_BUFFER) { // dual cable EPD
+            _bbep.iCSPin = _bbep.iCS2Pin;
+            bbepSendCMDSequence(&_bbep, _bbep.pInitFull); // second controller 
+            _bbep.iCSPin = _bbep.iCS1Pin;
+        }
+    }
+
+}
+
 void BBEPAPER::sleep(int bDeep)
 {
     bbepSleep(&_bbep, bDeep);

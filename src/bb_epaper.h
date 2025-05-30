@@ -473,6 +473,7 @@ class BBEPAPER
     void fillEllipse(int16_t x, int16_t y, int32_t rx, int32_t ry, uint16_t color);
     void stretchAndSmooth(uint8_t *pSrc, uint8_t *pDest, int w, int h, int iSmoothType);
     void sleep(int bDeep);
+    void wake(void);
     void wait(bool bQuick = false);
     bool isBusy(void);
     void drawString(const char *pText, int x, int y);

@@ -200,14 +200,6 @@ void bbepWriteCmd(BBEPDISP *pBBEP, uint8_t cmd)
         // if it's asleep, it can't receive commands
         bbepWakeUp(pBBEP);
         pBBEP->is_awake = 1;
-        if (pBBEP->iFlags & BBEP_7COLOR) { // need to send before you can send it data
-            bbepSendCMDSequence(pBBEP, pBBEP->pInitFull);
-            if (pBBEP->iFlags & BBEP_SPLIT_BUFFER) { // dual cable EPD
-                pBBEP->iCSPin = pBBEP->iCS2Pin;
-                bbepSendCMDSequence(pBBEP, pBBEP->pInitFull); // second controller
-                pBBEP->iCSPin = pBBEP->iCS1Pin;
-            }
-        }
     }
     digitalWrite(pBBEP->iDCPin, LOW);
     delay(1);
