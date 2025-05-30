@@ -1355,7 +1355,7 @@ int bbepWriteString(BBEPDISP *pBBEP, int x, int y, char *szMsg, int iSize, int i
                                     (*pBBEP->pfnSetPixelFast)(pBBEP, x+ty, y+tx, iColor);
                                 }
                             } else if (iBG != BBEP_TRANSPARENT) {
-                                (*pBBEP->pfnSetPixelFast)(pBBEP, x+ty, y+tx+8, iBG);
+                                (*pBBEP->pfnSetPixelFast)(pBBEP, x+ty, y+tx, iBG);
                             }
                             u8Mask >>= 1;
                         }
