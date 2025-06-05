@@ -940,6 +940,37 @@ const uint8_t epd27_init_sequence_part[] PROGMEM =
     0x00 // end of table
 };
 
+const uint8_t ep7_init[] PROGMEM = 
+{
+   1, SSD1608_SW_RESET,
+   BUSY_WAIT,
+   4, 0x01, 0x7f, 0x02, 0x00, // gate set
+   2, 0x03, 0x00, // gate voltage control
+   4, 0x04, 0x41, 0xaa, 0x32, // set source voltage
+   2, 0x11, 0x03, // byte direction
+   2, 0x3c, 0x01, // border control
+   6, 0x0c, 0xae, 0xc7, 0xc3, 0xc0, 0x80, // boost strength
+   2, 0x18, 0x80, // enable internal temperature sensor
+   11, 0x37, 0x00, 0x00, 0xf8, 0x3f, 0x00, 0x40, 0x00, 0x00, 0x00, 0x01, // display options
+   5, 0x44, 0x00, 0x00, 0xbf, 0x03, // x dir/start
+   5, 0x45, 0x00, 0x00, 0x7f, 0x02, // y dir/start
+   3, 0x4e, 0x00, 0x00, // x addr start
+   3, 0x4f, 0x00, 0x00, // y addr start
+   BUSY_WAIT,
+   0
+};
+
+const uint8_t ep7_init_partial[] PROGMEM =
+{   
+    0x02, 0x11, 0x03,
+    0x05, 0x44, 0x00, 0x00, 0xbf, 0x03,
+    0x05, 0x45, 0x00, 0x00, 0x7f, 0x02,
+    0x02, 0x3c, 0x01, // border waveform
+    0x03, 0x4e, 0x00, 0x00,
+    0x03, 0x4f, 0x00, 0x00,
+    0
+};  
+
 const uint8_t epd426_init_full[] PROGMEM =
 {   
     0x01, SSD1608_SW_RESET, 
@@ -1527,7 +1558,8 @@ const EPD_PANEL panelDefs[] PROGMEM = {
     {480, 800, 0, epd426_init_full, epd426_init_fast, epd426_init_part, 0, BBEP_CHIP_SSD16xx, u8Colors_2clr},
     {128, 296, 0, epd29r2_init_sequence_full, NULL, NULL, BBEP_RED_SWAPPED | BBEP_3COLOR, BBEP_CHIP_UC81xx, u8Colors_3clr}, // EP29R2_128x296 Adafruit 2.9" 128x296 Tricolor FeatherWing
     {640, 400, 0, epd41_init_sequence_full, NULL, NULL, BBEP_4BPP_DATA, BBEP_CHIP_UC81xx, u8Colors_2clr}, // EP41_640x400 Eink ED040TC1
-    {1024, 576, 0, epd81c_init_full, NULL, NULL, BBEP_SPLIT_BUFFER | BBEP_7COLOR, BBEP_CHIP_UC81xx, u8Colors_spectra} // 8.1" 1024x576 dual cable Spectra 6 EP81_SPECTRA_1024x576
+    {1024, 576, 0, epd81c_init_full, NULL, NULL, BBEP_SPLIT_BUFFER | BBEP_7COLOR, BBEP_CHIP_UC81xx, u8Colors_spectra}, // 8.1" 1024x576 dual cable Spectra 6 EP81_SPECTRA_1024x576
+    {960, 640, 0, ep7_init, NULL, ep7_init_partial, 0, BBEP_CHIP_SSD16xx, u8Colors_2clr} // EP7_960x640 (ED070EC1)
 };
 //
 // Set the e-paper panel type
@@ -1696,9 +1728,25 @@ void bbepSetAddrWindow(BBEPDISP *pBBEP, int x, int y, int cx, int cy)
         //        bbepCMD2(pBBEP, SSD1608_DATA_MODE, 0x3);
         bbepWriteCmd(pBBEP, SSD1608_SET_RAMXPOS);
         tx += pBBEP->x_offset;
-        uc[0] = tx; // start x (byte boundary)
-        uc[1] = tx+((cx-1)>>3); // end x
-        bbepWriteData(pBBEP, uc, 2);
+        if (pBBEP->type == EP7_960x640) { // pixels, not bytes version
+            tx <<= 3;
+            uc[0] = (tx & 0xff);
+            uc[1] = ((tx >> 8) & 0xff); // high byte
+            uc[2] = (tx+cx-1) & 0xff; // low byte
+            uc[3] = (tx+cx-1) >> 8; // high byte
+            bbepWriteData(pBBEP, uc, 4);
+            // set ram counter to start of this region
+            bbepWriteCmd(pBBEP, SSD1608_SET_RAMXCOUNT);
+            uc[0] = (tx & 0xff);
+            uc[1] = (tx >> 8);
+            bbepWriteData(pBBEP, uc, 2);
+        } else { // bytes version
+            uc[0] = tx; // start x (byte boundary)
+            uc[1] = tx+((cx-1)>>3); // end x
+            bbepWriteData(pBBEP, uc, 2);
+            // set ram counter to start of this region
+            bbepCMD2(pBBEP, SSD1608_SET_RAMXCOUNT, tx);
+        }
         
         bbepWriteCmd(pBBEP, SSD1608_SET_RAMYPOS);
         uc[0] = (uint8_t)ty; // start y
@@ -1708,7 +1756,6 @@ void bbepSetAddrWindow(BBEPDISP *pBBEP, int x, int y, int cx, int cy)
         bbepWriteData(pBBEP, uc, 4);
         
         // set ram counter to start of this region
-        bbepCMD2(pBBEP, SSD1608_SET_RAMXCOUNT, tx);
         uc[0] = ty;
         uc[1] = (ty>>8);
         bbepWriteCmd(pBBEP, SSD1608_SET_RAMYCOUNT);

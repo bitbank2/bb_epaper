@@ -143,6 +143,7 @@ enum {
     EP29R2_128x296, // Adafruit 2.9" 128x296 Tricolor FeatherWing
     EP41_640x400, // EInk ED040TC1 SPI UC81xx
     EP81_SPECTRA_1024x576, // Spectra 8.1" 1024x576 6-colors
+    EP7_960x640, // ED070EC1
     EP_PANEL_COUNT
 };
 #ifdef FUTURE
