@@ -980,10 +980,10 @@ const uint8_t epd426_init_full[] PROGMEM =
     0x06, 0x0c, 0xae, 0xc7, 0xc3, 0xc0, 0x80, // set soft start
     0x04, 0x01, 0xdf, 0x01, 0x02, // driver output control
 //    0x03, 0x21, 0x40, 0x00, // display update control
-    0x02, 0x11, 0x03, // data entry mode
+    0x02, 0x3c, 0x01, // border waveform
+    0x02, 0x11, 0x01, // data entry mode
     0x05, 0x44, 0x00, 0x00, 0xdf, 0x01, // ram start/end
     0x05, 0x45, 0x00, 0x00, 0x1f, 0x03,
-    0x02, 0x3c, 0x01, // border waveform
     
     0x03, 0x4e, 0x00, 0x00,
     0x03, 0x4f, 0x00, 0x00,
@@ -1023,25 +1023,6 @@ const uint8_t epd42b_init_sequence_fast[] PROGMEM =
     2, 0x11, 0x3, // data entry mode
     0x03, 0x44, 0x00, 0x31, // ram start/end
     0x05, 0x45, 0x00, 0x00, 0x2b, 0x01,
-    0x02, 0x4e, 0x00,
-    0x03, 0x4f, 0x00, 0x00,
-    BUSY_WAIT,
-    0
-};
-
-const uint8_t epd426_init_fast[] PROGMEM =
-{
-    0x01, SSD1608_SW_RESET,
-    BUSY_WAIT,
-    3, 0x21, 0x40, 0x00,
-    2, 0x3c, 0x05,
-    2, 0x1a, 0x6e, // temp register
-    2, 0x22, 0x91, // load temp
-    1, 0x20,
-    BUSY_WAIT,
-    2, 0x11, 0x3, // data entry mode
-    0x03, 0x44, 0x00, 0x3b, // ram start/end
-    0x05, 0x45, 0x00, 0x00, 0x1f, 0x03,
     0x02, 0x4e, 0x00,
     0x03, 0x4f, 0x00, 0x00,
     BUSY_WAIT,
@@ -1555,7 +1536,7 @@ const EPD_PANEL panelDefs[] PROGMEM = {
     {640, 384, 0, epd74r_init, NULL, NULL,  BBEP_3COLOR | BBEP_4BPP_DATA, BBEP_CHIP_UC81xx, u8Colors_3clr}, // EP74R_640x384, 3-color 640x384
     {600, 448, 0, epd583r_init, NULL, NULL,  BBEP_3COLOR | BBEP_4BPP_DATA, BBEP_CHIP_UC81xx, u8Colors_3clr}, // EP583R_600x448, 3-color 600x448
     {800, 480, 0, epd75r_init, NULL, NULL, BBEP_3COLOR | BBEP_RED_SWAPPED, BBEP_CHIP_UC81xx, u8Colors_3clr}, // EP75R_800x480, waveshare 7.5 800x480 B/W/R
-    {480, 800, 0, epd426_init_full, epd426_init_fast, epd426_init_part, 0, BBEP_CHIP_SSD16xx, u8Colors_2clr},
+    {800, 480, 0, epd426_init_full, NULL, epd426_init_part, 0, BBEP_CHIP_SSD16xx, u8Colors_2clr},
     {128, 296, 0, epd29r2_init_sequence_full, NULL, NULL, BBEP_RED_SWAPPED | BBEP_3COLOR, BBEP_CHIP_UC81xx, u8Colors_3clr}, // EP29R2_128x296 Adafruit 2.9" 128x296 Tricolor FeatherWing
     {640, 400, 0, epd41_init_sequence_full, NULL, NULL, BBEP_4BPP_DATA, BBEP_CHIP_UC81xx, u8Colors_2clr}, // EP41_640x400 Eink ED040TC1
     {1024, 576, 0, epd81c_init_full, NULL, NULL, BBEP_SPLIT_BUFFER | BBEP_7COLOR, BBEP_CHIP_UC81xx, u8Colors_spectra}, // 8.1" 1024x576 dual cable Spectra 6 EP81_SPECTRA_1024x576
@@ -1728,8 +1709,10 @@ void bbepSetAddrWindow(BBEPDISP *pBBEP, int x, int y, int cx, int cy)
         //        bbepCMD2(pBBEP, SSD1608_DATA_MODE, 0x3);
         bbepWriteCmd(pBBEP, SSD1608_SET_RAMXPOS);
         tx += pBBEP->x_offset;
-        if (pBBEP->type == EP7_960x640) { // pixels, not bytes version
-            tx <<= 3;
+        if (pBBEP->type == EP7_960x640 || pBBEP->type == EP426_800x480) { // pixels, not bytes version
+            if (pBBEP->type == EP7_960x640) {
+                tx <<= 3;
+            }
             uc[0] = (tx & 0xff);
             uc[1] = ((tx >> 8) & 0xff); // high byte
             uc[2] = (tx+cx-1) & 0xff; // low byte
@@ -1749,10 +1732,17 @@ void bbepSetAddrWindow(BBEPDISP *pBBEP, int x, int y, int cx, int cy)
         }
         
         bbepWriteCmd(pBBEP, SSD1608_SET_RAMYPOS);
-        uc[0] = (uint8_t)ty; // start y
-        uc[1] = (uint8_t)(ty>>8);
-        uc[2] = (uint8_t)(ty+cy-1); // end y
-        uc[3] = (uint8_t)((ty+cy-1)>>8);
+        if (pBBEP->type == EP426_800x480) { // flipped y
+            uc[2] = (uint8_t)ty; // start y
+            uc[3] = (uint8_t)(ty>>8);
+            uc[0] = (uint8_t)(ty+cy-1); // end y
+            uc[1] = (uint8_t)((ty+cy-1)>>8);
+        } else {
+            uc[0] = (uint8_t)ty; // start y
+            uc[1] = (uint8_t)(ty>>8);
+            uc[2] = (uint8_t)(ty+cy-1); // end y
+            uc[3] = (uint8_t)((ty+cy-1)>>8);
+        }
         bbepWriteData(pBBEP, uc, 4);
         
         // set ram counter to start of this region
@@ -1762,6 +1752,7 @@ void bbepSetAddrWindow(BBEPDISP *pBBEP, int x, int y, int cx, int cy)
         bbepWriteData(pBBEP, uc, 2);
         //        bbepCMD2(pBBEP, SSD1608_DATA_MODE, 0x3);
     }
+    bbepWaitBusy(pBBEP);
 } /* bbepSetAddrWindow() */
 //
 // Put the eink into light or deep sleep
