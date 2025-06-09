@@ -11,7 +11,7 @@
 // Project started 9/23/2024
 // Copyright (c) 2024 BitBank Software, Inc.
 //
-#include "../../../src/bb_epaper.h"
+#include <bb_epaper.h>
 #include "Roboto_Black_78.h"
 #include <time.h>
 BBEPAPER bbep(EP42_400x300); // 4.2" UC81xx controller

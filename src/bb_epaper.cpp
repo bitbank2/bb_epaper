@@ -14,7 +14,7 @@
 // ./APL.txt.
 //
 
-#ifdef _LINUX_
+#ifdef __LINUX__
 #include <stdint.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -29,10 +29,10 @@
 void delay(int);
 #else // Arduino
 
-#endif // _LINUX_
+#endif // __LINUX__
 
 #include "bb_epaper.h"
-#ifdef _LINUX_
+#ifdef __LINUX__
 #include "rpi_io.inl"
 #else
 #ifdef ARDUINO
@@ -40,7 +40,7 @@ void delay(int);
 #else
 #include "../esp_idf/esp_generic.inl" // ESP-IDF specific
 #endif // ARDUINO
-#endif // _LINUX_
+#endif // __LINUX__
 #include "bb_ep.inl" // All of the display interface code is in here
 #include "bb_ep_gfx.inl" // drawing code
 
@@ -75,7 +75,7 @@ void BBEPAPER::setCS2(uint8_t cs)
     bbepSetCS2(&_bbep, cs);
 }
 
-#ifndef _LINUX_
+#ifndef __LINUX__
 void BBEPAPER::initIO(int iDC, int iReset, int iBusy, int iCS, int iMOSI, int iSCLK, uint32_t u32Speed)
 {
     bbepInitIO(&_bbep, iDC, iReset, iBusy, iCS, iMOSI, iSCLK, u32Speed);

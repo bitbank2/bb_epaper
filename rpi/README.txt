@@ -6,4 +6,5 @@ The SPI bus access is off by default, so to enable it, type the following:
 Select option 3 (Interface Options), then option I4 (SPI). Choose yes, then
 finish.
 
+Build the bb_epaper C/C++ static library by typing 'make' in the terminal. This will allow you to use the example programs.
 

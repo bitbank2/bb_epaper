@@ -21,7 +21,7 @@
 // AVR doesn't have enough RAM for a back buffer
 #define NO_RAM
 #endif // __AVR__
-#else // _LINUX_
+#else // __LINUX__
 // for Print support
 #define DEC 10
 #define HEX 16
@@ -32,7 +32,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
-#endif // _LINUX_
+#endif // __LINUX__
 
 // error messages
 enum {
@@ -407,7 +407,7 @@ class BBEPAPER : public Print
 #else
 class BBEPAPER
 #endif // !__AVR__
-#endif // _LINUX_
+#endif // __LINUX__
 {
   public:
     BBEPAPER(int iPanel);
@@ -417,16 +417,16 @@ class BBEPAPER
     void setCS2(uint8_t cs);
     bool hasFastRefresh();
     bool hasPartialRefresh();
-#ifndef _LINUX_
+#ifndef __LINUX__
 #ifdef ARDUINO
     void initIO(int iDC, int iReset, int iBusy, int iCS = SS, int iMOSI = MOSI, int iSCLK = SCK, uint32_t u32Speed = 8000000);
 #else // esp-idf?
     void initIO(int iDC, int iReset, int iBusy, int iCS, int iMOSI, int iSCLK, uint32_t u32Speed);
 #endif // ARDUINO
-#else // _LINUX_
+#else // __LINUX__
     void initIO(int iDC, int iReset, int iBusy, int iCS, int iSPIChannel, uint32_t u32Speed = 8000000);
 #endif
-    int writePlane(int iPlane = PLANE_DUPLICATE);
+    int writePlane(int iPlane = PLANE_BOTH);
     void startWrite(int iPlane);
     void writeData(uint8_t *pData, int iLen);
     void writeCmd(uint8_t u8Cmd);
