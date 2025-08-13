@@ -25,7 +25,7 @@
 static G5DECIMAGE g5dec;
 // forward declarations
 void InvertBytes(uint8_t *pData, uint8_t bLen);
-
+void bbepUnicodeString(const char *szMsg, uint8_t *szExtMsg);
 const uint8_t ucFont[]PROGMEM = {
     0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x06,0x5f,0x5f,0x06,0x00,
     0x00,0x07,0x07,0x00,0x07,0x07,0x00,0x14,0x7f,0x7f,0x14,0x7f,0x7f,0x14,
@@ -174,6 +174,77 @@ const uint8_t ucSmallFont[] PROGMEM = {
     0x00,0x41,0x41,0x3e,0x08,
     0x02,0x01,0x02,0x01,0x00,
     0x3c,0x26,0x23,0x26,0x3c};
+//
+// Get the size of text in a custom font area
+//
+void bbepGetStringBox(BBEPDISP *pBBEP, const char *szMsg, BB_RECT *pRect)
+{
+int cx = 0;
+unsigned int c, i = 0;
+BB_FONT *pBBF;
+BB_FONT_SMALL *pBBFS;
+BB_GLYPH *pGlyph;
+BB_GLYPH_SMALL *pSmallGlyph;
+int miny, maxy;
+uint8_t szExtMsg[80];
+
+   miny = 4000; maxy = 0;
+   if (pBBEP == NULL || pRect == NULL || szMsg == NULL) return; // bad pointers
+
+   if (pBBEP->pFont == NULL) { // built-in font
+        miny = 0;
+        switch (pBBEP->iFont) {
+            case FONT_6x8:
+                cx = 6;
+                maxy = 8;
+                break;
+            case FONT_8x8:
+                cx = 8;
+                maxy = 8;
+                break;
+            case FONT_12x16:
+                cx = 12;
+                maxy = 16;
+                break;
+            case FONT_16x16:
+                cx = 16;
+                maxy = 16;
+                break;
+        }
+        cx *= strlen(szMsg);
+   } else { // proportional fonts
+       bbepUnicodeString(szMsg, szExtMsg); // convert to extended ASCII
+       if (pgm_read_word(pBBEP->pFont) == BB_FONT_MARKER) {
+           pBBF = (BB_FONT *)pBBEP->pFont; pBBFS = NULL;
+       } else { // small font
+           pBBFS = (BB_FONT_SMALL *)pBBEP->pFont; pBBF = NULL;
+       }
+       while (szExtMsg[i]) {
+           c = szExtMsg[i++];
+           if (pBBF) { // big font
+               if (c < pgm_read_byte(&pBBF->first) || c > pgm_read_byte(&pBBF->last)) // undefined character
+                   continue; // skip it
+               c -= pgm_read_byte(&pBBF->first); // first char of font defined
+               pGlyph = &pBBF->glyphs[c];
+               cx += pgm_read_word(&pGlyph->xAdvance);
+               if ((int16_t)pgm_read_word(&pGlyph->yOffset) < miny) miny = pgm_read_word(&pGlyph->yOffset);
+               if (pgm_read_word(&pGlyph->height)+(int16_t)pgm_read_word(&pGlyph->yOffset) > maxy) maxy = pgm_read_word(&pGlyph->height)+(int16_t)pgm_read_word(&pGlyph->yOffset);
+           } else {  // small font
+               if (c < pgm_read_byte(&pBBFS->first) || c > pgm_read_byte(&pBBFS->last)) // undefined character
+                   continue; // skip it
+               c -= pgm_read_byte(&pBBFS->first); // first char of font defined
+               pSmallGlyph = &pBBFS->glyphs[c];
+               cx += pgm_read_byte(&pSmallGlyph->xAdvance);
+               if ((int8_t)pgm_read_byte(&pSmallGlyph->yOffset) < miny) miny = (int8_t)pgm_read_byte(&pSmallGlyph->yOffset);
+               if (pgm_read_byte(&pSmallGlyph->height)+(int8_t)pgm_read_byte(&pSmallGlyph->yOffset) > maxy) maxy = pgm_read_byte(&pSmallGlyph->height)+(int8_t)pgm_read_byte(&pSmallGlyph->yOffset);
+           } // small
+       }
+   } // prop fonts
+   pRect->w = cx;
+   pRect->x = pBBEP->iCursorX;
+   pRect->y = pBBEP->iCursorY + miny;
+   pRect->h = maxy - miny + 1;
+} /* bbepGetStringBox() */
 
 //
 // Draw a sprite of any size in any position
@@ -326,6 +397,61 @@ BBEPDISP *pBBEP = (BBEPDISP *)pb;
     u8 |= ucColor << ((3-(x & 3))*2);
     pBBEP->ucScreen[i] = u8;
 } /* bbepSetPixelFast4Clr() */
+
+int bbepSetPixel4Gray(void *pb, int x, int y, unsigned char ucColor)
+{
+int i;
+int iPitch, iSize;
+BBEPDISP *pBBEP = (BBEPDISP *)pb;
+const uint8_t u8Mask = 0x80 >> (x & 7);
+
+    // only available for local buffer operations
+    if (!pBBEP || !pBBEP->ucScreen) return BBEP_ERROR_BAD_PARAMETER;
+    ucColor = pBBEP->pColorLookup[ucColor & 0xf]; // translate the color for this display type
+
+    iPitch = (pBBEP->width+7)>>3;
+    iSize = ((pBBEP->native_width+7)>>3) * pBBEP->native_height;
+
+    i = (x >> 3) + (y * iPitch);
+    if (x < 0 || x >= pBBEP->width || i < 0 || i > iSize-1) { // off the screen
+        pBBEP->last_error = BBEP_ERROR_BAD_PARAMETER;
+        return BBEP_ERROR_BAD_PARAMETER;
+    }
+    if (ucColor & 1) { // first plane
+        pBBEP->ucScreen[i] |= u8Mask;
+    } else {
+        pBBEP->ucScreen[i] &= ~u8Mask;
+    }
+    if (ucColor & 2) { // second plane
+        pBBEP->ucScreen[iSize + i] |= u8Mask;
+    } else {
+        pBBEP->ucScreen[iSize + i] &= ~u8Mask;
+    }
+    return BBEP_SUCCESS;
+} /* bbepSetPixel4Gray() */
+
+void bbepSetPixelFast4Gray(void *pb, int x, int y, unsigned char ucColor)
+{
+int i;
+int iPitch, iSize;
+BBEPDISP *pBBEP = (BBEPDISP *)pb;
+const uint8_t u8Mask = 0x80 >> (x & 7);
+
+    iPitch = (pBBEP->width+7)>>3;
+    iSize = ((pBBEP->native_width+7)>>3) * pBBEP->native_height;
+    i = (x >> 3) + (y * iPitch);
+
+    if (ucColor & 1) { // first plane
+        pBBEP->ucScreen[i] |= u8Mask;
+    } else {
+        pBBEP->ucScreen[i] &= ~u8Mask;
+    }
+    if (ucColor & 2) { // second plane
+        pBBEP->ucScreen[iSize + i] |= u8Mask;
+    } else {
+        pBBEP->ucScreen[iSize + i] &= ~u8Mask;
+    }
+} /* bbepSetPixelFast4Gray() */
 
 int bbepSetPixel3Clr(void *pb, int x, int y, unsigned char ucColor)
 {
@@ -959,13 +1085,16 @@ uint16_t u16CP; // 16-bit codepoint encoded by the multi-byte sequence
 //
 // Draw a string of BB_FONT characters directly into the EPD framebuffer
 //
-int bbepWriteStringCustom(BBEPDISP *pBBEP, BB_FONT *pFont, int x, int y, char *szMsg, int iColor, uint8_t iPlane)
+int bbepWriteStringCustom(BBEPDISP *pBBEP, void *pFont, int x, int y, char *szMsg, int iColor, uint8_t iPlane)
 {
     int rc, i, h, w, j, end_y, dx, dy, tx, ty, tw, iSrcPitch, iPitch, iBG;
     signed int n;
     unsigned int c, bInvert = 0;
     uint8_t *s, uc0, uc1;
+    BB_FONT *pBBF;
+    BB_FONT_SMALL *pBBFS;
     BB_GLYPH *pGlyph;
+    BB_GLYPH_SMALL *pSmallGlyph;
     uint8_t *pBits, u8CMD1, u8CMD2, u8CMD, u8EndMask;
     uint8_t szExtMsg[256]; // translated extended ASCII message text
     uint8_t first, last;
@@ -975,6 +1104,15 @@ int bbepWriteStringCustom(BBEPDISP *pBBEP, BB_FONT *pFont, int x, int y, char *s
         pBBEP->last_error = BBEP_ERROR_BAD_PARAMETER;
         return BBEP_ERROR_BAD_PARAMETER; // invalid param
     }
+// Determine if we're using a small or large font
+    if (pgm_read_word(pFont) == BB_FONT_MARKER) {
+        pBBF = (BB_FONT *)pFont;
+        pBBFS = NULL;
+    } else {
+        pBBFS = (BB_FONT_SMALL *)pFont;
+        pBBF = NULL;
+    }
+
     if (iColor != BBEP_TRANSPARENT) {
         iColor = pBBEP->pColorLookup[iColor & 0xf]; // translate the color for this display type
     }
@@ -992,8 +1130,13 @@ int bbepWriteStringCustom(BBEPDISP *pBBEP, BB_FONT *pFont, int x, int y, char *s
         x = pBBEP->iCursorX;
     if (y == -1)
         y = pBBEP->iCursorY;
-    first = pgm_read_byte(&pFont->first);
-    last = pgm_read_byte(&pFont->last);
+    if (pBBF) {
+        first = pgm_read_byte(&pBBF->first);
+        last = pgm_read_byte(&pBBF->last);
+    } else {
+        first = pgm_read_byte(&pBBFS->first);
+        last = pgm_read_byte(&pBBFS->last);
+    }
     if (x == CENTER_X) { // center the string on the e-paper
         dx = i = 0;
         while (szExtMsg[i]) {
@@ -1001,37 +1144,67 @@ int bbepWriteStringCustom(BBEPDISP *pBBEP, BB_FONT *pFont, int x, int y, char *s
             if (c < first || c > last) // undefined character
                 continue; // skip it
             c -= first; // first char of font defined
-            pGlyph = &pFont->glyphs[c]; // glyph info for this character
-            dx += pgm_read_byte(&pGlyph->xAdvance);
+            if (pBBF) {
+                pGlyph = &pBBF->glyphs[c]; // glyph info for this character
+                dx += pgm_read_word(&pGlyph->xAdvance);
+            } else { // small font
+                pSmallGlyph = &pBBFS->glyphs[c]; // glyph info for this character
+                dx += pgm_read_byte(&pSmallGlyph->xAdvance);
+            }
         }
         x = (pBBEP->width - dx)/2;
         if (x < 0) x = 0;
     }
     // Point to the start of the compressed data
-    pBits = (uint8_t *)pFont;
-    pBits += sizeof(BB_FONT);
-    pBits += (last - first + 1) * sizeof(BB_GLYPH);
+    if (pBBF) {
+        pBits = (uint8_t *)pBBF;
+        pBits += sizeof(BB_FONT);
+        pBits += (last - first + 1) * sizeof(BB_GLYPH);
+    } else {
+        pBits = (uint8_t *)pBBFS;
+        pBits += sizeof(BB_FONT_SMALL);
+        pBits += (last - first + 1) * sizeof(BB_GLYPH_SMALL);
+    }
     i = 0;
     while (szExtMsg[i] && x < pBBEP->width && y < pBBEP->height) {
+        int16_t xOffset, yOffset;
+        uint32_t u32Offset, u32Rot, xAdvance;
         c = szExtMsg[i++];
         if (c < first || c > last) // undefined character
             continue; // skip it
         c -= first; // first char of font defined
-        pGlyph = &pFont->glyphs[c]; // glyph info for this character
-        if (pgm_read_byte(&pGlyph->width) > 1) { // skip this if drawing a space
-            s = pBits + pgm_read_word(&pGlyph->bitmapOffset); // start of compressed bitmap data
-            if (pgm_read_dword(&pFont->rotation) == 0 || pgm_read_dword(&pFont->rotation) == 180) {
-                h = pgm_read_word(&pGlyph->height);
-                w = pgm_read_byte(&pGlyph->width);
-                dx = x + (int16_t)pgm_read_word(&pGlyph->xOffset); // offset from character UL to start drawing
-                dy = y + (int16_t)pgm_read_word(&pGlyph->yOffset);
+        if (pBBF) {
+            pGlyph = &pBBF->glyphs[c]; // glyph info for this character
+            w = pgm_read_word(&pGlyph->width);
+            h = pgm_read_word(&pGlyph->height);
+            u32Offset = pgm_read_word(&pGlyph->bitmapOffset);
+            u32Rot = pgm_read_dword(&pBBF->rotation);
+            xAdvance = pgm_read_word(&pGlyph->xAdvance);
+            xOffset = (int16_t)pgm_read_word(&pGlyph->xOffset);
+            yOffset = (int16_t)pgm_read_word(&pGlyph->yOffset);
+        } else { // small font
+            pSmallGlyph = &pBBFS->glyphs[c]; // glyph info for this character
+            w = pgm_read_byte(&pSmallGlyph->width);
+            h = pgm_read_byte(&pSmallGlyph->height);
+            u32Offset = pgm_read_word(&pSmallGlyph->bitmapOffset);
+            u32Rot = pgm_read_dword(&pBBFS->rotation);
+            xAdvance = pgm_read_byte(&pSmallGlyph->xAdvance);
+            xOffset = (int8_t)pgm_read_byte(&pSmallGlyph->xOffset);
+            yOffset = (int8_t)pgm_read_byte(&pSmallGlyph->yOffset);
+        }
+        if (w > 1) { // skip this if drawing a space
+            s = pBits + u32Offset; // start of compressed bitmap data
+            if (u32Rot == 0 || u32Rot == 180) {
+                dx = x + xOffset; // offset from character UL to start drawing
+                dy = y + yOffset;
             } else { // rotated
-                w = pgm_read_word(&pGlyph->height);
-                h = pgm_read_byte(&pGlyph->width);
-                n = (int16_t)pgm_read_word(&pGlyph->yOffset); // offset from character UL to start drawing
+                dx = w; // swap height/width
+                w = h;
+                h = dx;
+                n = yOffset; // offset from character UL to start drawing
                 dx = x;
                 if (-n < w) dx -= (w+n); // since we draw from the baseline
-                dy = y + (int16_t)pgm_read_word(&pGlyph->xOffset);
+                dy = y + xOffset;
             }
             if ((dy + h) > pBBEP->height) { // trim it
                 h = pBBEP->height - dy;
@@ -1041,7 +1214,11 @@ int bbepWriteStringCustom(BBEPDISP *pBBEP, BB_FONT *pFont, int x, int y, char *s
                 u8EndMask <<= (8-(w & 7));
             }
             end_y = dy + h;
-            ty = (pgm_read_word(&pGlyph[1].bitmapOffset) - (intptr_t)(s - pBits)); // compressed size
+            if (pBBF) {
+                ty = (pgm_read_word(&pGlyph[1].bitmapOffset) - (intptr_t)(s - pBits)); // compressed size
+            } else {
+                ty = (pgm_read_word(&pSmallGlyph[1].bitmapOffset) - (intptr_t)(s - pBits)); // compressed size
+            }
             if (ty < 0 || ty > 4096) ty = 4096; // DEBUG
             rc = g5_decode_init(&g5dec, w, h, s, ty);
             if (rc != G5_SUCCESS) {
@@ -1101,6 +1278,9 @@ int bbepWriteStringCustom(BBEPDISP *pBBEP, BB_FONT *pFont, int x, int y, char *s
                 else if (iColor == BBEP_RED && (pBBEP->iFlags & BBEP_3COLOR)) {
                     u8CMD = u8CMD2; // second plane is red (inverted)
                 }
+                if (!(pBBEP->iFlags & BBEP_3COLOR) && pBBEP->iPlane == 1) {
+                    u8CMD = u8CMD2; // set second plane for partial updates
+                }
                 bbepWriteCmd(pBBEP, u8CMD); // memory write command
                 for (ty=dy; ty<end_y && rc == G5_SUCCESS && ty < pBBEP->native_height; ty++) {
                     rc = g5_decode_line(&g5dec, u8Cache);
@@ -1124,10 +1304,10 @@ int bbepWriteStringCustom(BBEPDISP *pBBEP, BB_FONT *pFont, int x, int y, char *s
                 } // for y
             }
         } // if not drawing a space
-        if (pgm_read_dword(&pFont->rotation) == 0 || pgm_read_dword(&pFont->rotation) == 180) {
-            x += pgm_read_byte(&pGlyph->xAdvance); // width of this character
+        if (u32Rot == 0 || u32Rot == 180) {
+            x += xAdvance; // width of this character
         } else {
-            y += pgm_read_byte(&pGlyph->xAdvance);
+            y += xAdvance;
         }
     } // while drawing characters
     pBBEP->iCursorX = x;
@@ -1611,7 +1791,7 @@ void bbepGetStringBox(BBEPDISP *pBBEP, BB_FONT *pFont, const char *szMsg, int *w
     *bottom = maxy;
 } /* bbepGetStringBox() */
 
-int bbepAllocBuffer(BBEPDISP *pBBEP)
+int bbepAllocBuffer(BBEPDISP *pBBEP, int bDoubleSize)
 {
 #ifndef NO_RAM
     int iSize;
@@ -1619,7 +1799,10 @@ int bbepAllocBuffer(BBEPDISP *pBBEP)
         iSize = (pBBEP->native_width >> 1) * pBBEP->native_height;
     } else { // B/W or B/W/R or B/W/R/Y
         iSize = ((pBBEP->native_width+7)>>3) * pBBEP->native_height;
-        iSize *= 2; // 2 bit planes
+        if (bDoubleSize) {
+            iSize *= 2; // 2 bit planes
+            pBBEP->iFlags |= BBEP_HAS_SECOND_PLANE;
+        }
     }
 #if defined (HAL_ESP32_HAL_H_) && !defined(__riscv)
     if (iSize > 98000) { // need to use PSRAM

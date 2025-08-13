@@ -45,6 +45,15 @@ enum {
     BBEP_ERROR_COUNT
 };
 
+#ifndef __ONEBITDISPLAY__
+typedef struct {
+    int x; 
+    int y;
+    int w; 
+    int h;
+} BB_RECT; 
+#endif
+
 #define LIGHT_SLEEP 0
 #define DEEP_SLEEP 1
 
@@ -74,7 +83,9 @@ enum {
     PLANE_0=0,
     PLANE_1,
     PLANE_BOTH,
-    PLANE_DUPLICATE // duplicate 0 to both 0 and 1
+    PLANE_DUPLICATE, // duplicate 0 to both 0 and 1
+    PLANE_0_TO_1, // send plane 0 to plane 1 memory
+    PLANE_FALSE_DIFF, // use 'partial' mode to force all pixels to update
 };
 #ifndef __ONEBITDISPLAY__
 // 5 possible font sizes: 8x8, 16x32, 6x8, 12x16 (stretched from 6x8 with smoothing), 16x16 (stretched from 8x8)
@@ -103,6 +114,17 @@ typedef struct epd_panel {
     const uint8_t *pColorLookup; // color translation table
 } EPD_PANEL;
 
+// Products with built-in SPI EPDs
+enum {
+    EPD_PRODUCT_UNDEFINED=0,
+    EPD_BADGER2040,
+    EPD_LILYGO_S3_MINI,
+    EPD_TRMNL_OG,
+    EPD_CROWPANEL29,
+    EPD_CROWPANEL213,
+    EPD_PRODUCT_COUNT
+};
+
 // Display types
 enum {
     EP_PANEL_UNDEFINED=0,
@@ -124,7 +146,10 @@ enum {
     EP37_240x416, // GDEY037T03
     EP213_104x212, // InkyPHAT 2.13 black and white
     EP75_800x480, // GDEY075T7
+    EP75_800x480_4GRAY, // GDEW075T7 in 4 grayscale mode
+    EP75_800x480_4GRAY_OLD, // GDEY075T7 in 4 grayscale mode
     EP29_128x296, // Pimoroni Badger2040
+    EP29_128x296_4GRAY, // Pimoroni Badger2040
     EP213R_122x250, // Inky phat 2.13 B/W/R
     EP154_200x200, // waveshare
     EP154B_200x200, // DEPG01540BN
@@ -140,10 +165,14 @@ enum {
     EP583R_600x448, // 4-bits per pixel needs different support
     EP75R_800x480, // Waveshare 800x480 3-color
     EP426_800x480, // Waveshare 4.26" B/W 800x480
+    EP426_800x480_4GRAY, // Waveshare 4.26" 800x480 2-bit grayscale mode
     EP29R2_128x296, // Adafruit 2.9" 128x296 Tricolor FeatherWing
     EP41_640x400, // EInk ED040TC1 SPI UC81xx
     EP81_SPECTRA_1024x576, // Spectra 8.1" 1024x576 6-colors
     EP7_960x640, // ED070EC1
+    EP213R2_122x250, // UC8151 3-color
+    EP29Z_128x296, // SSD1680 (CrowPanel 2.9")
+    EP213Z_122x250, // SSD1680 (CrowPanel 2.13")
     EP_PANEL_COUNT
 };
 #ifdef FUTURE
@@ -183,6 +212,7 @@ enum {
 #define BBEP_PARTIAL2 0x0080
 #define BBEP_4BPP_DATA 0x0100
 #define BBEP_SPLIT_BUFFER 0x0200
+#define BBEP_HAS_SECOND_PLANE 0x0400
 
 #define BBEP_BLACK 0
 #define BBEP_WHITE 1
@@ -410,30 +440,37 @@ class BBEPAPER
 #endif // __LINUX__
 {
   public:
+    BBEPAPER(void) { memset(&_bbep, 0, sizeof(_bbep)); }
     BBEPAPER(int iPanel);
     int createVirtual(int iWidth, int iHeight, int iFlags);
     void setAddrWindow(int x, int y, int w, int h);
     int setPanelType(int iPanel);
+    int begin(int iProduct);
     void setCS2(uint8_t cs);
     bool hasFastRefresh();
     bool hasPartialRefresh();
 #ifndef __LINUX__
 #ifdef ARDUINO
+#ifdef SCK
     void initIO(int iDC, int iReset, int iBusy, int iCS = SS, int iMOSI = MOSI, int iSCLK = SCK, uint32_t u32Speed = 8000000);
+#else // no SCK/MOSI default pins
+    void initIO(int iDC, int iReset, int iBusy, int iCS, int iMOSI, int iSCLK, uint32_t u32Speed = 8000000);
+#endif
 #else // esp-idf?
     void initIO(int iDC, int iReset, int iBusy, int iCS, int iMOSI, int iSCLK, uint32_t u32Speed);
 #endif // ARDUINO
 #else // __LINUX__
     void initIO(int iDC, int iReset, int iBusy, int iCS, int iSPIChannel, uint32_t u32Speed = 8000000);
 #endif
-    int writePlane(int iPlane = PLANE_BOTH);
+    int writePlane(int iPlane = PLANE_BOTH, bool bInvert = false);
     void startWrite(int iPlane);
     void writeData(uint8_t *pData, int iLen);
     void writeCmd(uint8_t u8Cmd);
     int refresh(int iMode, bool bWait = true);
     void setBuffer(uint8_t *pBuffer);
-    int allocBuffer(void);
+    int allocBuffer(bool bSecondPlane = true);
     void * getBuffer(void);
+    uint8_t * getCache(void);
     void freeBuffer(void);
     uint32_t capabilities();
     void setRotation(int iAngle);
@@ -460,9 +497,9 @@ class BBEPAPER
     int16_t getCursorX(void);
     int16_t getCursorY(void);
     int testPanelType(void);
-    void getTextBounds(const char *string, int16_t x, int16_t y, int16_t *x1, int16_t *y1, uint16_t *w, uint16_t *h);
+    void getStringBox(const char *string, BB_RECT *pRect);
 #ifdef ARDUINO
-    void getTextBounds(const String &str, int16_t x, int16_t y, int16_t *x1, int16_t *y1, uint16_t *w, uint16_t *h);
+    void getStringBox(const String &str, BB_RECT *pRect);
 #endif
     int dataTime();
     int opTime();

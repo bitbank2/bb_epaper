@@ -5,13 +5,18 @@
 // Written by Larry Bank
 // Copyright (c) 2024 BitBank Software, Inc.
 //
-// Use of this software is governed by the Business Source License
-// included in the file ./LICENSE.
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//    http://www.apache.org/licenses/LICENSE-2.0
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//===========================================================================
 //
-// As of the Change Date specified in that file, in accordance with
-// the Business Source License, use of this software will be governed
-// by the Apache License, Version 2.0, included in the file
-// ./APL.txt.
+
 #include "Group5.h"
 
 /* Number of consecutive 1 bits in a byte from MSB to LSB */
@@ -45,7 +50,7 @@ static const uint8_t vtable[14] =
          2,7};    /* V(3)  = 0000010 */
 
 
-static void G5ENCInsertCode(BUFFERED_BITS *bb, BIGUINT ulCode, int iLen)
+static void G5ENCInsertCode(G5_BUFFERED_BITS *bb, BIGUINT ulCode, int iLen)
 {
     if ((bb->ulBitOff + iLen) > REGISTER_WIDTH) { // need to write data
         bb->ulBits |= (ulCode >> (bb->ulBitOff + iLen - REGISTER_WIDTH)); // partial bits on first word
@@ -61,7 +66,7 @@ static void G5ENCInsertCode(BUFFERED_BITS *bb, BIGUINT ulCode, int iLen)
 //
 // Flush any buffered bits to the output
 //
-static void G5ENCFlushBits(BUFFERED_BITS *bb)
+static void G5ENCFlushBits(G5_BUFFERED_BITS *bb)
 {
     while (bb->ulBitOff >= 8)
     {
@@ -69,9 +74,11 @@ static void G5ENCFlushBits(BUFFERED_BITS *bb)
         bb->ulBits <<= 8;
         bb->ulBitOff -= 8;
     }
-   *bb->pBuf++ = (unsigned char) (bb->ulBits >> (REGISTER_WIDTH - 8));
-   bb->ulBitOff = 0;
-   bb->ulBits = 0;
+    if (bb->ulBitOff) { // partial byte?
+        *bb->pBuf++ = (unsigned char) (bb->ulBits >> (REGISTER_WIDTH - 8));
+    }
+    bb->ulBitOff = 0;
+    bb->ulBits = 0;
 } /* G5ENCFlushBits() */
 //
 // Initialize the compressor
@@ -198,13 +205,13 @@ int xsize, iErr, iHighWater;
 int iCur, iRef, iLen;
 int iHLen; // number of bits for long horizontal codes
 int16_t *CurFlips, *RefFlips;
-BUFFERED_BITS bb;
+G5_BUFFERED_BITS bb;
 
     if (pImage == NULL || pPixels == NULL)
         return G5_INVALID_PARAMETER;
     iHighWater = pImage->iOutSize - 32;
     iHLen = 32 - __builtin_clz(pImage->iWidth);
-    memcpy(&bb, &pImage->bb, sizeof(BUFFERED_BITS)); // keep local copy
+    memcpy(&bb, &pImage->bb, sizeof(G5_BUFFERED_BITS)); // keep local copy
     CurFlips = pImage->pCur;
     RefFlips = pImage->pRef;
     xsize = pImage->iWidth; /* For performance reasons */
@@ -283,7 +290,7 @@ BUFFERED_BITS bb;
     if (pImage->y == pImage->iHeight-1) { // last line of image
         G5ENCFlushBits(&bb); // output the final buffered bits
         // wrap up final output
-        pImage->iDataSize = (int)(bb.pBuf-pImage->pOutBuf);
+        pImage->iDataSize = 1 + (int)(bb.pBuf-pImage->pOutBuf);
         iErr = G5_ENCODE_COMPLETE;
     }
     pImage->pCur = RefFlips; // swap current and reference lines
