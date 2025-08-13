@@ -65,6 +65,54 @@ void BBEPAPER::setAddrWindow(int x, int y, int w, int h)
     bbepSetAddrWindow(&_bbep, x, y, w, h);
 }
 
+int BBEPAPER::begin(int iProduct)
+{
+int rc = BBEP_ERROR_BAD_PARAMETER;
+
+    switch (iProduct) {
+        case EPD_LILYGO_S3_MINI: // DC:12 CS:13 RST: 11 BUSY: 10 SCK: 14 MOSI: 15
+            if (setPanelType(EP102_80x128) == BBEP_SUCCESS) {
+                initIO(12, 11, 10, 13, 15, 14, 8000000);
+                return BBEP_SUCCESS;
+            }
+            break;
+        case EPD_BADGER2040: // DC:20 CS:17 RST:21 BUSY: 26 PWR: 10
+            if (setPanelType(EP29_128x296) == BBEP_SUCCESS) {
+                initIO(20, 21, 26, 17, -1, -1, 12000000);
+                setRotation(270);
+                pinMode(10, OUTPUT);
+                digitalWrite(10, HIGH); // keep power turned on
+                return BBEP_SUCCESS;
+            }
+            break;
+        case EPD_TRMNL_OG: // DC:5 CS:6 RST:10 BUSY:4 MOSI:8 SCK:7
+            if (setPanelType(EP75_800x480) == BBEP_SUCCESS) {
+                initIO(5, 10, 4, 6, 8, 7, 10000000);
+                return BBEP_SUCCESS;
+            }
+            break;
+        case EPD_CROWPANEL29: // DC:46 CS:45 RST:47 BUSY:48 MOSI:11 SCK:12
+            pinMode(7, OUTPUT);
+            digitalWrite(7, HIGH); // screen power on
+            if (setPanelType(EP29Z_128x296) == BBEP_SUCCESS) {
+                initIO(46, 47, 48, 45, 11, 12, 12000000);
+                setRotation(270);
+                return BBEP_SUCCESS;
+            } 
+            break;
+        case EPD_CROWPANEL213:
+            pinMode(7, OUTPUT);
+            digitalWrite(7, HIGH); // screen power on
+            if (setPanelType(EP213Z_122x250) == BBEP_SUCCESS) {
+                initIO(13, 10, 9, 14, 11, 12, 12000000);
+                setRotation(270);
+                return BBEP_SUCCESS;
+            } 
+            break;
+    } // switch on product type
+    return rc;
+} /* begin() */
+
 int BBEPAPER::setPanelType(int iPanel)
 {
     return bbepSetPanelType(&_bbep, iPanel);
@@ -91,11 +139,11 @@ void BBEPAPER::initIO(int iDC, int iReset, int iBusy, int iCS, int iSPIChannel, 
 	bbepInitIO(&_bbep, u32Speed);
 } /* initIO() */
 #endif
-int BBEPAPER::writePlane(int iPlane)
+int BBEPAPER::writePlane(int iPlane, bool bInvert)
 {
     long l = millis();
     int rc;
-    rc = bbepWritePlane(&_bbep, iPlane);
+    rc = bbepWritePlane(&_bbep, iPlane, (int)bInvert);
     _bbep.iDataTime = (int)(millis() - l);
     return rc;
 } /* writePlane() */
@@ -144,11 +192,15 @@ void BBEPAPER::backupPlane(void)
         memcpy(&_bbep.ucScreen[iSize], _bbep.ucScreen, iSize);
     }
 }
-int BBEPAPER::allocBuffer(void)
+int BBEPAPER::allocBuffer(bool bSecondPlane)
 {
-    return bbepAllocBuffer(&_bbep);
+    return bbepAllocBuffer(&_bbep, (int)bSecondPlane);
 } /* allocBuffer() */
 
+uint8_t * BBEPAPER::getCache(void)
+{
+    return u8Cache;
+}
 void * BBEPAPER::getBuffer(void)
 {
     return (void *)_bbep.ucScreen;
@@ -211,10 +263,6 @@ bool BBEPAPER::hasPartialRefresh()
 
 void BBEPAPER::setTextColor(int iFG, int iBG)
 {
-    if ((_bbep.iFlags & (BBEP_3COLOR | BBEP_4COLOR | BBEP_7COLOR)) == 0) {
-        if (iFG == BBEP_RED || iFG == BBEP_YELLOW) iFG = BBEP_BLACK; // can't set red color
-        if (iBG == BBEP_RED || iFG == BBEP_YELLOW) iBG = BBEP_BLACK;
-    }
     _bbep.iFG = iFG;
     _bbep.iBG = (iBG == -1) ? iFG : iBG;
 } /* setTextColor() */
@@ -419,22 +467,49 @@ static uint8_t u8Unicode0, u8Unicode1;
         bbepWriteString(&_bbep, -1, -1, szTemp, _bbep.iFont, _bbep.iFG, _bbep.iBG);
     }
   } else { // Custom font
-      BB_FONT *pBBF = (BB_FONT *)_bbep.pFont;
+      BB_FONT *pBBF;
+      BB_FONT_SMALL *pBBFS;
+      BB_GLYPH *pGlyph;
+      BB_GLYPH_SMALL *pSmallGlyph;
+      int first, last;
+      if (pgm_read_word(_bbep.pFont) == BB_FONT_MARKER) {
+          pBBF = (BB_FONT *)_bbep.pFont; pBBFS = NULL;
+          first = pgm_read_byte(&pBBF->first);
+          last = pgm_read_byte(&pBBF->last);
+      } else { // small font
+          pBBFS = (BB_FONT_SMALL *)_bbep.pFont; pBBF = NULL;
+          first = pgm_read_byte(&pBBFS->first);
+          last = pgm_read_byte(&pBBFS->last);
+      }
     if (c == '\n') {
       _bbep.iCursorX = 0;
-      _bbep.iCursorY += pBBF->height;
+       if (pBBF) {
+           _bbep.iCursorY += pBBF->height;
+       } else {
+           _bbep.iCursorY += pBBFS->height;
+       }
     } else if (c != '\r') {
-      if (c >= pBBF->first && c <= pBBF->last) {
-          BB_GLYPH *pBBG = &pBBF->glyphs[c - pBBF->first];
-        w = pBBG->width;
-        h = pBBG->height;
-        if (w > 0 && h > 0) { // Is there an associated bitmap?
-          w += pBBG->xOffset;
+      if (c >= first && c <= last) {
+          if (pBBF) {
+              pGlyph = &pBBF->glyphs[c - first];
+              w = pgm_read_word(&pGlyph->width);
+              h = pgm_read_word(&pGlyph->height);
+          } else { // small font
+              pSmallGlyph = &pBBFS->glyphs[c - first];
+              w = pgm_read_word(&pSmallGlyph->width);
+              h = pgm_read_word(&pSmallGlyph->height);
+          }
+      if (w > 0 && h > 0) { // Is there an associated bitmap?
+          if (pBBF) {
+              w += (int16_t)pgm_read_word(&pGlyph->xOffset);
+          } else {
+              w += (int8_t)pgm_read_byte(&pSmallGlyph->xOffset);
+          }
           if (_bbep.wrap && (_bbep.iCursorX + w) > _bbep.width) {
             _bbep.iCursorX = 0;
             _bbep.iCursorY += h;
           }
-          bbepWriteStringCustom(&_bbep, (BB_FONT *)_bbep.pFont, -1, -1, szTemp, _bbep.iFG, _bbep.iPlane);
+          bbepWriteStringCustom(&_bbep, _bbep.pFont, -1, -1, szTemp, _bbep.iFG, _bbep.iPlane);
         }
       }
     }
@@ -455,21 +530,14 @@ int16_t BBEPAPER::getCursorY(void)
 {
   return _bbep.iCursorY;
 }
-void BBEPAPER::getTextBounds(const char *string, int16_t x, int16_t y, int16_t *x1, int16_t *y1, uint16_t *w, uint16_t *h)
+void BBEPAPER::getStringBox(const char *string, BB_RECT *pRect)
 {
-    if (_bbep.pFont) {
-        int width, top, bottom;
-        bbepGetStringBox(&_bbep, (BB_FONT *)_bbep.pFont, string, &width, &top, &bottom);
-        *x1 = x;
-        *w = width;
-        *y1 = y + top;
-        *h = (bottom - top + 1);
-    }
+    bbepGetStringBox(&_bbep, (char *)string, pRect);
 }
 #ifdef ARDUINO
-void BBEPAPER::getTextBounds(const String &str, int16_t x, int16_t y, int16_t *x1, int16_t *y1, uint16_t *w, uint16_t *h)
+void BBEPAPER::getStringBox(const String &str, BB_RECT *pRect)
 {
-    getTextBounds(str.c_str(), x, y, x1, y1, w, h);
+    bbepGetStringBox(&_bbep, str.c_str(), pRect);
 }
 #endif
 int BBEPAPER::dataTime(void)

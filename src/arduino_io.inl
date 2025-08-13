@@ -64,10 +64,14 @@ void bbepInitIO(BBEPDISP *pBBEP, uint8_t u8DC, uint8_t u8RST, uint8_t u8BUSY, ui
     SPI.begin(); // other architectures have fixed SPI pins
 #endif
     SPI.beginTransaction(SPISettings(u32Speed, MSBFIRST, SPI_MODE0));
+#ifdef ARDUINO_ARCH_ESP32
+// For NRF52, you have to leave an 'open' transaction
     SPI.endTransaction(); // N.B. - if you call beginTransaction() again without a matching endTransaction(), it will hang on ESP32
+#endif
+    pBBEP->is_awake = 1;
+// Before we can start sending pixels, many panels need to know the display resolution
+    bbepSendCMDSequence(pBBEP, pBBEP->pInitFull);
     if (pBBEP->iFlags & BBEP_7COLOR) { // need to send before you can send it data
-        pBBEP->is_awake = 1;
-        bbepSendCMDSequence(pBBEP, pBBEP->pInitFull);
         if (pBBEP->iFlags & BBEP_SPLIT_BUFFER) {    
            // Send the same sequence to the second controller
            pBBEP->iCSPin = pBBEP->iCS2Pin;
