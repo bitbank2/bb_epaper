@@ -92,9 +92,10 @@ int rc = BBEP_ERROR_BAD_PARAMETER;
             }
             break;
         case EPD_CROWPANEL29: // DC:46 CS:45 RST:47 BUSY:48 MOSI:11 SCK:12
+        case EPD_CROWPANEL29_4GRAY:
             pinMode(7, OUTPUT);
             digitalWrite(7, HIGH); // screen power on
-            if (setPanelType(EP29Z_128x296) == BBEP_SUCCESS) {
+            if (setPanelType((iProduct == EPD_CROWPANEL29) ? EP29Z_128x296 : EP29Z_128x296_4GRAY) == BBEP_SUCCESS) {
                 initIO(46, 47, 48, 45, 11, 12, 12000000);
                 setRotation(270);
                 return BBEP_SUCCESS;

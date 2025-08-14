@@ -121,6 +121,7 @@ enum {
     EPD_LILYGO_S3_MINI,
     EPD_TRMNL_OG,
     EPD_CROWPANEL29,
+    EPD_CROWPANEL29_4GRAY,
     EPD_CROWPANEL213,
     EPD_PRODUCT_COUNT
 };
@@ -135,6 +136,7 @@ enum {
     EP293_128x296,
     EP294_128x296, // Waveshare newer 2.9" 1-bit 128x296
     EP295_128x296, // harvested from Solum 2.9" BW ESLs
+    EP295_128x296_4GRAY,
     EP266_152x296, // GDEY0266T90
     EP102_80x128, // GDEW0102T4
     EP27B_176x264, // GDEY027T91
@@ -172,6 +174,7 @@ enum {
     EP7_960x640, // ED070EC1
     EP213R2_122x250, // UC8151 3-color
     EP29Z_128x296, // SSD1680 (CrowPanel 2.9")
+    EP29Z_128x296_4GRAY, // SSD1680 (CrowPanel 2.9")
     EP213Z_122x250, // SSD1680 (CrowPanel 2.13")
     EP_PANEL_COUNT
 };
