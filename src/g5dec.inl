@@ -141,7 +141,7 @@ static void Decode_Begin(G5DECIMAGE *pPage)
 #ifdef __GNUC__
 #ifdef __AVR__
     pPage->iHLen = 16 - __builtin_clz(pPage->iWidth);
-#else 
+#else
     pPage->iHLen = 32 - __builtin_clz(pPage->iWidth);
 #endif
 #else
