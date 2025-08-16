@@ -55,9 +55,7 @@ void ConvertTo1Bpp(uint8_t *pBMP, int w, int h, int iBpp, uint8_t *palette)
     uint8_t *s, *d, *pPal, u8, count;
 
     iPitch = (w * iBpp)/8;
-    iPitch = (iPitch + 3) & 0xfffc;
     iDestPitch = (w+7)/8;
-    iDestPitch = (iDestPitch + 3) & 0xfffc; // round to nearest "DWORD"
     iDelta = iBpp/8;
     for (y=0; y<h; y++) {
         s = &pBMP[iPitch * y];
@@ -80,18 +78,30 @@ void ConvertTo1Bpp(uint8_t *pBMP, int w, int h, int iBpp, uint8_t *palette)
                     s += 2;
                     break;
                 case 8:
-                    pPal = &palette[s[0] * 4];
-                    g = (pPal[0] + pPal[1]*2 + pPal[2])/4;
+                    if (palette) {
+                        pPal = &palette[s[0] * 3];
+                        g = (pPal[0] + pPal[1]*2 + pPal[2])/4;
+                    } else {
+                        g = s[0];
+                    }
                     s++;
                     break;
                 case 4:
-                    if (x & 1) {
-                        pPal = &palette[(s[0] & 0xf) * 4];
-                        g = (pPal[0] + pPal[1]*2 + pPal[2])/4;
-                        s++;
+                    if (palette) {
+                        if (x & 1) {
+                            pPal = &palette[(s[0] & 0xf) * 4];
+                            g = (pPal[0] + pPal[1]*2 + pPal[2])/4;
+                            s++;
+                        } else {
+                            pPal = &palette[(s[0]>>4) * 4];
+                            g = (pPal[0] + pPal[1]*2 + pPal[2])/4;
+                        }
                     } else {
-                        pPal = &palette[(s[0]>>4) * 4];
-                        g = (pPal[0] + pPal[1]*2 + pPal[2])/4;
+                        if (x & 1) {
+                            g = (s[0] & 0xf) | (s[0] << 4);
+                        } else {
+                            g = (s[0] >> 4) | (s[0] & 0xf0);
+                        }
                     }
                     break;
             } // switch on bpp
@@ -103,11 +113,14 @@ void ConvertTo1Bpp(uint8_t *pBMP, int w, int h, int iBpp, uint8_t *palette)
                 count = 8;
             }
         } // for x
+        if (w & 7) {
+            *d++ = u8; // store last partial byte
+        }
     } // for y
 } /* ConvertTo1Bpp() */
 
 int main(int argc, const char * argv[]) {
-    int w, h, y, i, rc, bpp;
+    int w, h, y, rc, bpp;
     uint8_t *s, *pOut, *pData;
     int iPitch, iOutSize, iDataSize;
     FILE *ihandle;
@@ -149,7 +162,6 @@ int main(int argc, const char * argv[]) {
              free(png.getBuffer());
              return -1;
         }
-        i = 1;
         pPalette = NULL;
         switch (png.getPixelType()) {
             case PNG_PIXEL_INDEXED:
@@ -157,15 +169,12 @@ int main(int argc, const char * argv[]) {
                 if (png.getPixelType() == PNG_PIXEL_INDEXED) {
                     pPalette = png.getPalette();
                 }
-                i = 1;
                 bpp = png.getBpp();
                 break;
             case PNG_PIXEL_TRUECOLOR:
-                i = 3;
                 bpp = 24;
                 break;
             case PNG_PIXEL_TRUECOLOR_ALPHA:
-                i = 4;
                 bpp = 32;
                 break;
         } // switch
