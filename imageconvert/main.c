@@ -1,37 +1,132 @@
 //
-// Group5 Image Compressor tool
+// Group5 Image Conversion tool
 // Written by Larry Bank
-// Copyright (c) 2024 BitBank Software, Inc.
+// Copyright (c) 2024-2025 BitBank Software, Inc.
 //
 
 #include <stdio.h>
 #define MAX_IMAGE_FLIPS 256
 #include "../src/Group5.h"
 #include "../src/g5enc.inl"
+#include "../src/g5dec.inl"
+
+/* Windows BMP header info (54 bytes) */
+uint8_t winbmphdr[54] =
+        {0x42,0x4d,
+         0,0,0,0,         /* File size */
+         0,0,0,0,0x36,4,0,0,0x28,0,0,0,
+         0,0,0,0, /* Xsize */
+         0,0,0,0, /* Ysize */
+         1,0,8,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,       /* number of planes, bits per pel */
+         0,0,0,0};
+
 //
-// Read a Windows BMP file into memory
+// Minimal code to save frames as Windows BMP files
 //
-uint8_t * ReadBMP(const char *fname, int *width, int *height, int *bpp, unsigned char *pPal)
+void SaveBMP(const char *fname, uint8_t *pBitmap, uint8_t *pPalette, int cx, int cy, int bpp)
 {
-    int y, w, h, bits, offset;
-    uint8_t *s, *d, *pTemp, *pBitmap;
-    int pitch, bytewidth;
-    int iSize, iDelta;
+FILE * oHandle;
+int i, bsize, lsize;
+uint32_t *l;
+uint8_t *s;
+uint8_t ucTemp[1024];
+
+    oHandle = fopen(fname, "w+b");
+    bsize = (cx * bpp) >> 3;
+    lsize = (bsize + 3) & 0xfffc; /* Width of each line */
+    winbmphdr[26] = 1; // number of planes
+    winbmphdr[28] = (uint8_t)bpp;
+
+   /* Write the BMP header */
+   l = (uint32_t *)&winbmphdr[2];
+    i =(cy * lsize) + 54;
+    if (bpp <= 8)
+        i += 1024;
+   *l = (uint32_t)i; /* Store the file size */
+   l = (uint32_t *)&winbmphdr[10]; // pointer to data
+    *l = i - (cy * lsize);
+    winbmphdr[14] = 0x28;
+   l = (uint32_t *)&winbmphdr[18];
+   *l = (uint32_t)cx;      /* width */
+   *(l+1) = (uint32_t)(-cy);  /* height */
+   fwrite(winbmphdr, 1, 54, oHandle);
+    if (bpp <= 8) {
+    if (pPalette == NULL) {// create a grayscale palette
+        int iDelta, iCount = 1<<bpp;
+        int iGray = 0;
+        iDelta = 255/(iCount-1);
+        for (i=0; i<iCount; i++) {
+            ucTemp[i*4+0] = (uint8_t)iGray;
+            ucTemp[i*4+1] = (uint8_t)iGray;
+            ucTemp[i*4+2] = (uint8_t)iGray;
+            ucTemp[i*4+3] = 0;
+            iGray += iDelta;
+        }
+    } else {
+        for (i=0; i<256; i++) // change palette to WinBMP format
+        {
+            ucTemp[i*4 + 0] = pPalette[(i*3)+2];
+            ucTemp[i*4 + 1] = pPalette[(i*3)+1];
+            ucTemp[i*4 + 2] = pPalette[(i*3)+0];
+            ucTemp[i*4 + 3] = 0;
+        }
+    }
+    fwrite(ucTemp, 1, 1024, oHandle);
+    }
+   /* Write the image data */
+   for (i=0; i<cy; i++)
+    {
+        s = &pBitmap[i*bsize];
+        if (bpp >= 24) { // swap R/B for Windows BMP byte order
+            uint8_t ucTemp[2048];
+            int j, iBpp = bpp/8;
+            uint8_t *d = ucTemp;
+            for (j=0; j<cx; j++) {
+                d[0] = s[2]; d[1] = s[1]; d[2] = s[0];
+                d += iBpp; s += iBpp;
+            }
+            fwrite(ucTemp, 1, (size_t)lsize, oHandle);
+        } else {
+            fwrite(s, 1, (size_t)lsize, oHandle);
+        }
+    }
+   fclose(oHandle);
+} /* SaveBMP() */
+
+//
+// Read a file into memory
+//
+uint8_t *ReadTheFile(const char *fname, int *pSize)
+{
     FILE *infile;
-    
+    int iSize;
+    uint8_t *pData;
     infile = fopen(fname, "r+b");
     if (infile == NULL) {
         printf("Error opening input file %s\n", fname);
         return NULL;
     }
-    // Read the bitmap into RAM
     fseek(infile, 0, SEEK_END);
     iSize = (int)ftell(infile);
     fseek(infile, 0, SEEK_SET);
-    pBitmap = (uint8_t *)malloc(iSize);
-    pTemp = (uint8_t *)malloc(iSize);
-    fread(pTemp, 1, iSize, infile);
+    pData = (uint8_t *)malloc(iSize);
+    fread(pData, 1, iSize, infile);
     fclose(infile);
+    *pSize = iSize;
+    return pData;
+} /* ReadTheFile() */
+
+//
+// Read a Windows BMP file into memory
+//
+uint8_t * ReadBMP(uint8_t *pTemp, int iSize, int *width, int *height, int *bpp, unsigned char *pPal)
+{
+    int y, w, h, bits, offset;
+    uint8_t *s, *d, *pBitmap;
+    int pitch, bytewidth;
+    int iDelta;
+    
+    pBitmap = (uint8_t *)malloc(iSize);
     
     if (pTemp[0] != 'B' || pTemp[1] != 'M' || pTemp[14] < 0x28) {
         free(pBitmap);
@@ -188,62 +283,85 @@ void ConvertTo1Bpp(uint8_t *pBMP, int w, int h, int iBpp, uint8_t *palette)
 int main(int argc, const char * argv[]) {
     uint8_t *s, *pBMP, *pOut;
     int rc, w, h, y, bpp;
-    int iOutSize, iPitch;
+    int iSize, iOutSize, iPitch;
     G5ENCIMAGE g5enc;
-    BB_BITMAP bbbm;
+    G5DECIMAGE g5dec;
+    BB_BITMAP bbbm, *pBBBM;
     uint8_t palette[1024];
     int bHFile; // flag indicating if the output will be a .H file of hex data
 
     printf("Group5 image conversion tool\n");
     if (argc != 3) {
         printf("Usage: ./imgconvert <WinBMP image> <g5 compressed image>\n");
+        printf("  or ./imgconvert <G5 image> <WinBMP image>\n");
         return -1;
     }
     pOut = (uint8_t *)argv[2] + strlen(argv[2]) - 1;
     bHFile = (pOut[0] == 'H' || pOut[0] == 'h'); // output an H file?
     
-    pBMP = ReadBMP(argv[1], &w, &h, &bpp, palette);
-    if (bpp != 1) { // need to convert it to 1-bpp
-        printf("Converting from %d-bpp to 1-bpp\n", bpp);
-        ConvertTo1Bpp(pBMP, w, h, bpp, palette);
-    }
-    s = pBMP;
-    printf("Bitmap size: %d x %d\n", w, h);
-    iPitch = (w+7) >> 3;
-    pOut = (uint8_t *)malloc(iPitch * h);
-    rc = g5_encode_init(&g5enc, w, h, pOut, iPitch * h);
-    for (y=0; y<h && rc == G5_SUCCESS; y++) {
-        rc = g5_encode_encodeLine(&g5enc, s);
-        s += iPitch;
-    }
-    if (rc == G5_ENCODE_COMPLETE) {
-        FILE *f;
-        iOutSize = g5_encode_getOutSize(&g5enc);
-        printf("Input data size:  %d bytes, compressed size: %d bytes\n", iPitch*h, iOutSize);
-        printf("Compression ratio: %2.1f:1\n", (float)(iPitch*h) / (float)iOutSize);
-        bbbm.u16Marker = BB_BITMAP_MARKER;
-        bbbm.width = w;
-        bbbm.height = h;
-        bbbm.size = iOutSize;
-        f = fopen(argv[2], "w+b");
-        if (!f) {
-            printf("Error opening: %s\n", argv[2]);
-        } else {
-            if (bHFile) { // generate HEX file to include in a project
-                StartHexFile(f, iOutSize+sizeof(BB_BITMAP), w, h, argv[2]);
-                AddHexBytes(f, &bbbm, sizeof(BB_BITMAP), 0);
-                AddHexBytes(f, pOut, iOutSize, 1);
-                printf(".H file created successfully!\n");
-            } else { // generate a binary file
-                fwrite(&bbbm, 1, sizeof(BB_BITMAP), f);
-                fwrite(pOut, 1, iOutSize, f);
-                printf("Binary file created successfully!\n");
-            }
-            fflush(f);
-            fclose(f);
+    
+    pBMP = ReadTheFile(argv[1], &iSize);
+    if (*(uint16_t *)pBMP == BB_BITMAP_MARKER) { // we're converting a G5 to a BMP
+        pBBBM = (BB_BITMAP *)pBMP;
+        w = pBBBM->width;
+        h = pBBBM->height;
+        printf("Converting %dx%d G5 image to BMP\n", w, h);
+        iPitch = (w + 7)/8;
+        iPitch = (iPitch + 3) & 0xfffc;
+        pOut = (uint8_t *)malloc(iPitch * h); // output BMP
+        rc = g5_decode_init(&g5dec, w, h, (uint8_t *)&pBBBM[1], pBBBM->size);
+        if (rc != G5_SUCCESS) {
+            printf("Error decoding Group5 image\n");
+            return -1;
         }
+        for (y=0; y<h; y++) {
+            g5_decode_line(&g5dec, &pOut[iPitch*y]);
+        } // for y
+        SaveBMP(argv[2], pOut, NULL, w, h, 1);
     } else {
-        printf("Error encoding image: %d\n", rc);
+        pBMP = ReadBMP(pBMP, iSize, &w, &h, &bpp, palette);
+        if (bpp != 1) { // need to convert it to 1-bpp
+            printf("Converting from %d-bpp to 1-bpp\n", bpp);
+            ConvertTo1Bpp(pBMP, w, h, bpp, palette);
+        }
+        s = pBMP;
+        printf("Bitmap size: %d x %d\n", w, h);
+        iPitch = (w+7) >> 3;
+        pOut = (uint8_t *)malloc(iPitch * h);
+        rc = g5_encode_init(&g5enc, w, h, pOut, iPitch * h);
+        for (y=0; y<h && rc == G5_SUCCESS; y++) {
+            rc = g5_encode_encodeLine(&g5enc, s);
+            s += iPitch;
+        }
+        if (rc == G5_ENCODE_COMPLETE) {
+            FILE *f;
+            iOutSize = g5_encode_getOutSize(&g5enc);
+            printf("Input data size:  %d bytes, compressed size: %d bytes\n", iPitch*h, iOutSize);
+            printf("Compression ratio: %2.1f:1\n", (float)(iPitch*h) / (float)iOutSize);
+            bbbm.u16Marker = BB_BITMAP_MARKER;
+            bbbm.width = w;
+            bbbm.height = h;
+            bbbm.size = iOutSize;
+            f = fopen(argv[2], "w+b");
+            if (!f) {
+                printf("Error opening: %s\n", argv[2]);
+            } else {
+                if (bHFile) { // generate HEX file to include in a project
+                    StartHexFile(f, iOutSize+sizeof(BB_BITMAP), w, h, argv[2]);
+                    AddHexBytes(f, &bbbm, sizeof(BB_BITMAP), 0);
+                    AddHexBytes(f, pOut, iOutSize, 1);
+                    printf(".H file created successfully!\n");
+                } else { // generate a binary file
+                    fwrite(&bbbm, 1, sizeof(BB_BITMAP), f);
+                    fwrite(pOut, 1, iOutSize, f);
+                    printf("Binary file created successfully!\n");
+                }
+                fflush(f);
+                fclose(f);
+            }
+        } else {
+            printf("Error encoding image: %d\n", rc);
+        }
     }
     free(pBMP);
     return 0;
