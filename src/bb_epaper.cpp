@@ -102,9 +102,10 @@ int rc = BBEP_ERROR_BAD_PARAMETER;
             } 
             break;
         case EPD_CROWPANEL213:
+        case EPD_CROWPANEL213_4GRAY:
             pinMode(7, OUTPUT);
             digitalWrite(7, HIGH); // screen power on
-            if (setPanelType(EP213Z_122x250) == BBEP_SUCCESS) {
+            if (setPanelType((iProduct == EPD_CROWPANEL213) ? EP213Z_122x250 : EP213Z_122x250_4GRAY) == BBEP_SUCCESS) {
                 initIO(13, 10, 9, 14, 11, 12, 12000000);
                 setRotation(270);
                 return BBEP_SUCCESS;
