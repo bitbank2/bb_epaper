@@ -398,6 +398,22 @@ BBEPDISP *pBBEP = (BBEPDISP *)pb;
     pBBEP->ucScreen[i] = u8;
 } /* bbepSetPixelFast4Clr() */
 
+// Fast version (no pointer verification + no boundary checking)
+// special version for logical ORing 2 planes together
+void bbepSetPixelFast4ClrV2(void *pb, int x, int y, unsigned char ucColor)
+{
+int i;
+int iPitch;
+uint8_t u8;
+BBEPDISP *pBBEP = (BBEPDISP *)pb;
+
+    iPitch = (pBBEP->width+3)>>2;
+    i = (x >> 2) + (y * iPitch);
+    u8 = pBBEP->ucScreen[i];
+    u8 |= ucColor << (1+((3-(x & 3))*2));
+    pBBEP->ucScreen[i] = u8;
+} /* bbepSetPixelFast4ClrV2() */
+
 int bbepSetPixel4Gray(void *pb, int x, int y, unsigned char ucColor)
 {
 int i;
@@ -625,6 +641,84 @@ void InvertBytes(uint8_t *pData, uint8_t bLen)
     }
 } /* InvertBytes() */
 //
+// 2-plane G5 image
+// requires a local framebuffer
+//
+int bbepLoadG5_2Bit(BBEPDISP *pBBEP, const uint8_t *pG5, int x, int y, float fScale)
+{
+    uint16_t rc, tx, ty, cx, cy, dx, dy, size;
+    int row, width, height;
+    BB_BITMAP *pbbb;
+    uint8_t *pOldBuffer;
+    BB_SET_PIXEL_FAST *pOldPixel;
+    uint32_t u32Frac, u32XAcc, u32YAcc; // integer fraction vars
+
+    pbbb = (BB_BITMAP *)pG5;
+    u32Frac = (uint32_t)(65536.0f / fScale); // calculate the fraction to advance the destination x/y
+    cx = pgm_read_word(&pbbb->width);
+    cy = pgm_read_word(&pbbb->height);
+    width = pBBEP->width;
+    height = pBBEP->height;
+    // Calculate scaled destination size
+    dx = (int)(fScale * (float)cx);
+    dy = (int)(fScale * (float)cy);
+    size = pgm_read_word(&pbbb->size);
+    rc = g5_decode_init(&g5dec, cx, cy*2, (uint8_t *)&pbbb[1], size);
+    pOldBuffer = pBBEP->ucScreen; // keep old pointer
+    pOldPixel = pBBEP->pfnSetPixelFast;
+    if (!(pBBEP->iFlags & BBEP_4COLOR)) {
+        pBBEP->pfnSetPixelFast = bbepSetPixelFast2Clr;
+    }
+    for (int iPlane = 0; iPlane < 2; iPlane++) {
+        // Treat it as 2 1-bit planes
+        if (iPlane == 1) {
+            if (pBBEP->iFlags & BBEP_4COLOR) {
+                pBBEP->pfnSetPixelFast = bbepSetPixelFast4ClrV2;
+            } else {
+                pBBEP->ucScreen += (((pBBEP->native_width+7)/8) * pBBEP->native_height);
+            } 
+        }
+        g5_decode_line(&g5dec, u8Cache); // decode first line to start
+        u32YAcc = 0; //65536; // force first line to get decoded
+        row = 1;
+        for (ty=y; ty<(y+dy) && ty < height; ty++) {
+            uint8_t u8, *s, u8Color, src_mask;
+            while (u32YAcc >= 65536) { // advance to next source line
+                g5_decode_line(&g5dec, u8Cache);
+                row++;
+                u32YAcc -= 65536;
+            }
+            s = u8Cache;
+            u32XAcc = 0;
+            u8 = *s++; // grab first source byte (8 pixels)
+            src_mask = 0x80;
+            for (tx=x; tx<x+dx && tx < width; tx++) {
+                u8Color = ((u8 & src_mask) != 0);
+                (*pBBEP->pfnSetPixelFast)(pBBEP, tx, ty, u8Color);
+                u32XAcc += u32Frac;
+                while (u32XAcc >= 65536) {
+                    u32XAcc -= 65536; // whole source pixel horizontal movement
+                    src_mask >>= 1;
+                    if (src_mask == 0) { // need to load the next byte
+                        u8 = *s++;
+                        src_mask = 0x80;
+                    }
+                }
+            } // for tx
+            u32YAcc += u32Frac;
+        } // for y
+        while (row < cy) {
+            g5_decode_line(&g5dec, u8Cache); // make sure we reach the 2nd plane
+            row++;
+        }
+    } // for each plane
+// Restore pointers
+    pBBEP->ucScreen = pOldBuffer;
+    pBBEP->pfnSetPixelFast = pOldPixel;
+
+    return BBEP_SUCCESS;
+} /* bbepLoadG5_2Bit() */
+//
 // Load a 1-bpp Group5 compressed bitmap
 // Pass the pointer to the beginning of the G5 file
 // If the FG == BG color, and there is a back buffer, it will
@@ -646,6 +740,9 @@ int bbepLoadG5(BBEPDISP *pBBEP, const uint8_t *pG5, int x, int y, int iFG, int i
         iBG = pBBEP->pColorLookup[iBG & 0xf];
     }
     pbbb = (BB_BITMAP *)pG5;
+    if (pgm_read_word(&pbbb->u16Marker) == BB_BITMAP2_MARKER) {
+        return bbepLoadG5_2Bit(pBBEP, pG5, x, y, fScale);
+    }
     if (pgm_read_word(&pbbb->u16Marker) != BB_BITMAP_MARKER) return BBEP_ERROR_BAD_DATA;
     u32Frac = (uint32_t)(65536.0f / fScale); // calculate the fraction to advance the destination x/y
     cx = pgm_read_word(&pbbb->width);
@@ -1989,7 +2086,6 @@ void bbepEllipse(BBEPDISP *pBBEP, int iCenterX, int iCenterY, int32_t iRadiusX, 
         pBBEP->last_error = BBEP_ERROR_BAD_PARAMETER;
         return; // invalid radii
     }
-    ucColor = pBBEP->pColorLookup[ucColor & 0xf];
     if (iRadiusX > iRadiusY) {// use X as the primary radius
         iRadius = iRadiusX;
         iXFrac = 65536;

@@ -999,6 +999,37 @@ const uint8_t epd213z_init_full[] PROGMEM =
    0 // end
 }; /* epd213z_init_full */
 
+const uint8_t epd213z_init_gray[] PROGMEM =
+{
+   0x01, 0x12, // soft reset
+   BUSY_WAIT,
+   0x04, 0x01, 0xf9, 0x00, 0x00,
+   0x02, 0x011, 0x03,
+   0x03, 0x44, 0x00, 0x0f,
+   0x05, 0x45, 0x00, 0x00, 0xf9, 0x00,
+   0x02, 0x3c, 0x01,
+   BUSY_WAIT,
+   0x02, 0x18, 0x80,
+   0x02, 0x4e, 0x00,
+   0x03, 0x4f, 0x00, 0x00,
+   BUSY_WAIT,
+    91, 0x32, // LUT
+    0x9a, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // LUT 0
+    0x96, 0x60, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // LUT 1
+    0x99, 0x90, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // LUT 2
+    0x94, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // LUT 3
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // LUT VCOM
+    0x0a, 0x0a, 0x07, 0x02, 0x00, // phases for 0 A,B,C,D
+    0x02, 0x02, 0x00, 0x00, 0x00, // phases for 1 A,B
+    0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, // 2-9 not needed
+    0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00,
+   0 // end
+}; /* epd213z_init_gray */
+
 const uint8_t epd213z_init_fast[] PROGMEM = 
 {   
    0x01, 0x12, // soft reset
@@ -1309,10 +1340,10 @@ const uint8_t epd295_init_sequence_part[] PROGMEM =
     0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
     0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    0x10, 0x00, 0x00, 0x00, 0x00,
-    0x10, 0x00, 0x00, 0x00, 0x00,
-    0x10, 0x00, 0x00, 0x00, 0x00,
-    0x10, 0x00, 0x00, 0x00, 0x00,
+    0x0a, 0x00, 0x00, 0x00, 0x00,
+    0x0a, 0x00, 0x00, 0x00, 0x00,
+    0x0a, 0x00, 0x00, 0x00, 0x00,
+    0x0a, 0x00, 0x00, 0x00, 0x00,
     0x00, 0x00, 0x00, 0x00, 0x00,
     0x00, 0x00, 0x00, 0x00, 0x00,
     0x00, 0x00, 0x00, 0x00, 0x00,
@@ -2226,6 +2257,7 @@ const EPD_PANEL panelDefs[] PROGMEM = {
     {128, 296, 0, epd29z_init_full, epd29z_init_fast, epd29z_init_full, 0, BBEP_CHIP_SSD16xx, u8Colors_2clr}, // CrowPanel 2.9 (EP29Z_128x296)
     {128, 296, 0, epd29z_init_gray, epd29z_init_gray, epd29z_init_gray, BBEP_4GRAY, BBEP_CHIP_SSD16xx, u8Colors_4gray}, // CrowPanel 2.9 (EP29Z_128x296_4GRAY)
     {122, 250, 0, epd213z_init_full, epd213z_init_fast, epd213z_init_full, 0, BBEP_CHIP_SSD16xx, u8Colors_2clr}, // CrowPanel 2.13 (EP213Z_122x250)
+    {122, 250, 0, epd213z_init_gray, epd213z_init_gray, epd213z_init_gray, BBEP_4GRAY, BBEP_CHIP_SSD16xx, u8Colors_4gray}, // CrowPanel 2.13 (EP213Z_122x250) 4-gray mode
 };
 //
 // Set the e-paper panel type
@@ -2236,11 +2268,27 @@ int bbepSetPanelType(BBEPDISP *pBBEP, int iPanel)
     if (pBBEP == NULL || iPanel <= EP_PANEL_UNDEFINED || iPanel >= EP_PANEL_COUNT)
         return BBEP_ERROR_BAD_PARAMETER;
     
-    pBBEP->native_width = pBBEP->width = panelDefs[iPanel].width;
-    pBBEP->native_height = pBBEP->height = panelDefs[iPanel].height;
+    switch (pBBEP->iOrientation) {
+        case 0:
+        case 180:
+            pBBEP->width = pBBEP->native_width = panelDefs[iPanel].width;
+            pBBEP->height = pBBEP->native_height = panelDefs[iPanel].height;
+            break;
+        case 90:
+        case 270:
+            pBBEP->width = pBBEP->native_height = panelDefs[iPanel].height;
+            pBBEP->height = pBBEP->native_width = panelDefs[iPanel].width;
+            break;
+    }
+
     pBBEP->x_offset = panelDefs[iPanel].x_offset;
     pBBEP->chip_type = panelDefs[iPanel].chip_type;
     pBBEP->iFlags = panelDefs[iPanel].flags;
+    // If the memory is already allocated and the user is setting a
+    // panel type which needs 2 planes, assume they have been allocated
+    if (pBBEP->ucScreen && (pBBEP->iFlags & (BBEP_3COLOR | BBEP_4GRAY | BBEP_4COLOR))) {
+       pBBEP->iFlags |= BBEP_HAS_SECOND_PLANE;
+    }
     pBBEP->pInitFull = panelDefs[iPanel].pInitFull;
     pBBEP->pInitFast = panelDefs[iPanel].pInitFast;
     pBBEP->pInitPart = panelDefs[iPanel].pInitPart;
@@ -2740,17 +2788,11 @@ void bbepSetRotation(BBEPDISP *pBBEP, int iRotation)
     switch (iRotation) {
         default: return;
         case 0:
-            pBBEP->width = pBBEP->native_width;
-            pBBEP->height = pBBEP->native_height;
-            break;
-        case 90:
-            pBBEP->width = pBBEP->native_height;
-            pBBEP->height = pBBEP->native_width;
-            break;
         case 180:
             pBBEP->width = pBBEP->native_width;
             pBBEP->height = pBBEP->native_height;
             break;
+        case 90:
         case 270:
             pBBEP->width = pBBEP->native_height;
             pBBEP->height = pBBEP->native_width;

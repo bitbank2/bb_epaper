@@ -123,6 +123,7 @@ enum {
     EPD_CROWPANEL29,
     EPD_CROWPANEL29_4GRAY,
     EPD_CROWPANEL213,
+    EPD_CROWPANEL213_4GRAY,
     EPD_PRODUCT_COUNT
 };
 
@@ -176,6 +177,7 @@ enum {
     EP29Z_128x296, // SSD1680 (CrowPanel 2.9")
     EP29Z_128x296_4GRAY, // SSD1680 (CrowPanel 2.9")
     EP213Z_122x250, // SSD1680 (CrowPanel 2.13")
+    EP213Z_122x250_4GRAY, // CrowPanel 2.13" 4 gray mode
     EP_PANEL_COUNT
 };
 #ifdef FUTURE
