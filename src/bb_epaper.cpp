@@ -91,6 +91,38 @@ int rc = BBEP_ERROR_BAD_PARAMETER;
                 return BBEP_SUCCESS;
             }
             break;
+        case EPD_CROWPANEL154: // DC:13 CS:14 RST:10 BUSY:9 MOSI:11 SCK:12
+            pinMode(7, OUTPUT);
+            digitalWrite(7, HIGH); // screen power on
+            if (setPanelType(EP154Z_152x152) == BBEP_SUCCESS) {
+                initIO(13, 10, 9, 14, 11, 12, 12000000);
+                return BBEP_SUCCESS;
+            }
+            break;
+        case EPD_CROWPANEL579:
+            pinMode(7, OUTPUT);
+            digitalWrite(7, HIGH); // screen power on
+            if (setPanelType(EP579_792x272) == BBEP_SUCCESS) {
+                initIO(46, 47, 48, 45, 11, 12, 12000000);
+                return BBEP_SUCCESS;
+            }   
+            break;
+        case EPD_CROWPANEL37:
+            pinMode(7, OUTPUT);
+            digitalWrite(7, HIGH); // screen power on
+            if (setPanelType(EP37B_240x416) == BBEP_SUCCESS) {
+                initIO(46, 47, 48, 45, 11, 12, 12000000);
+                return BBEP_SUCCESS;
+            }
+            break;
+        case EPD_CROWPANEL42: // DC:46 CS:45 RST:47 BUSY:48 MOSI:11 SCK:12
+            pinMode(7, OUTPUT); 
+            digitalWrite(7, HIGH); // screen power on
+            if (setPanelType(EP42B_400x300) == BBEP_SUCCESS) {
+                initIO(46, 47, 48, 45, 11, 12, 12000000);
+                return BBEP_SUCCESS;
+            }
+            break;
         case EPD_CROWPANEL29: // DC:46 CS:45 RST:47 BUSY:48 MOSI:11 SCK:12
         case EPD_CROWPANEL29_4GRAY:
             pinMode(7, OUTPUT);

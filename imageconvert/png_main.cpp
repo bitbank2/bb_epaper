@@ -280,7 +280,7 @@ int main(int argc, const char * argv[]) {
                 bpp = 32;
                 break;
         } // switch
-        if (iMode != MODE_BW) { // need to convert it to 1 or 2-bpp
+        if (iMode != MODE_BW || (iMode == MODE_BW && bpp != 1)) { // need to convert it to 1 or 2-bpp
             printf("Converting pixels to %s\n", szModes[iMode]);
             ConvertBpp(png.getBuffer(), iMode, w, h, bpp, pPalette);
         }
