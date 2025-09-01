@@ -268,6 +268,35 @@ const uint8_t EPD213R_104x212_d_init_sequence_full[] PROGMEM = {
     0x00
 };
 
+const uint8_t epd37b_init_sequence_full[] PROGMEM = {
+    0x01, 0x04, // power on
+    BUSY_WAIT,
+    0x02, 0x00, 0x1f, // panel init
+    0x00
+};
+
+const uint8_t epd37b_init_sequence_fast[] PROGMEM = {
+    0x01, 0x04, // power on
+    BUSY_WAIT,
+    0x02, 0x00, 0x1f, // panel init
+    0x02, 0xe0, 0x02,
+    0x02, 0xe5, 0x5f,
+    0x02, 0x50, 0xd7,
+    BUSY_WAIT,
+    0x00
+};
+
+const uint8_t epd37b_init_sequence_part[] PROGMEM = {
+    0x01, 0x04, // power on
+    BUSY_WAIT,
+    0x02, 0x00, 0x1f, // panel init
+    0x02, 0xe0, 0x02,
+    0x02, 0xe5, 0x6e,
+    0x02, 0x50, 0xd7,
+    BUSY_WAIT,
+    0x00
+};
+
 const uint8_t epd37_init_sequence_full[] PROGMEM = {
     0x01, UC8151_PON, // Power on
     BUSY_WAIT,
@@ -982,12 +1011,100 @@ const uint8_t epd213b_init_sequence_part[] PROGMEM =
     0x00 // end of table
 };
 
+const uint8_t epd579_init_full[] PROGMEM =
+{
+   EPD_RESET,
+   BUSY_WAIT,
+   0x01, 0x12, // soft reset
+   BUSY_WAIT,
+   0x02, 0x3c, 0xc0,
+   BUSY_WAIT,
+   0
+};
+
+const uint8_t epd579_init_fast[] PROGMEM =
+{
+   0x01, 0x12, // soft reset
+   BUSY_WAIT,
+   0x02, 0x18, 0x80,
+   0x02, 0x22, 0xb1,
+   0x01, 0x20,
+   BUSY_WAIT,
+   0x03, 0x1a, 0x64, 0x00,
+   0x02, 0x22, 0x91,
+   0x01, 0x20,
+   BUSY_WAIT,
+   0x02, 0x3c, 0x03,
+   BUSY_WAIT,
+   0x00
+};
+
+const uint8_t epd579_init_part[] PROGMEM =
+{
+   0x01, 0x12, // soft reset
+   BUSY_WAIT, 
+   0x02, 0x3c, 0x01,
+   0x02, 0x11, 0x03,
+   0x02, 0x18, 0x80,
+   0x02, 0x22, 0xb1,
+   0x01, 0x20,
+   BUSY_WAIT,
+   0x03, 0x1a, 0x64, 0x00,
+   0x02, 0x22, 0x91,
+   0x01, 0x20,
+   BUSY_WAIT,
+   0x00
+};
+
+const uint8_t epd154z_init_full[] PROGMEM = 
+{
+   0x01, 0x12, // soft reset
+   BUSY_WAIT,
+   0x02, 0x11, 0x03,
+   0x02, 0x3c, 0x01,
+   0x00
+};
+
+const uint8_t epd154z_init_fast[] PROGMEM =   
+{
+   0x01, 0x12, // soft reset
+   BUSY_WAIT,
+   0x02, 0x3c, 0x01,
+   0x02, 0x11, 0x03,
+   0x02, 0x18, 0x80,
+   0x02, 0x22, 0xb1,
+   0x01, 0x20,
+   BUSY_WAIT,
+   0x03, 0x1a, 0x5a, 0x00,
+   0x02, 0x22, 0x91,
+   0x01, 0x20,
+   BUSY_WAIT,
+   0x00
+};
+
+const uint8_t epd154z_init_part[] PROGMEM =   
+{
+   0x01, 0x12, // soft reset
+   BUSY_WAIT, 
+   0x02, 0x3c, 0x01,
+   0x02, 0x11, 0x03,
+   0x02, 0x18, 0x80,
+   0x02, 0x22, 0xb1,
+   0x01, 0x20,
+   BUSY_WAIT,
+   0x03, 0x1a, 0x64, 0x00,
+   0x02, 0x22, 0x91,
+   0x01, 0x20,
+   BUSY_WAIT,
+   0x00
+}; 
+
 const uint8_t epd213z_init_full[] PROGMEM = 
 {
    0x01, 0x12, // soft reset
    BUSY_WAIT,
    0x04, 0x01, 0xf9, 0x00, 0x00,
-   0x02, 0x011, 0x03,
+   0x02, 0x11, 0x03,
    0x03, 0x44, 0x00, 0x0f,
    0x05, 0x45, 0x00, 0x00, 0xf9, 0x00,
    0x02, 0x3c, 0x01,
@@ -1623,13 +1740,6 @@ const uint8_t epd426_init_part[] PROGMEM =
     0x00 // end of table
 };
 
-const uint8_t epd579_init_sequence_full[] PROGMEM =
-{
-    2, 0x11, 0x03, // data format
-    2, 0x3c, 0x80, // border color
-    0x00 // end of table
-}; /* epd579_init_sequence_full[] */
-
 const uint8_t epd29b_init_sequence_full[] PROGMEM = {
     1, SSD1608_SW_RESET,
     BUSY_WAIT,
@@ -2226,6 +2336,7 @@ const EPD_PANEL panelDefs[] PROGMEM = {
     {400, 300, 0, epd42r_init_sequence_full, NULL, NULL, BBEP_3COLOR, BBEP_CHIP_SSD16xx, u8Colors_3clr}, // EP42R_400x300, Inky wHAT 4.2" 400x300 B/W/R
     {400, 300, 0, epd42r2_init_sequence_full, epd42r2_init_sequence_fast, NULL, BBEP_RED_SWAPPED | BBEP_3COLOR, BBEP_CHIP_UC81xx, u8Colors_3clr}, // EP42R2_400x300
     {240, 416, 0, epd37_init_sequence_full, NULL, epd37_init_sequence_part, 0, BBEP_CHIP_UC81xx, u8Colors_2clr}, // EP37_240x416
+    {240, 416, 0, epd37b_init_sequence_full, epd37b_init_sequence_fast, epd37b_init_sequence_part, 0, BBEP_CHIP_UC81xx, u8Colors_2clr}, // EP37B_240x416
     {104, 212, 0, epd213_inky_init_sequence_full, NULL, NULL, 0, BBEP_CHIP_UC81xx, u8Colors_2clr}, // EP213_104x212, older InkyPHAT black and white
     {800, 480, 0, epd75_init_sequence_full, epd75_init_sequence_fast, epd75_init_sequence_partial, 0, BBEP_CHIP_UC81xx, u8Colors_2clr}, // EP75_800x480
     {800, 480, 0, epd75_gray_init, NULL, NULL, BBEP_4GRAY, BBEP_CHIP_UC81xx, u8Colors_4gray}, // EP75_800x480_4GRAY
@@ -2258,6 +2369,8 @@ const EPD_PANEL panelDefs[] PROGMEM = {
     {128, 296, 0, epd29z_init_gray, epd29z_init_gray, epd29z_init_gray, BBEP_4GRAY, BBEP_CHIP_SSD16xx, u8Colors_4gray}, // CrowPanel 2.9 (EP29Z_128x296_4GRAY)
     {122, 250, 0, epd213z_init_full, epd213z_init_fast, epd213z_init_full, 0, BBEP_CHIP_SSD16xx, u8Colors_2clr}, // CrowPanel 2.13 (EP213Z_122x250)
     {122, 250, 0, epd213z_init_gray, epd213z_init_gray, epd213z_init_gray, BBEP_4GRAY, BBEP_CHIP_SSD16xx, u8Colors_4gray}, // CrowPanel 2.13 (EP213Z_122x250) 4-gray mode
+    {152, 152, 0, epd154z_init_full, epd154z_init_fast, epd154z_init_part, 0, BBEP_CHIP_SSD16xx, u8Colors_2clr}, // CrowPanel 1.54" EP154Z_152x152
+    {792, 272, 0, epd579_init_full, epd579_init_fast, epd579_init_part, 0, BBEP_CHIP_SSD16xx, u8Colors_2clr}, // CrowPanel 5.79" (EP579_792x272)
 };
 //
 // Set the e-paper panel type
@@ -2573,6 +2686,8 @@ void bbepSendCMDSequence(BBEPDISP *pBBEP, const uint8_t *pSeq)
         iLen = *s++;
         if (iLen == BUSY_WAIT) {
             bbepWaitBusy(pBBEP);
+        } else if (iLen == EPD_RESET) {
+            bbepWakeUp(pBBEP);
         } else {
             bbepWriteCmd(pBBEP, s[0]);
             s++;
@@ -2764,6 +2879,8 @@ int bbepRefresh(BBEPDISP *pBBEP, int iMode)
     } else {
         const uint8_t u8CMD[4] = {0xf7, 0xc7, 0xff, 0xc0}; // normal, fast, partial, partial2
         const uint8_t u8CMDz[4] = {0xf4, 0xc7, 0xfc, 0}; // special set for SSD1680
+        const uint8_t u8CMDz2[4] = {0xf4, 0xc7, 0xdc, 0}; // special set #2 for SSD1680
+        const uint8_t u8CMDz3[4] = {0xf7, 0xc7, 0xdc, 0}; // special set #3
         if (pBBEP->iFlags & (BBEP_4GRAY | BBEP_3COLOR | BBEP_4COLOR)) {
             iMode = REFRESH_FAST;
         } // 3/4-color = 0xc7
@@ -2772,6 +2889,10 @@ int bbepRefresh(BBEPDISP *pBBEP, int iMode)
         }
         if (pBBEP->type == EP29Z_128x296 || pBBEP->type == EP213Z_122x250) {
             bbepCMD2(pBBEP, SSD1608_DISP_CTRL2, u8CMDz[iMode]);
+        } else if (pBBEP->type == EP154Z_152x152) {
+            bbepCMD2(pBBEP, SSD1608_DISP_CTRL2, u8CMDz2[iMode]);
+        } else if (pBBEP->type == EP579_792x272) {
+            bbepCMD2(pBBEP, SSD1608_DISP_CTRL2, u8CMDz3[iMode]);
         } else {
             bbepCMD2(pBBEP, SSD1608_DISP_CTRL2, u8CMD[iMode]);
         }
@@ -3171,6 +3292,130 @@ static void bbepWriteImage1to4bpp(BBEPDISP *pBBEP, uint8_t ucCMD, uint8_t *pBuff
 //
 // Write Image data (1-bpp entire plane) from RAM to the e-paper
 // Rotate the pixels if necessary
+// This version is specifically for the 272x792 5.79" panels
+// since they split the memory into two halves
+//
+static void bbepWriteHalf(BBEPDISP *pBBEP, uint8_t ucCMD, uint8_t *pBuffer, int bInvert)
+{
+    int tx, ty;
+    uint8_t *s, *d, ucSrcMask, ucDstMask, uc;
+    uint8_t ucInvert = 0;
+    int iPitch;
+
+    iPitch = (pBBEP->native_width + 7) >> 3;
+    if (bInvert) {
+        ucInvert = 0xff; // red logic is inverted
+    }
+    if (ucCMD & 0x80) { // second half
+        pBuffer += (392/8); // start in the middle
+        bbepWriteCmd(pBBEP, 0x91); // switch to second memory set
+        u8Cache[0] = 4;
+        bbepWriteData(pBBEP, u8Cache, 1);
+        bbepWriteCmd(pBBEP, 0xc4);
+        u8Cache[0] = 0x31; u8Cache[1] = 0;
+        bbepWriteData(pBBEP, u8Cache, 2);
+        bbepWriteCmd(pBBEP, 0xc5);
+        u8Cache[0] = 0x0f; u8Cache[1] = 0x1; u8Cache[2] = u8Cache[3] = 0;
+        bbepWriteData(pBBEP, u8Cache, 4);
+        bbepWriteCmd(pBBEP, 0xce);
+        u8Cache[0] = 0x31;
+        bbepWriteData(pBBEP, u8Cache, 1);
+        bbepWriteCmd(pBBEP, 0xcf);
+        u8Cache[0] = 0x0f; u8Cache[1] = 0x01;
+        bbepWriteData(pBBEP, u8Cache, 2);
+    } else {
+        bbepWriteCmd(pBBEP, 0x11);
+        u8Cache[0] = 0x5;
+        bbepWriteCmd(pBBEP, 0x11);
+        u8Cache[0] = 0x5;
+        bbepWriteData(pBBEP, u8Cache, 1);
+        bbepWriteData(pBBEP, u8Cache, 1);
+        bbepWriteCmd(pBBEP, 0x44);
+        u8Cache[0] = 0; u8Cache[1] = 0x31;
+        bbepWriteData(pBBEP, u8Cache, 2);
+        bbepWriteCmd(pBBEP, 0x45);
+        u8Cache[0] = 0x0f; u8Cache[1] = 0x1; u8Cache[2] = u8Cache[3] = 0;
+        bbepWriteData(pBBEP, u8Cache, 4);
+        bbepWriteCmd(pBBEP, 0x4e);
+        u8Cache[0] = 0;
+        bbepWriteData(pBBEP, u8Cache, 1);
+        bbepWriteCmd(pBBEP, 0x4f);
+        u8Cache[0] = 0x0f; u8Cache[1] = 0x01;
+        bbepWriteData(pBBEP, u8Cache, 2);
+    }
+    bbepWriteCmd(pBBEP, ucCMD); // start write
+    // Convert the bit direction and write the data to the EPD
+    switch (pBBEP->iOrientation) {
+        case 0:
+            for (tx=0; tx<400/8; tx++) {
+                d = u8Cache;
+                s = &pBuffer[tx];
+                for (ty=0; ty<272; ty++) {
+                    *d++ = *s;
+                    s += iPitch;
+                }
+                if (ucInvert) InvertBytes(d, 272);
+                bbepWriteData(pBBEP, u8Cache, 272);
+            } // for ty
+            break;
+        case 90:
+            for (tx=0; tx<pBBEP->width; tx++) {
+                d = u8Cache;
+                // need to pick up and reassemble every pixel
+                ucDstMask = 0x80;
+                uc = 0xff;
+                ucSrcMask = 0x80 >> (tx & 7);
+                for (ty=pBBEP->native_height-1; ty>=0; ty--) {
+                    s = &pBuffer[(tx >> 3) + (ty * iPitch)];
+                    if ((s[0] & ucSrcMask) == 0) uc &= ~ucDstMask;
+                    ucDstMask >>= 1;
+                    if (ucDstMask == 0) {
+                        *d++ = (uc ^ ucInvert);
+                        ucDstMask = 0x80;
+                        uc = 0xff;
+                    }
+                } // for ty
+                *d++ = (uc ^ ucInvert); // store final partial byte
+                bbepWriteData(pBBEP, u8Cache, (pBBEP->native_width+7)/8);
+            } // for tx
+            break;
+        case 180:
+            for (ty=pBBEP->native_height-1; ty>=0; ty--) {
+                d = u8Cache;
+                s = &pBuffer[ty * iPitch];
+                for (tx=iPitch-1; tx>=0; tx--) {
+                    *d++ = (ucMirror[s[tx]] ^ ucInvert);
+                } // for tx
+                bbepWriteData(pBBEP, u8Cache, iPitch);
+            } // for ty
+            break;
+        case 270:
+            for (tx=pBBEP->width-1; tx>=0; tx--) {
+                d = u8Cache;
+                // reassemble every pixel
+                ucDstMask = 0x80;
+                uc = 0xff;
+                ucSrcMask = 0x80 >> (tx & 7);
+                for (ty=0; ty<pBBEP->native_height; ty++) {
+                    s = &pBuffer[(tx>>3) + (ty * iPitch)];
+                    if ((s[0] & ucSrcMask) == 0) uc &= ~ucDstMask;
+                    ucDstMask >>= 1;
+                    if (ucDstMask == 0) {
+                        *d++ = (uc ^ ucInvert);
+                        ucDstMask = 0x80;
+                        uc = 0xff;
+                    }
+                } // for ty
+                *d++ = (uc ^ ucInvert); // store final partial byte
+                bbepWriteData(pBBEP, u8Cache, (pBBEP->native_width+7)/8);
+            } // for x
+            break;
+    } // switch on orientation
+} /* bbepWriteHalf() */
+
+//
+// Write Image data (1-bpp entire plane) from RAM to the e-paper
+// Rotate the pixels if necessary
 //
 static void bbepWriteImage(BBEPDISP *pBBEP, uint8_t ucCMD, uint8_t *pBuffer, int bInvert)
 {
@@ -3262,7 +3507,9 @@ int bbepWritePlane(BBEPDISP *pBBEP, int iPlane, int bInvert)
     if (pBBEP == NULL || pBBEP->ucScreen == NULL || iPlane < PLANE_0 || iPlane > PLANE_FALSE_DIFF) {
         return BBEP_ERROR_BAD_PARAMETER;
     }
-    bbepSetAddrWindow(pBBEP, 0,0, pBBEP->native_width, pBBEP->native_height);
+    if (pBBEP->native_width != 792) { // special case of split buffer
+        bbepSetAddrWindow(pBBEP, 0,0, pBBEP->native_width, pBBEP->native_height);
+    }
 
     if (pBBEP->iFlags & BBEP_4BPP_DATA) { // special case for some 2 and 3-color panels
         if (pBBEP->iFlags & BBEP_3COLOR) {
@@ -3300,32 +3547,70 @@ int bbepWritePlane(BBEPDISP *pBBEP, int iPlane, int bInvert)
     if (pBBEP->iFlags & BBEP_3COLOR && iPlane == PLANE_DUPLICATE) {
         iPlane = PLANE_BOTH;
     } 
-    switch (iPlane) {
-        case PLANE_0:
-            bbepWriteImage(pBBEP, ucCMD1, pBBEP->ucScreen, bInvert);
-            break;
-        case PLANE_1:
-            bbepWriteImage(pBBEP, ucCMD2, &pBBEP->ucScreen[iOffset], bInvert);
-            break;
-        case PLANE_0_TO_1:
-            bbepWriteImage(pBBEP, ucCMD2, pBBEP->ucScreen, bInvert);
-            break;
-        case PLANE_BOTH:
-            bbepWriteImage(pBBEP, ucCMD1, pBBEP->ucScreen, bInvert);
-            if (pBBEP->iFlags & BBEP_HAS_SECOND_PLANE) {
-                bbepWriteImage(pBBEP, ucCMD2, &pBBEP->ucScreen[iOffset], bInvert);
-            }
-            break;
-        case PLANE_DUPLICATE:
-            bbepWriteImage(pBBEP, ucCMD1, pBBEP->ucScreen, bInvert);
-            bbepWriteImage(pBBEP, ucCMD2, pBBEP->ucScreen, bInvert);
-            break;
+    if (pBBEP->native_width == 792) { // special case
+        switch (iPlane) {
+            case PLANE_0:
+                bbepWriteHalf(pBBEP, ucCMD1, pBBEP->ucScreen, bInvert);
+                bbepWriteHalf(pBBEP, ucCMD1 | 0x80, pBBEP->ucScreen, bInvert);
+                break;
+            case PLANE_1:
+                bbepWriteHalf(pBBEP, ucCMD2, &pBBEP->ucScreen[iOffset], bInvert);
+                bbepWriteHalf(pBBEP, ucCMD2 | 0x80, &pBBEP->ucScreen[iOffset], bInvert);    
+                break;
+            case PLANE_0_TO_1:
+                bbepWriteHalf(pBBEP, ucCMD2, pBBEP->ucScreen, bInvert);
+                bbepWriteHalf(pBBEP, ucCMD2 | 0x80, pBBEP->ucScreen, bInvert);
+                break;
+            case PLANE_BOTH:
+                bbepWriteHalf(pBBEP, ucCMD1, pBBEP->ucScreen, bInvert);
+                bbepWriteHalf(pBBEP, ucCMD1 | 0x80, pBBEP->ucScreen, bInvert);
+                if (pBBEP->iFlags & BBEP_HAS_SECOND_PLANE) {
+                    bbepWriteHalf(pBBEP, ucCMD2, &pBBEP->ucScreen[iOffset], bInvert);
+                    bbepWriteHalf(pBBEP, ucCMD2 | 0x80, &pBBEP->ucScreen[iOffset], bInvert);
+                }
+                break;
+            case PLANE_DUPLICATE:
+                bbepWriteHalf(pBBEP, ucCMD1, pBBEP->ucScreen, bInvert);
+                bbepWriteHalf(pBBEP, ucCMD1 | 0x80, pBBEP->ucScreen, bInvert);
+                bbepWriteHalf(pBBEP, ucCMD2, pBBEP->ucScreen, bInvert);
+                bbepWriteHalf(pBBEP, ucCMD2 | 0x80, pBBEP->ucScreen, bInvert);
+                break;
 
-        case PLANE_FALSE_DIFF: // send inverted image to 'old' plane
-            bbepWriteImage(pBBEP, ucCMD1, pBBEP->ucScreen, 0);
-            bbepWriteImage(pBBEP, ucCMD2, pBBEP->ucScreen, 1);
-            break;
-    }
+            case PLANE_FALSE_DIFF: // send inverted image to 'old' plane
+                bbepWriteHalf(pBBEP, ucCMD1, pBBEP->ucScreen, 0);
+                bbepWriteHalf(pBBEP, ucCMD1 | 0x80, pBBEP->ucScreen, 0);
+                bbepWriteHalf(pBBEP, ucCMD2, pBBEP->ucScreen, 1);
+                bbepWriteHalf(pBBEP, ucCMD2 | 0x80, pBBEP->ucScreen, 1);
+                break;
+        } // switch on plane option
+    } else { // 'normal' panels
+        switch (iPlane) {
+            case PLANE_0:
+                bbepWriteImage(pBBEP, ucCMD1, pBBEP->ucScreen, bInvert);
+                break;
+            case PLANE_1:
+                bbepWriteImage(pBBEP, ucCMD2, &pBBEP->ucScreen[iOffset], bInvert);
+                break;
+            case PLANE_0_TO_1:
+                bbepWriteImage(pBBEP, ucCMD2, pBBEP->ucScreen, bInvert);
+                break;
+            case PLANE_BOTH:
+                bbepWriteImage(pBBEP, ucCMD1, pBBEP->ucScreen, bInvert);
+                if (pBBEP->iFlags & BBEP_HAS_SECOND_PLANE) {
+                    bbepWriteImage(pBBEP, ucCMD2, &pBBEP->ucScreen[iOffset], bInvert);
+                }
+                break;
+            case PLANE_DUPLICATE:
+                bbepWriteImage(pBBEP, ucCMD1, pBBEP->ucScreen, bInvert);
+                bbepWriteImage(pBBEP, ucCMD2, pBBEP->ucScreen, bInvert);
+                break;
+
+            case PLANE_FALSE_DIFF: // send inverted image to 'old' plane
+                bbepWriteImage(pBBEP, ucCMD1, pBBEP->ucScreen, 0);
+                bbepWriteImage(pBBEP, ucCMD2, pBBEP->ucScreen, 1);
+                break;
+        } // switch on plane option
+    } // normal panels
     return BBEP_SUCCESS;
 } /* bbepWritePlane() */
 

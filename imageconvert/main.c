@@ -32,7 +32,11 @@ uint8_t *s;
 uint8_t ucTemp[1024];
 
     oHandle = fopen(fname, "w+b");
-    bsize = (cx * bpp) >> 3;
+    if (bpp == 1) {
+        bsize = (cx + 7)>>3;
+    } else {
+        bsize = (cx * bpp) / 8;
+    }
     lsize = (bsize + 3) & 0xfffc; /* Width of each line */
     winbmphdr[26] = 1; // number of planes
     winbmphdr[28] = (uint8_t)bpp;
@@ -90,7 +94,8 @@ uint8_t ucTemp[1024];
             fwrite(s, 1, (size_t)lsize, oHandle);
         }
     }
-   fclose(oHandle);
+    fflush(oHandle);
+    fclose(oHandle);
 } /* SaveBMP() */
 
 //
@@ -307,8 +312,7 @@ int main(int argc, const char * argv[]) {
         h = pBBBM->height;
         printf("Converting %dx%d G5 image to BMP\n", w, h);
         iPitch = (w + 7)/8;
-        iPitch = (iPitch + 3) & 0xfffc;
-        pOut = (uint8_t *)malloc(iPitch * h); // output BMP
+        pOut = (uint8_t *)malloc(iPitch * (h+1)); // output BMP
         rc = g5_decode_init(&g5dec, w, h, (uint8_t *)&pBBBM[1], pBBBM->size);
         if (rc != G5_SUCCESS) {
             printf("Error decoding Group5 image\n");

@@ -124,6 +124,10 @@ enum {
     EPD_CROWPANEL29_4GRAY,
     EPD_CROWPANEL213,
     EPD_CROWPANEL213_4GRAY,
+    EPD_CROWPANEL42,
+    EPD_CROWPANEL37,
+    EPD_CROWPANEL154,
+    EPD_CROWPANEL579,
     EPD_PRODUCT_COUNT
 };
 
@@ -147,6 +151,7 @@ enum {
     EP42R_400x300,
     EP42R2_400x300, // GDEQ042Z21
     EP37_240x416, // GDEY037T03
+    EP37B_240x416, // CROWPANEL 3.7"
     EP213_104x212, // InkyPHAT 2.13 black and white
     EP75_800x480, // GDEY075T7
     EP75_800x480_4GRAY, // GDEW075T7 in 4 grayscale mode
@@ -178,6 +183,8 @@ enum {
     EP29Z_128x296_4GRAY, // SSD1680 (CrowPanel 2.9")
     EP213Z_122x250, // SSD1680 (CrowPanel 2.13")
     EP213Z_122x250_4GRAY, // CrowPanel 2.13" 4 gray mode
+    EP154Z_152x152, // CrowPanel 1.54"
+    EP579_792x272, // CrowPanel 5.79"
     EP_PANEL_COUNT
 };
 #ifdef FUTURE
@@ -400,6 +407,7 @@ enum {
 #endif
 
 #define BUSY_WAIT 0xff
+#define EPD_RESET 0xfe
 
 // Normal pixel drawing function pointer
 typedef int (BB_SET_PIXEL)(void *pBBEP, int x, int y, unsigned char color);
