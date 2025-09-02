@@ -24,9 +24,16 @@ inside of inexpensive e-paper price tags.
 
 ## Convenient tools
 In order to help with the adoption and usage of G5, I needed to create a set of tools that
-make it easy to convert to and from this format.
+make it easy to convert to and from this format. The imgconvert tool allows for converting
+both PNG and Win BMP files into G5 output as either binary or .H files which can directly
+compile into your project. It also allows going in the other direction and converting the
+binary of .H G5 files back into Win BMP files.
 
 ## Going further
-The basic G5 compression only supports 1-bit pixels. Three and four color e-paper displays
+The G5 compression algorithm only supports 1-bit pixels. Three and four color e-paper displays
 have become more common in recent years and I wanted to create a solution to address them
-as well. 
+as well. The latest G5 file format and imageconvert tool support 3 and 4 color images by splitting
+the data into two 1-bit planes, the same way the memory is arranged inside the epaper controller.
+The imageconvert tool supports a "best effort" mapping of color images to the 3 or 4 colors
+of these displays (black/white/red and black/white/yellow/red). The bb_library drawing functions
+can decode these two plane images and reproduce the correct colors on the displays.
