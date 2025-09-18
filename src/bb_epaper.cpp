@@ -91,6 +91,15 @@ int rc = BBEP_ERROR_BAD_PARAMETER;
                 return BBEP_SUCCESS;
             }
             break;
+
+        case EPD_RETERMINAL_SPECTRA: // Seeed Studio 7.3" color E1002
+            // DC:11 RST:12 BUSY:13 CS:10 MOSI:9 SCK:7
+            if (setPanelType(EP73_SPECTRA_800x480) == BBEP_SUCCESS) {
+                initIO(11, 12, 13, 10, 9, 7, 10000000);
+                return BBEP_SUCCESS;
+            }
+            break;
+
         case EPD_CROWPANEL154: // DC:13 CS:14 RST:10 BUSY:9 MOSI:11 SCK:12
             pinMode(7, OUTPUT);
             digitalWrite(7, HIGH); // screen power on

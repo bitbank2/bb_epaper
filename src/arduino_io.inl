@@ -34,6 +34,21 @@ void bbepSetCS2(BBEPDISP *pBBEP, uint8_t cs)
     digitalWrite(cs, HIGH); // disable second CS for now
 } /* bbepSetCS2() */
 
+void SPI_Write(BBEPDISP *pBBEP, uint8_t *pData, int iLen)
+{
+int i, j;
+uint8_t uc;
+
+    for (i=0; i<iLen; i++) {
+        uc = *pData++;
+        for (j=0; j<8; j++) {
+            digitalWrite(pBBEP->iCLKPin, 0);
+            digitalWrite(pBBEP->iMOSIPin, uc & 0x80);
+            digitalWrite(pBBEP->iCLKPin, 1);
+            uc <<= 1;
+        }
+    }
+} /* SPI_Write() */
 //
 // Initialize the GPIO pins and SPI for use by bb_eink
 //
@@ -58,16 +73,21 @@ void bbepInitIO(BBEPDISP *pBBEP, uint8_t u8DC, uint8_t u8RST, uint8_t u8BUSY, ui
     pBBEP->iSpeed = u32Speed;
     pinMode(pBBEP->iCSPin, OUTPUT);
     digitalWrite(pBBEP->iCSPin, HIGH); // manually control the CS pin
+    if (u32Speed == 0) { // bit bang mode
+        pinMode(pBBEP->iMOSIPin, OUTPUT);
+        pinMode(pBBEP->iCLKPin, OUTPUT);
+    } else {
 #ifdef ARDUINO_ARCH_ESP32
-    SPI.begin(pBBEP->iCLKPin, -1, pBBEP->iMOSIPin, -1); //pBBEP->iCSPin);
+        SPI.begin(pBBEP->iCLKPin, -1, pBBEP->iMOSIPin, -1); //pBBEP->iCSPin);
 #else
-    SPI.begin(); // other architectures have fixed SPI pins
+        SPI.begin(); // other architectures have fixed SPI pins
 #endif
-    SPI.beginTransaction(SPISettings(u32Speed, MSBFIRST, SPI_MODE0));
+        SPI.beginTransaction(SPISettings(u32Speed, MSBFIRST, SPI_MODE0));
 #ifdef ARDUINO_ARCH_ESP32
 // For NRF52, you have to leave an 'open' transaction
-    SPI.endTransaction(); // N.B. - if you call beginTransaction() again without a matching endTransaction(), it will hang on ESP32
+        SPI.endTransaction(); // N.B. - if you call beginTransaction() again without a matching endTransaction(), it will hang on ESP32
 #endif
+    }
     pBBEP->is_awake = 1;
 // Before we can start sending pixels, many panels need to know the display resolution
     bbepSendCMDSequence(pBBEP, pBBEP->pInitFull);
@@ -131,7 +151,11 @@ void bbepWriteCmd(BBEPDISP *pBBEP, uint8_t cmd)
     digitalWrite(pBBEP->iDCPin, LOW);
     delay(1);
     digitalWrite(pBBEP->iCSPin, LOW);
-    SPI.transfer(cmd);
+    if (pBBEP->iSpeed == 0) { // bit bang
+        SPI_Write(pBBEP, &cmd, 1);
+    } else {
+        SPI.transfer(cmd);
+    }
     digitalWrite(pBBEP->iCSPin, HIGH);
     digitalWrite(pBBEP->iDCPin, HIGH); // leave data mode as the default
 } /* bbepWriteCmd() */
@@ -145,25 +169,41 @@ void bbepWriteData(BBEPDISP *pBBEP, uint8_t *pData, int iLen)
     if (pBBEP->iFlags & BBEP_CS_EVERY_BYTE) {
         for (int i=0; i<iLen; i++) {
             digitalWrite(pBBEP->iCSPin, LOW);
-            SPI.transfer(pData[i]);
+            if (pBBEP->iSpeed == 0) { // bit bang
+                SPI_Write(pBBEP, &pData[i], 1);
+            } else {
+                SPI.transfer(pData[i]);
+            }
             digitalWrite(pBBEP->iCSPin, HIGH);
         }
     } else {
         digitalWrite(pBBEP->iCSPin, LOW);
-        SPI.transferBytes(pData, NULL, iLen);
+        if (pBBEP->iSpeed == 0) { // bit bang
+            SPI_Write(pBBEP, pData, iLen);
+        } else {
+            SPI.transferBytes(pData, NULL, iLen);
+        }
         digitalWrite(pBBEP->iCSPin, HIGH);
     }
 #else
     if (pBBEP->iFlags & BBEP_CS_EVERY_BYTE) {
         for (int i=0; i<iLen; i++) { // Arduino clobbers the data (duplex)
             digitalWrite(pBBEP->iCSPin, LOW);
-            SPI.transfer(pData[i]);
+            if (pBBEP->iSpeed == 0) { // bit bang
+                SPI_Write(pBBEP, &pData[i], 1);
+            } else {
+                SPI.transfer(pData[i]);
+            }
             digitalWrite(pBBEP->iCSPin, HIGH);
         }
     } else {
         digitalWrite(pBBEP->iCSPin, LOW);
         for (int i=0; i<iLen; i++) { // Arduino clobbers the data (duplex)
-            SPI.transfer(pData[i]);
+            if (pBBEP->iSpeed == 0) { // bit bang
+                SPI_Write(pBBEP, &pData[i], 1);
+            } else {
+                SPI.transfer(pData[i]);
+            }
         }
         digitalWrite(pBBEP->iCSPin, HIGH);
     }

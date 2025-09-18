@@ -3,7 +3,6 @@
 // Point size: 24, first: 32, last: 255
 // compressed font data size = 9405 bytes
 //
-// for non-Arduino builds...
 #ifndef PROGMEM
 #define PROGMEM
 #endif
