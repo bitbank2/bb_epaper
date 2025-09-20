@@ -3094,7 +3094,7 @@ int bbepRefresh(BBEPDISP *pBBEP, int iMode)
         case REFRESH_FAST:
             if (!pBBEP->pInitFast) { // fall back to full
                 bbepSendCMDSequence(pBBEP, pBBEP->pInitFull);
-            } else if (!pBBEP->iFlags & BBEP_4COLOR) {
+            } else if (!(pBBEP->iFlags & BBEP_4COLOR)) {
                 bbepSendCMDSequence(pBBEP, pBBEP->pInitFast);
             }
             break;
