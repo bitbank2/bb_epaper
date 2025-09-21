@@ -2883,7 +2883,7 @@ void bbepSleep(BBEPDISP *pBBEP, int bDeep)
             }
         }
     } else {
-        bbepCMD2(pBBEP, SSD1608_DEEP_SLEEP, (bDeep) ? 0x02 : 0x01); // deep sleep mode 1 keeps RAM,only uses about 1uA
+        bbepCMD2(pBBEP, SSD1608_DEEP_SLEEP, (bDeep) ? 0x03 : 0x01); // deep sleep mode 1 keeps RAM,only uses about 1uA
     }
     pBBEP->is_awake = 0;
 } /* bbepSleep() */
@@ -3094,7 +3094,7 @@ int bbepRefresh(BBEPDISP *pBBEP, int iMode)
         case REFRESH_FAST:
             if (!pBBEP->pInitFast) { // fall back to full
                 bbepSendCMDSequence(pBBEP, pBBEP->pInitFull);
-            } else if (!pBBEP->iFlags & BBEP_4COLOR) {
+            } else if (!(pBBEP->iFlags & BBEP_4COLOR)) {
                 bbepSendCMDSequence(pBBEP, pBBEP->pInitFast);
             }
             break;
