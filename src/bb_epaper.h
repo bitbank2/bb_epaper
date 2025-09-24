@@ -488,7 +488,7 @@ class BBEPAPER
     void writeCmd(uint8_t u8Cmd);
     int refresh(int iMode, bool bWait = true);
     void setBuffer(uint8_t *pBuffer);
-    int allocBuffer(bool bSecondPlane = true);
+    int allocBuffer(bool bSecondPlane = false);
     void * getBuffer(void);
     uint8_t * getCache(void);
     void freeBuffer(void);

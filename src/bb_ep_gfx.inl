@@ -24,7 +24,7 @@
 
 static G5DECIMAGE g5dec;
 // forward declarations
-void InvertBytes(uint8_t *pData, uint8_t bLen);
+void InvertBytes(uint8_t *pData, int bLen);
 void bbepUnicodeString(const char *szMsg, uint8_t *szExtMsg);
 const uint8_t ucFont[]PROGMEM = {
     0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x06,0x5f,0x5f,0x06,0x00,
@@ -631,9 +631,9 @@ void bbepSetPixelFast16Clr(void *pb, int x, int y, unsigned char ucColor)
 //
 // Invert font data
 //
-void InvertBytes(uint8_t *pData, uint8_t bLen)
+void InvertBytes(uint8_t *pData, int bLen)
 {
-    uint8_t i;
+    int i;
     for (i=0; i<bLen; i++)
     {
         *pData = ~(*pData);
@@ -664,6 +664,7 @@ int bbepLoadG5_2Bit(BBEPDISP *pBBEP, const uint8_t *pG5, int x, int y, float fSc
     dy = (int)(fScale * (float)cy);
     size = pgm_read_word(&pbbb->size);
     rc = g5_decode_init(&g5dec, cx, cy*2, (uint8_t *)&pbbb[1], size);
+    if (rc != G5_SUCCESS) return BBEP_ERROR_BAD_DATA;
     pOldBuffer = pBBEP->ucScreen; // keep old pointer
     pOldPixel = pBBEP->pfnSetPixelFast;
     if (!(pBBEP->iFlags & BBEP_4COLOR)) {

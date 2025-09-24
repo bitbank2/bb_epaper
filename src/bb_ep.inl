@@ -18,7 +18,7 @@
 #ifndef __BB_EP__
 #define __BB_EP__
 // forward declarations
-void InvertBytes(uint8_t *pData, uint8_t bLen);
+void InvertBytes(uint8_t *pData, int bLen);
 void bbepSetPixelFast4Clr(void *pb, int x, int y, unsigned char ucColor);
 void bbepSetPixelFast3Clr(void *pb, int x, int y, unsigned char ucColor);
 void bbepSetPixelFast2Clr(void *pb, int x, int y, unsigned char ucColor);
@@ -1254,13 +1254,14 @@ const uint8_t epd579_init_full[] PROGMEM =
    BUSY_WAIT,
    0x01, 0x12, // soft reset
    BUSY_WAIT,
-   0x02, 0x3c, 0xc0,
+   0x02, 0x3c, 0xc0, // set border to white
    BUSY_WAIT,
    0
 };
 
 const uint8_t epd579_init_fast[] PROGMEM =
 {
+   EPD_RESET,
    0x01, 0x12, // soft reset
    BUSY_WAIT,
    0x02, 0x18, 0x80,
@@ -1271,25 +1272,26 @@ const uint8_t epd579_init_fast[] PROGMEM =
    0x02, 0x22, 0x91,
    0x01, 0x20,
    BUSY_WAIT,
-   0x02, 0x3c, 0x03,
-   BUSY_WAIT,
+//   0x02, 0x3c, 0x03,
+//   BUSY_WAIT,
    0x00
 };
 
 const uint8_t epd579_init_part[] PROGMEM =
 {
+   EPD_RESET,
    0x01, 0x12, // soft reset
    BUSY_WAIT, 
-   0x02, 0x3c, 0x01,
    0x02, 0x11, 0x03,
-   0x02, 0x18, 0x80,
-   0x02, 0x22, 0xb1,
+   0x02, 0x3c, 0x80,
+
+   0x02, 0x22, 0xc0,
    0x01, 0x20,
    BUSY_WAIT,
-   0x03, 0x1a, 0x64, 0x00,
-   0x02, 0x22, 0x91,
-   0x01, 0x20,
-   BUSY_WAIT,
+//   0x03, 0x1a, 0x64, 0x00,
+//   0x02, 0x22, 0x91,
+//   0x01, 0x20,
+//   BUSY_WAIT,
    0x00
 };
 
@@ -2607,7 +2609,7 @@ const EPD_PANEL panelDefs[] PROGMEM = {
     {122, 250, 0, epd213z_init_full, epd213z_init_fast, epd213z_init_full, 0, BBEP_CHIP_SSD16xx, u8Colors_2clr}, // CrowPanel 2.13 (EP213Z_122x250)
     {122, 250, 0, epd213z_init_gray, epd213z_init_gray, epd213z_init_gray, BBEP_4GRAY, BBEP_CHIP_SSD16xx, u8Colors_4gray}, // CrowPanel 2.13 (EP213Z_122x250) 4-gray mode
     {152, 152, 0, epd154z_init_full, epd154z_init_fast, epd154z_init_part, 0, BBEP_CHIP_SSD16xx, u8Colors_2clr}, // CrowPanel 1.54" EP154Z_152x152
-    {792, 272, 0, epd579_init_full, epd579_init_fast, epd579_init_part, 0, BBEP_CHIP_SSD16xx, u8Colors_2clr}, // CrowPanel 5.79" (EP579_792x272)
+    {792, 272, 0, epd579_init_full, epd579_init_fast, NULL, 0, BBEP_CHIP_SSD16xx, u8Colors_2clr}, // CrowPanel 5.79" (EP579_792x272)
     {122, 250, 0, epd213yr_init_full, epd213yr_init_fast, NULL, BBEP_4COLOR, BBEP_CHIP_UC81xx, u8Colors_4clr_v2}, // EP213YR_122x250
     {240, 416, 0, epd37yr_init_full, NULL, NULL, BBEP_4COLOR, BBEP_CHIP_UC81xx, u8Colors_4clr_v2}, // EP37YR_240x416
     {184, 384, 0, epd35yr_init_full, epd35yr_init_fast, NULL, BBEP_4COLOR, BBEP_CHIP_UC81xx, u8Colors_4clr_v2}, // EP35YR_184x384
@@ -3078,6 +3080,7 @@ void bbepFill(BBEPDISP *pBBEP, unsigned char ucColor, int iPlane)
 
 int bbepRefresh(BBEPDISP *pBBEP, int iMode)
 {
+
     if (iMode != REFRESH_FULL && iMode != REFRESH_FAST && iMode != REFRESH_PARTIAL)
         return BBEP_ERROR_BAD_PARAMETER;
     
@@ -3123,7 +3126,7 @@ int bbepRefresh(BBEPDISP *pBBEP, int iMode)
         const uint8_t u8CMD[4] = {0xf7, 0xc7, 0xff, 0xc0}; // normal, fast, partial, partial2
         const uint8_t u8CMDz[4] = {0xf4, 0xc7, 0xfc, 0}; // special set for SSD1680
         const uint8_t u8CMDz2[4] = {0xf4, 0xc7, 0xdc, 0}; // special set #2 for SSD1680
-        const uint8_t u8CMDz3[4] = {0xf7, 0xc7, 0xdc, 0}; // special set #3
+//        const uint8_t u8CMDz3[4] = {0xf7, 0xc7, 0xdc, 0}; // special set #3
         if (pBBEP->iFlags & (BBEP_4GRAY | BBEP_3COLOR | BBEP_4COLOR)) {
             iMode = REFRESH_FAST;
         } // 3/4-color = 0xc7
@@ -3134,8 +3137,8 @@ int bbepRefresh(BBEPDISP *pBBEP, int iMode)
             bbepCMD2(pBBEP, SSD1608_DISP_CTRL2, u8CMDz[iMode]);
         } else if (pBBEP->type == EP154Z_152x152) {
             bbepCMD2(pBBEP, SSD1608_DISP_CTRL2, u8CMDz2[iMode]);
-        } else if (pBBEP->type == EP579_792x272) {
-            bbepCMD2(pBBEP, SSD1608_DISP_CTRL2, u8CMDz3[iMode]);
+//        } else if (pBBEP->type == EP579_792x272) {
+//            bbepCMD2(pBBEP, SSD1608_DISP_CTRL2, u8CMDz3[iMode]);
         } else {
             bbepCMD2(pBBEP, SSD1608_DISP_CTRL2, u8CMD[iMode]);
         }
@@ -3555,16 +3558,20 @@ static void bbepWriteHalf(BBEPDISP *pBBEP, uint8_t ucCMD, uint8_t *pBuffer, int 
         ucInvert = 0xff; // red logic is inverted
     }
     if (ucCMD & 0x80) { // second half
-        pBuffer += (392/8); // start in the middle
+        if (pBuffer) {
+            pBuffer += (392/8); // start in the middle
+        }
+        if (ucCMD == 0xa4) {
         bbepWriteCmd(pBBEP, 0x91); // switch to second memory set
         u8Cache[0] = 4;
         bbepWriteData(pBBEP, u8Cache, 1);
         bbepWriteCmd(pBBEP, 0xc4);
-        u8Cache[0] = 0x31; u8Cache[1] = 0;
+        u8Cache[0] = 0x30; u8Cache[1] = 0;
         bbepWriteData(pBBEP, u8Cache, 2);
         bbepWriteCmd(pBBEP, 0xc5);
         u8Cache[0] = 0x0f; u8Cache[1] = 0x1; u8Cache[2] = u8Cache[3] = 0;
         bbepWriteData(pBBEP, u8Cache, 4);
+        }
         bbepWriteCmd(pBBEP, 0xce);
         u8Cache[0] = 0x31;
         bbepWriteData(pBBEP, u8Cache, 1);
@@ -3572,11 +3579,9 @@ static void bbepWriteHalf(BBEPDISP *pBBEP, uint8_t ucCMD, uint8_t *pBuffer, int 
         u8Cache[0] = 0x0f; u8Cache[1] = 0x01;
         bbepWriteData(pBBEP, u8Cache, 2);
     } else {
+        if (ucCMD == 0x24) {
         bbepWriteCmd(pBBEP, 0x11);
         u8Cache[0] = 0x5;
-        bbepWriteCmd(pBBEP, 0x11);
-        u8Cache[0] = 0x5;
-        bbepWriteData(pBBEP, u8Cache, 1);
         bbepWriteData(pBBEP, u8Cache, 1);
         bbepWriteCmd(pBBEP, 0x44);
         u8Cache[0] = 0; u8Cache[1] = 0x31;
@@ -3584,6 +3589,7 @@ static void bbepWriteHalf(BBEPDISP *pBBEP, uint8_t ucCMD, uint8_t *pBuffer, int 
         bbepWriteCmd(pBBEP, 0x45);
         u8Cache[0] = 0x0f; u8Cache[1] = 0x1; u8Cache[2] = u8Cache[3] = 0;
         bbepWriteData(pBBEP, u8Cache, 4);
+        }
         bbepWriteCmd(pBBEP, 0x4e);
         u8Cache[0] = 0;
         bbepWriteData(pBBEP, u8Cache, 1);
@@ -3591,7 +3597,15 @@ static void bbepWriteHalf(BBEPDISP *pBBEP, uint8_t ucCMD, uint8_t *pBuffer, int 
         u8Cache[0] = 0x0f; u8Cache[1] = 0x01;
         bbepWriteData(pBBEP, u8Cache, 2);
     }
+    bbepWaitBusy(pBBEP);
     bbepWriteCmd(pBBEP, ucCMD); // start write
+    if (!pBuffer) { // just write 00s
+        memset(u8Cache, 0, 272);
+        for (tx=0; tx<400/8; tx++) {
+            bbepWriteData(pBBEP, u8Cache, 272);
+        }
+        return;
+    }
     // Convert the bit direction and write the data to the EPD
     switch (pBBEP->iOrientation) {
         case 0:
@@ -3799,7 +3813,9 @@ int bbepWritePlane(BBEPDISP *pBBEP, int iPlane, int bInvert)
         switch (iPlane) {
             case PLANE_0:
                 bbepWriteHalf(pBBEP, ucCMD1, pBBEP->ucScreen, bInvert);
+                bbepWriteHalf(pBBEP, ucCMD2, NULL, 0);
                 bbepWriteHalf(pBBEP, ucCMD1 | 0x80, pBBEP->ucScreen, bInvert);
+                bbepWriteHalf(pBBEP, ucCMD2 | 0x80, NULL, 0);
                 break;
             case PLANE_1:
                 bbepWriteHalf(pBBEP, ucCMD2, &pBBEP->ucScreen[iOffset], bInvert);
@@ -3811,10 +3827,16 @@ int bbepWritePlane(BBEPDISP *pBBEP, int iPlane, int bInvert)
                 break;
             case PLANE_BOTH:
                 bbepWriteHalf(pBBEP, ucCMD1, pBBEP->ucScreen, bInvert);
-                bbepWriteHalf(pBBEP, ucCMD1 | 0x80, pBBEP->ucScreen, bInvert);
                 if (pBBEP->iFlags & BBEP_HAS_SECOND_PLANE) {
                     bbepWriteHalf(pBBEP, ucCMD2, &pBBEP->ucScreen[iOffset], bInvert);
+                } else { // write 0's if no plane memory
+                    bbepWriteHalf(pBBEP, ucCMD2, NULL, 0); 
+                }
+                bbepWriteHalf(pBBEP, ucCMD1 | 0x80, pBBEP->ucScreen, bInvert);
+                if (pBBEP->iFlags & BBEP_HAS_SECOND_PLANE) {
                     bbepWriteHalf(pBBEP, ucCMD2 | 0x80, &pBBEP->ucScreen[iOffset], bInvert);
+                } else { // write 0's if no plane memory
+                    bbepWriteHalf(pBBEP, ucCMD2 | 0x80, NULL, 0);
                 }
                 break;
             case PLANE_DUPLICATE:
