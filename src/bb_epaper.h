@@ -129,6 +129,7 @@ enum {
     EPD_CROWPANEL154,
     EPD_CROWPANEL579,
     EPD_RETERMINAL_SPECTRA,
+    EPD_BBBADGE,
     EPD_PRODUCT_COUNT
 };
 
@@ -416,6 +417,7 @@ enum {
 
 #define BUSY_WAIT 0xff
 #define EPD_RESET 0xfe
+#define MAKE_LUTS 0xfd
 
 // Normal pixel drawing function pointer
 typedef int (BB_SET_PIXEL)(void *pBBEP, int x, int y, unsigned char color);
@@ -430,7 +432,7 @@ int iCursorX, iCursorY;
 int width, height, native_width, native_height;
 int iScreenOffset, iOrientation;
 int iFG, iBG; //current color
-int iFont, iFlags;
+int iFont, iFlags, iPasses;
 void *pFont;
 int iDataTime, iOpTime; // time in milliseconds for data transmission and operation
 uint32_t iSpeed;
@@ -488,6 +490,7 @@ class BBEPAPER
     void writeData(uint8_t *pData, int iLen);
     void writeCmd(uint8_t u8Cmd);
     int refresh(int iMode, bool bWait = true);
+    void setPasses(int iPasses);
     void setBuffer(uint8_t *pBuffer);
     int allocBuffer(bool bSecondPlane = false);
     void * getBuffer(void);
@@ -529,6 +532,7 @@ class BBEPAPER
     void drawCircle(int32_t x, int32_t y, int32_t r, uint32_t color);
     void fillCircle(int32_t x, int32_t y, int32_t r, uint32_t color);
     void drawEllipse(int16_t x, int16_t y, int32_t rx, int32_t ry, uint16_t color);
+    void writeRegion(int16_t x, int16_t y, int16_t w, int16_t h, int plane = PLANE_0);
     void fillEllipse(int16_t x, int16_t y, int32_t rx, int32_t ry, uint16_t color);
     void stretchAndSmooth(uint8_t *pSrc, uint8_t *pDest, int w, int h, int iSmoothType);
     void sleep(int bDeep);

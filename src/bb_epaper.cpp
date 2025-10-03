@@ -60,6 +60,11 @@ BBEPAPER::BBEPAPER(int iPanel)
     bbepSetPanelType(&_bbep, iPanel);
 }
 
+void BBEPAPER::setPasses(int iPasses)
+{
+   _bbep.iPasses = iPasses;
+} /* setPasses() */
+
 void BBEPAPER::setAddrWindow(int x, int y, int w, int h)
 {
     bbepSetAddrWindow(&_bbep, x, y, w, h);
@@ -108,6 +113,14 @@ int rc = BBEP_ERROR_BAD_PARAMETER;
                 return BBEP_SUCCESS;
             }
             break;
+
+        case EPD_BBBADGE:
+            setPanelType(EP29Z_128x296);
+            // Requesting SPI speed = 0 tells the library to use SPI bit banging
+            initIO(6, 3, 24, 8, 41, 7, 0);
+            setRotation(270);
+            break;
+
         case EPD_CROWPANEL579:
             pinMode(7, OUTPUT);
             digitalWrite(7, HIGH); // screen power on
@@ -182,6 +195,12 @@ void BBEPAPER::initIO(int iDC, int iReset, int iBusy, int iCS, int iSPIChannel, 
 	bbepInitIO(&_bbep, u32Speed);
 } /* initIO() */
 #endif
+
+void BBEPAPER::writeRegion(int16_t x, int16_t y, int16_t w, int16_t h, int plane)
+{
+   bbepWriteRegion(&_bbep, x, y, w, h, plane);
+} /* writeRegion() */
+
 int BBEPAPER::writePlane(int iPlane, bool bInvert)
 {
     long l = millis();
