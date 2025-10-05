@@ -1860,7 +1860,7 @@ int bbepWriteString(BBEPDISP *pBBEP, int x, int y, char *szMsg, int iSize, int i
 //
 // Get the width of text in a custom font
 //
-void bbepGetStringBox(BBEPDISP *pBBEP, BB_FONT *pFont, const char *szMsg, int *width, int *top, int *bottom)
+void bbepGetStringBoxF(BBEPDISP *pBBEP, BB_FONT *pFont, const char *szMsg, int *width, int *top, int *bottom)
 {
     int cx = 0;
     unsigned int c, i = 0;
