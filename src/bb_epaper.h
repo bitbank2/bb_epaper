@@ -103,6 +103,7 @@ enum {
 #define CENTER_Y 9999
 
 typedef struct epd_panel {
+    uint16_t id;
     uint16_t width;
     uint16_t height;
     int16_t x_offset;
