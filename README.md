@@ -14,7 +14,9 @@ I've always had an interest in graphics and displays. After experimenting with e
 <b>What's special about it?</b><br>
 It's the first epaper library I've ever seen which can draw text and graphics without needing a local copy of the image data. There are some limitations to working that way, but it opens the possibility to control large displays on MCUs with nearly no memory. It also supports keeping a local copy of the graphics in RAM (the normal way to work with epaper). By offering both options, this library is unique.<br>
 <br>
-
+<b>A word about the displays</b><br>
+One of the most challenging aspects of using epaper displays is that there are many displays which look the same, but use different internal controllers. Even ones that use thhe same company's chip can be using different variants with ever changing instruction sets. The display controller can also be permanently damaged by sending it the wrong commands or the wrong settings. I created a chart to try to make sense of the various panels, but please use caution when selecting the right bb_epaper display type:
+<br>
 Features:<br>
 ---------<br>
 - C API and C++ wrapper class with all of the usual graphics functions<br>
@@ -27,7 +29,7 @@ Features:<br>
 - A function to load a Windows BMP file<br>
 - Optimized pixel pipeline customized for each supported bit depth<br>
 <br>
-The compmressed font handling depends on my Group5 data compression library (included).<br>
+The compressed font handling depends on my Group5 data compression library (included).<br>
 See the Wiki for help getting started<br>
 https://github.com/bitbank2/bb_epaper/wiki <br>
 <br>
