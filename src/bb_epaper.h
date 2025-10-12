@@ -484,7 +484,7 @@ class BBEPAPER
     void initIO(int iDC, int iReset, int iBusy, int iCS, int iMOSI, int iSCLK, uint32_t u32Speed);
 #endif // ARDUINO
 #else // __LINUX__
-    void initIO(int iDC, int iReset, int iBusy, int iCS, int iSPIChannel, uint32_t u32Speed = 8000000);
+    void initIO(int iDC, int iReset, int iBusy, int iCS, int iSPIChannel, int iNotUsed = -1, uint32_t u32Speed = 8000000);
 #endif
     int writePlane(int iPlane = PLANE_BOTH, bool bInvert = false);
     void startWrite(int iPlane);
