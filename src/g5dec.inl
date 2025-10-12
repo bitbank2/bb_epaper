@@ -143,18 +143,10 @@ static void Decode_Begin(G5DECIMAGE *pPage)
     pPage->ulBits = TIFFMOTOLONG(pPage->pSrc); // load 32 bits to start
     pPage->ulBitOff = 0;
     // Calculate the number of bits needed for a long horizontal code
-#ifdef __GNUC__
 #ifdef __AVR__
     pPage->iHLen = 16 - __builtin_clz(pPage->iWidth);
 #else
     pPage->iHLen = 32 - __builtin_clz(pPage->iWidth);
-#endif
-#else
-#ifdef _MSC_VER
-    pPage->iHLen = 32 - __lzcnt(pPage->iWidth);
-#else
-    #error "Unsupported compiler for G5 decoder"
-#endif // _MSC_VER
 #endif
 } /* Decode_Begin() */
 //

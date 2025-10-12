@@ -87,7 +87,8 @@ enum {
     PLANE_0_TO_1, // send plane 0 to plane 1 memory
     PLANE_FALSE_DIFF, // use 'partial' mode to force all pixels to update
 };
-#ifndef __ONEBITDISPLAY__
+#ifndef __BB_FONT_SIZES__
+#define __BB_FONT_SIZES__
 // 5 possible font sizes: 8x8, 16x32, 6x8, 12x16 (stretched from 6x8 with smoothing), 16x16 (stretched from 8x8)
 enum {
    FONT_6x8 = 0,
@@ -96,7 +97,7 @@ enum {
    FONT_16x16,
    FONT_COUNT
 };
-#endif
+#endif // __BB_FONT_SIZES__
 
 // Centering coordinates to pass to the character drawing functions
 #define CENTER_X 9998
