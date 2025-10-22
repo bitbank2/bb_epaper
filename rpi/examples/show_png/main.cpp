@@ -7,7 +7,8 @@
 #include <bb_epaper.h>
 #include <PNGdec.h>
 //BBEPAPER bbep(EP213_104x212); // InkyPHAT 2.13"
-BBEPAPER bbep(EP295_128x296);
+//BBEPAPER bbep(EP295_128x296);
+BBEPAPER bbep(EP75_800x480_GEN2);
 //BBEPAPER bbep(EP154R_152x152);
 // BCM GPIO numbers used by Pimoroni e-paper "HATs"
 //#define PIN_DC 22
@@ -15,7 +16,7 @@ BBEPAPER bbep(EP295_128x296);
 //#define PIN_BUSY 17
 //#define PIN_CS 8
 //#define SPI_BUS 0
-// BCM GPIO numbers for the Waveshare 2.13" e-paper HAT
+// BCM GPIO numbers for the Waveshare e-paper driver hat
 #define PIN_DC 25
 #define PIN_CS 8
 #define PIN_RST 17
@@ -175,7 +176,8 @@ int rc, iMode;
         printf("Invalid refresh mode.\n");
         return -1;
     }
-    
+    pinMode(18, OUTPUT);
+    digitalWrite(18, 1); // enable power to EPD
     bbep.initIO(PIN_DC, PIN_RST, PIN_BUSY, PIN_CS, SPI_BUS, 0, 8000000);
     bbep.allocBuffer(); // draw into RAM first
     bbep.fillScreen(BBEP_WHITE);

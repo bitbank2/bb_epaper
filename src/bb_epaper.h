@@ -32,6 +32,15 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#define OUTPUT 0
+#define INPUT  1
+#define INPUT_PULLUP 2
+#define HIGH 1
+#define LOW 0
+void delay(int);
+void pinMode(int pin, int mode);
+void digitalWrite(int pin, int value);
+int digitalRead(int pin);
 #endif // __LINUX__
 
 // error messages
@@ -156,9 +165,10 @@ enum {
     EP37_240x416, // GDEY037T03
     EP37B_240x416, // CROWPANEL 3.7"
     EP213_104x212, // InkyPHAT 2.13 black and white
-    EP75_800x480, // GDEY075T7
-    EP75_800x480_4GRAY, // GDEW075T7 in 4 grayscale mode
-    EP75_800x480_4GRAY_OLD, // GDEY075T7 in 4 grayscale mode
+    EP75_800x480, // GDEY075T7 (older version)
+    EP75_800x480_GEN2, // GEDY075-D2 (Waveshare/Xiao V2 panels)
+    EP75_800x480_4GRAY, // GDEW075T7 (older version) in 4 gray mode
+    EP75_800x480_4GRAY_GEN2, // GDEY075T7-D2 (newer version)  in 4 gray mode
     EP29_128x296, // Pimoroni Badger2040
     EP29_128x296_4GRAY, // Pimoroni Badger2040
     EP213R_122x250, // Inky phat 2.13 B/W/R

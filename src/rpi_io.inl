@@ -97,10 +97,12 @@ struct timespec res;
     return (long)iTime;
 } /* millis() */
 
+#ifdef FUTURE
 static void delayMicroseconds(int iMS)
 {
   usleep(iMS);
 } /* delayMicroseconds() */
+#endif // FUTURE
 
 //
 // Initialize the GPIO pins and SPI for use by bb_eink

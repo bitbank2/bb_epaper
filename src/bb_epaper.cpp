@@ -21,12 +21,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <fcntl.h>
-#define OUTPUT 0
-#define INPUT  1
-#define INPUT_PULLUP 2
-#define HIGH 1
-#define LOW 0
-void delay(int);
 #else // Arduino
 
 #endif // __LINUX__
