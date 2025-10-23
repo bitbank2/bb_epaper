@@ -165,6 +165,7 @@ int rc = BBEP_ERROR_BAD_PARAMETER;
 
 int BBEPAPER::setPanelType(int iPanel)
 {
+    _panel_type = iPanel;
     return bbepSetPanelType(&_bbep, iPanel);
 }
 // Special setup for dual-cable displays
@@ -251,6 +252,7 @@ void BBEPAPER::backupPlane(void)
 }
 int BBEPAPER::allocBuffer(bool bSecondPlane)
 {
+    if (_bbep.iFlags & (BBEP_4COLOR | BBEP_3COLOR | BBEP_4GRAY)) bSecondPlane = 1;
     return bbepAllocBuffer(&_bbep, (int)bSecondPlane);
 } /* allocBuffer() */
 

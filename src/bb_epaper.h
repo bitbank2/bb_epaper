@@ -507,6 +507,7 @@ class BBEPAPER
     void setBuffer(uint8_t *pBuffer);
     int allocBuffer(bool bSecondPlane = false);
     void * getBuffer(void);
+    int getPanelType(void) { return _panel_type;}
     uint8_t * getCache(void);
     void freeBuffer(void);
     uint32_t capabilities();
@@ -575,6 +576,7 @@ class BBEPAPER
 
   private:
     BBEPDISP _bbep;
+    int _panel_type;
     uint32_t _tar_memaddr   = 0x001236E0;
     uint16_t _dev_memaddr_l = 0x36E0;
     uint16_t _dev_memaddr_h = 0x0012;

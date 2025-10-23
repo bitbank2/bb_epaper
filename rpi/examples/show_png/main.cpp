@@ -6,22 +6,27 @@
 //
 #include <bb_epaper.h>
 #include <PNGdec.h>
+#define SHOW_DETAILS
 //BBEPAPER bbep(EP213_104x212); // InkyPHAT 2.13"
 //BBEPAPER bbep(EP295_128x296);
-BBEPAPER bbep(EP75_800x480_GEN2);
-//BBEPAPER bbep(EP154R_152x152);
+#define BBEP1BIT EP75_800x480_GEN2
+#define BBEP2BIT EP75_800x480_4GRAY_GEN2
+BBEPAPER bbep;
+//BBEPAPER bbep(EP75_800x480);
 // BCM GPIO numbers used by Pimoroni e-paper "HATs"
 //#define PIN_DC 22
 //#define PIN_RST 27
 //#define PIN_BUSY 17
 //#define PIN_CS 8
 //#define SPI_BUS 0
+//#define PIN_PWR -1
 // BCM GPIO numbers for the Waveshare e-paper driver hat
 #define PIN_DC 25
 #define PIN_CS 8
 #define PIN_RST 17
 #define PIN_BUSY 24
 #define SPI_BUS 0
+#define PIN_PWR 18
 
 PNG png;
 
@@ -33,21 +38,43 @@ enum {
 };
 
 //
-// The user passed a file with the wrong bit depth (not 1)
-// convert to 1-bpp by converting each color to 0 or 1 based on the gray level
+// The user passed a file which has 2 or more bits per pixel
+// convert to 2-bpp grayscale
 //
-void ConvertBpp(uint8_t *pBMP, int iMode, int w, int h, int iBpp, uint8_t *palette)
+void ConvertBpp(uint8_t *pBMP, int w, int h, int iBpp, uint8_t *palette)
 {
     int gray, r=0, g=0, b=0, x, y, iDelta, iPitch, iDestPitch, iDestBpp;
     uint8_t *s, *d, *pPal, u8, count;
 
-    iDestBpp = (iMode == MODE_BW) ? 1 : 2;
-    iPitch = (w * iBpp)/8;
-    if (iDestBpp == 1)
+    iDestBpp = 2;
+    if (iDestBpp == 1) {
         iDestPitch = (w+7)/8;
-    else {
+    } else {
         iDestPitch = (w+3)/4;
     }
+    // The bits per pixel info from PNG files is per color channel
+    // Convert the value into a true bits per pixel
+    switch (png.getPixelType()) {
+        case PNG_PIXEL_INDEXED:
+            break;
+        case PNG_PIXEL_TRUECOLOR:
+            iBpp *= 3;
+            palette = NULL;
+            break;
+        case PNG_PIXEL_TRUECOLOR_ALPHA:
+            iBpp *= 4;
+            palette = NULL;
+            break;
+        case PNG_PIXEL_GRAYSCALE:
+            palette = NULL;
+            break;
+    } // switch on pixel type
+    
+    // Loop through the source image and convert each pixel to 2-bit grayscale
+    // Overwrite the source image with the converted image since it will be smaller or
+    // equal in size to the original. This is needed even for 2-bit images which may
+    // use a palette with random color entries.
+    iPitch = (w * iBpp)/8;    
     iDelta = iBpp/8;
     for (y=0; y<h; y++) {
         s = &pBMP[iPitch * y];
@@ -101,16 +128,11 @@ void ConvertBpp(uint8_t *pBMP, int iMode, int w, int h, int iBpp, uint8_t *palet
                     }
                     break;
             } // switch on bpp
-            if (iMode == MODE_BW || iMode == MODE_4GRAY) {
-                gray = (r + g*2 + b)/4;
-                u8 |= gray >> (8-iDestBpp);
-//            } else if (iMode == MODE_BWR) {
-//                u8 |= GetBWRPixel(r, g, b); // match the closest colors
-//            } else {
-//                u8 |= GetBWYRPixel(r, g, b);
-            }
+            // Convert the source rgb into gray with a simple formula which favors green
+            gray = (r + g*2 + b)/4;
+            u8 |= gray >> (8-iDestBpp); // pack 1 or 2 bit gray pixels into a destination byte
             count -= iDestBpp;
-            if (count == 0) { // byte is full, move on
+            if (count == 0) { // byte is full, store it and prepare the next
                 *d++ = u8;
                 u8 = 0;
                 count = 8;
@@ -121,7 +143,9 @@ void ConvertBpp(uint8_t *pBMP, int iMode, int w, int h, int iBpp, uint8_t *palet
         }
     } // for y
 } /* ConvertBpp() */
-
+//
+// Decode the PNG file into an uncompressed bitmap
+//
 int DecodePNG(const char *fname)
 {
 int rc, iSize;
@@ -139,34 +163,63 @@ uint8_t *pData;
     fread(pData, 1, iSize, ihandle);
     fclose(ihandle);
     rc = png.openRAM(pData, iSize, NULL);
-    printf("image specs: %d x %d, %d-bpp\n", png.getWidth(), png.getHeight(), png.getBpp());
     png.setBuffer((uint8_t *)malloc(png.getBufferSize()));
     rc = png.decode(NULL, 0);
-    if (rc == PNG_SUCCESS) {
-        int y, iSrcPitch, iDestPitch;
-        uint8_t *s, *d;
-        // Debug - assumes 1-bpp
-        s = png.getBuffer();
-        d = (uint8_t *)bbep.getBuffer();
-        iSrcPitch = (png.getWidth()+7)/8;
-        iDestPitch = (bbep.width()+7)/8;
-        for (y=0; y<png.getHeight(); y++) {
-            memcpy(d, s, iSrcPitch);
-            s += iSrcPitch;
-            d += iDestPitch;
-        }
-        free(png.getBuffer());
-    }
     free(pData);
     return rc;
 } /* DecodePNG() */
+//
+// Prepare the decoded image for the framebuffer layout of the EPD
+//
+void PrepareImage(void)
+{
+	int x, y, iPlaneOffset, iSrcPitch, iDestPitch;
+	uint8_t *s, *d;
+	s = png.getBuffer();
+	d = (uint8_t *)bbep.getBuffer();
+	iDestPitch = (bbep.width()+7)/8;
+	if (png.getBpp() == 1) {
+	    iSrcPitch = (png.getWidth()+7)/8;
+	    for (y=0; y<png.getHeight(); y++) {
+		memcpy(d, s, iSrcPitch);
+		s += iSrcPitch;
+		d += iDestPitch;
+	    }
+	} else { // >=2 bpp
+	    iPlaneOffset = iDestPitch * png.getHeight(); // offset to 2nd memory plane
+	    iSrcPitch = (png.getWidth()+3)/4; // every source pixel depth will become 2-bpp
+	    // Convert the source bitmap to 2-bit grayscale
+	    ConvertBpp(s, png.getWidth(), png.getHeight(), png.getBpp(), png.getPalette());
+	    for (y=0; y<png.getHeight(); y++) {
+	    // Split the 2-bit packed pixels into 2 bit planes for the EPD
+		for (x=0; x<png.getWidth()/8; x+=2) { // work with pairs of bytes
+		    uint8_t s0 = s[x];
+		    uint8_t s1 = s[x+1];
+		    uint8_t u8Mask = 0x80, d0=0, d1=0;
+		    for (int bit=0; bit<4; bit++) {
+		        if (s0 & u8Mask) d1 |= (0x80 >> bit);
+		        if (s0 & (u8Mask>>1)) d0 |= (0x80 >> bit);
+		        if (s1 & u8Mask) d1 |= (0x8 >> bit);
+		        if (s1 & (u8Mask>>1)) d0 |= (0x8 >> bit);
+		        u8Mask >>= 2; 
+		    } // for each bit
+		    d[x/2] = d0; // plane 0
+		    d[(x/2) + iPlaneOffset] = d1; // plane 1
+		} // for x
+		s += iSrcPitch;
+		d += iDestPitch;
+	    } // for y
+	} // >= 2bpp
+	free(png.getBuffer());
+} /* PrepareImage() */
 
 int main(int argc, const char * argv[]) {
 int rc, iMode;
 
     if (argc != 3) { // print instructions
-        printf("show_png utility - display PNG images on ePaper displays\nwritten by Larry Bank (bitbank@pobox.com\nCopyright(c) 2025 BitBank Software, inc.\n");
-        printf("Usage: show_png <filename.png> <display_mode>\ndisplay_mode: full, fast, partial\n");
+        printf("show_png utility - display PNG images on ePaper displays\nwritten by Larry Bank (bitbank@pobox.com)\nCopyright(c) 2025 BitBank Software, inc.\n");
+        printf("Usage: show_png <filename.png> <display_mode>\nValid display modes: full, fast, partial\n");
+        printf("Color images and bit depths greater than 2-bpp will be\nautomatically converted to 2-bit (4 grays).\n");
         return -1;
     }
     if (strcasecmp(argv[2], "full") == 0) iMode = REFRESH_FULL;
@@ -176,24 +229,58 @@ int rc, iMode;
         printf("Invalid refresh mode.\n");
         return -1;
     }
-    pinMode(18, OUTPUT);
-    digitalWrite(18, 1); // enable power to EPD
-    bbep.initIO(PIN_DC, PIN_RST, PIN_BUSY, PIN_CS, SPI_BUS, 0, 8000000);
-    bbep.allocBuffer(); // draw into RAM first
-    bbep.fillScreen(BBEP_WHITE);
-    if (bbep.width() < bbep.height()) {
-        bbep.setRotation(90);
+    if (PIN_PWR >= 0) {
+        pinMode(PIN_PWR, OUTPUT);
+        digitalWrite(PIN_PWR, 1); // enable power to EPD
     }
+    bbep.initIO(PIN_DC, PIN_RST, PIN_BUSY, PIN_CS, SPI_BUS, 0, 8000000);
+#ifdef SHOW_DETAILS
+    printf("Decoding PNG...\n");
+#endif
     rc = DecodePNG(argv[1]);
     if (rc != PNG_SUCCESS) {
         printf("PNG decoder returned error %d\n", rc);
         return -1;
     }
-    // Push the pixels from our RAM buffer to the e-epaper
-    bbep.writePlane((iMode == REFRESH_PARTIAL) ? PLANE_FALSE_DIFF : PLANE_0);
-    bbep.refresh(iMode);
-    bbep.sleep(DEEP_SLEEP); // turn off the epaper power circuit
+#ifdef SHOW_DETAILS
+    printf("image specs: %d x %d, %d-bpp\n", png.getWidth(), png.getHeight(), png.getBpp());
+#endif
 
+    if (png.getBpp() == 1) {
+        bbep.setPanelType(BBEP1BIT);
+        bbep.allocBuffer(); // draw into RAM first
+        bbep.fillScreen(BBEP_WHITE);
+    } else {
+        bbep.setPanelType(BBEP2BIT);
+        bbep.allocBuffer(); // draw into RAM first
+        bbep.fillScreen(BBEP_GRAY3);
+    }
+    if (bbep.width() < bbep.height()) {
+        bbep.setRotation(90); // assume landscape mode for all images
+    }
+    // convert+copy the image into the local EPD framebuffer
+#ifdef SHOW_DETAILS
+    printf("Preparing image for EPD as %d-bpp...\n", (bbep.getPanelType() == BBEP1BIT) ? 1 : 2);
+#endif
+    PrepareImage();
+    // Push the pixels from our RAM buffer to the e-epaper
+#ifdef SHOW_DETAILS
+    printf("Writing data to EPD...\n");
+#endif
+    if (png.getBpp() == 1) {
+        bbep.writePlane((iMode == REFRESH_PARTIAL) ? PLANE_FALSE_DIFF : PLANE_0);
+        bbep.refresh(iMode);
+    } else { // 4 gray mode
+        bbep.writePlane();
+        bbep.refresh(REFRESH_FULL);
+    }
+#ifdef SHOW_DETAILS
+    printf("Refresh complete, shutting down...\n");
+#endif
+    bbep.sleep(DEEP_SLEEP); // turn off the epaper power circuit
+    if (PIN_PWR > 0) {
+        digitalWrite(PIN_PWR, 0); // disable power to EPD
+    }
     return 0;
 } /* main() */
 

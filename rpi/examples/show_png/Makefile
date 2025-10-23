@@ -1,5 +1,5 @@
-CFLAGS=-D__LINUX__ -Wall -O2 -I../../
-LIBS=-lbb_epaper -lpngdec -lgpiod 
+CFLAGS=-ggdb -D__LINUX__ -Wall -O2 -I../../
+LIBS=-g -lbb_epaper -lpngdec -lgpiod 
 
 all: show_png
 
