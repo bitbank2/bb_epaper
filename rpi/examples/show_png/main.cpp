@@ -9,6 +9,8 @@
 #define SHOW_DETAILS
 //BBEPAPER bbep(EP213_104x212); // InkyPHAT 2.13"
 //BBEPAPER bbep(EP295_128x296);
+//#define BBEP1BIT EP75_800x480
+//#define BBEP2BIT EP75_800x480_4GRAY
 #define BBEP1BIT EP75_800x480_GEN2
 #define BBEP2BIT EP75_800x480_4GRAY_GEN2
 BBEPAPER bbep;
@@ -192,9 +194,9 @@ void PrepareImage(void)
 	    ConvertBpp(s, png.getWidth(), png.getHeight(), png.getBpp(), png.getPalette());
 	    for (y=0; y<png.getHeight(); y++) {
 	    // Split the 2-bit packed pixels into 2 bit planes for the EPD
-		for (x=0; x<png.getWidth()/8; x+=2) { // work with pairs of bytes
-		    uint8_t s0 = s[x];
-		    uint8_t s1 = s[x+1];
+		for (x=0; x<png.getWidth()/4; x+=2) { // work with pairs of bytes
+		    uint8_t s0 = ~s[x]; // grayscale is inverted on the EPD
+		    uint8_t s1 = ~s[x+1];
 		    uint8_t u8Mask = 0x80, d0=0, d1=0;
 		    for (int bit=0; bit<4; bit++) {
 		        if (s0 & u8Mask) d1 |= (0x80 >> bit);
