@@ -1,8 +1,20 @@
 //
 // C++ example for bb_epaper library
 // written by Larry Bank (bitbank@pobox.com)
-// Project started 9/23/2024
-// Copyright (c) 2024 BitBank Software, Inc.
+// Project started 10/15/2025
+// Copyright (c) 2025 BitBank Software, Inc.
+//
+// SPDX-License-Identifier: Apache-2.0
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//    http://www.apache.org/licenses/LICENSE-2.0
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//===========================================================================
 //
 #include <bb_epaper.h>
 #include <PNGdec.h>
@@ -14,6 +26,8 @@
 #define BBEP1BIT EP75_800x480_GEN2
 #define BBEP2BIT EP75_800x480_4GRAY_GEN2
 BBEPAPER bbep;
+#define EPD_WIDTH 800
+#define EPD_HEIGHT 480
 //BBEPAPER bbep(EP75_800x480);
 // BCM GPIO numbers used by Pimoroni e-paper "HATs"
 //#define PIN_DC 22
@@ -32,16 +46,10 @@ BBEPAPER bbep;
 
 PNG png;
 
-enum {
-    MODE_BW = 0,
-    MODE_BWR,
-    MODE_BWYR,
-    MODE_4GRAY
-};
-
+const char *szPNGErrors[] = {"Success", "Invalid Paremeter", "Decoding", "Out of memory", "No buffer allocated", "Unsupported feature", "Invalid file", "Too big", "Quit early"};
 //
 // The user passed a file which has 2 or more bits per pixel
-// convert to 2-bpp grayscale
+// convert it to 2-bpp grayscale
 //
 void ConvertBpp(uint8_t *pBMP, int w, int h, int iBpp, uint8_t *palette)
 {
@@ -165,6 +173,17 @@ uint8_t *pData;
     fread(pData, 1, iSize, ihandle);
     fclose(ihandle);
     rc = png.openRAM(pData, iSize, NULL);
+    if (rc != PNG_SUCCESS) {
+        printf("PNG open returned error: %s\n", szPNGErrors[rc]);
+        free(pData);
+        return -1; // only show the error once
+    }
+    if (png.getWidth() > EPD_WIDTH || png.getHeight() > EPD_HEIGHT) {
+        printf("Requested image is too large for the EPD.\n");
+        printf("Image Size: %d x %d\nEPD size: %d x %d\n", png.getWidth(), png.getHeight(), EPD_WIDTH, EPD_HEIGHT);
+        free(pData);
+        return -1;
+    }
     png.setBuffer((uint8_t *)malloc(png.getBufferSize()));
     rc = png.decode(NULL, 0);
     free(pData);
@@ -172,7 +191,8 @@ uint8_t *pData;
 } /* DecodePNG() */
 //
 // Prepare the decoded image for the framebuffer layout of the EPD
-//
+// For 1-bit images, just memcpy since PNG uses the same layout.
+// For 2-bit images, the EPD splits the memory into 2x 1-bit planes.
 void PrepareImage(void)
 {
 	int x, y, iPlaneOffset, iSrcPitch, iDestPitch;
@@ -215,13 +235,20 @@ void PrepareImage(void)
 	free(png.getBuffer());
 } /* PrepareImage() */
 
+void ShowHelp(void)
+{
+    printf("show_png utility - display PNG images on ePaper displays\nwritten by Larry Bank (bitbank@pobox.com)\nCopyright(c) 2025 BitBank Software, inc.\n");
+    printf("Usage: show_png <filename.png> <display_mode>\nValid display modes: full, fast, partial\n");
+    printf("Color images and bit depths greater than 2-bpp will be\nautomatically converted to 2-bit (4 grays).\n");
+} /* ShowHelp() */
+//
+// Main program entry point
+//
 int main(int argc, const char * argv[]) {
 int rc, iMode;
 
     if (argc != 3) { // print instructions
-        printf("show_png utility - display PNG images on ePaper displays\nwritten by Larry Bank (bitbank@pobox.com)\nCopyright(c) 2025 BitBank Software, inc.\n");
-        printf("Usage: show_png <filename.png> <display_mode>\nValid display modes: full, fast, partial\n");
-        printf("Color images and bit depths greater than 2-bpp will be\nautomatically converted to 2-bit (4 grays).\n");
+        ShowHelp();
         return -1;
     }
     if (strcasecmp(argv[2], "full") == 0) iMode = REFRESH_FULL;
@@ -229,6 +256,7 @@ int rc, iMode;
     else if (strcasecmp(argv[2], "partial") == 0) iMode = REFRESH_PARTIAL;
     else {
         printf("Invalid refresh mode.\n");
+        ShowHelp();
         return -1;
     }
     if (PIN_PWR >= 0) {
@@ -241,7 +269,9 @@ int rc, iMode;
 #endif
     rc = DecodePNG(argv[1]);
     if (rc != PNG_SUCCESS) {
-        printf("PNG decoder returned error %d\n", rc);
+        if (rc > 0) {
+            printf("PNG decode returned error: %s\n", szPNGErrors[rc]);
+        }
         return -1;
     }
 #ifdef SHOW_DETAILS
