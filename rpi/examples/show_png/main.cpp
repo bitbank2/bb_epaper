@@ -19,15 +19,21 @@
 #include <bb_epaper.h>
 #include <PNGdec.h>
 #define SHOW_DETAILS
-//BBEPAPER bbep(EP213_104x212); // InkyPHAT 2.13"
-//BBEPAPER bbep(EP295_128x296);
-//#define BBEP1BIT EP75_800x480
-//#define BBEP2BIT EP75_800x480_4GRAY
-#define BBEP1BIT EP75_800x480_GEN2
-#define BBEP2BIT EP75_800x480_4GRAY_GEN2
+
 BBEPAPER bbep;
 #define EPD_WIDTH 800
 #define EPD_HEIGHT 480
+
+typedef struct dp_tag
+{
+  uint32_t OneBit, TwoBit; // profiles for 1 and 2-bit modes
+} DISPLAY_PROFILE;
+int iProfile = 0; // default
+const DISPLAY_PROFILE dpList[3] = { // 1-bit and 2-bit display types for each profile
+    {EP75_800x480, EP75_800x480_4GRAY}, // default (for original EPD)
+    {EP75_800x480_GEN2, EP75_800x480_4GRAY_GEN2}, // a = uses built-in fast + 4-gray
+    {EP75_800x480, EP75_800x480_4GRAY_V2}, // b = darker grays
+};
 //BBEPAPER bbep(EP75_800x480);
 // BCM GPIO numbers used by Pimoroni e-paper "HATs"
 //#define PIN_DC 22
@@ -238,7 +244,7 @@ void PrepareImage(void)
 void ShowHelp(void)
 {
     printf("show_png utility - display PNG images on ePaper displays\nwritten by Larry Bank (bitbank@pobox.com)\nCopyright(c) 2025 BitBank Software, inc.\n");
-    printf("Usage: show_png <filename.png> <display_mode>\nValid display modes: full, fast, partial\n");
+    printf("Usage: show_png <filename.png> <display_mode> <optional panel profile>\nValid display modes: full, fast, partial\nValid profiles: (empty=A), B, C\n");
     printf("Color images and bit depths greater than 2-bpp will be\nautomatically converted to 2-bit (4 grays).\n");
 } /* ShowHelp() */
 //
@@ -247,7 +253,7 @@ void ShowHelp(void)
 int main(int argc, const char * argv[]) {
 int rc, iMode;
 
-    if (argc != 3) { // print instructions
+    if (argc < 3 || argc > 4) { // print instructions
         ShowHelp();
         return -1;
     }
@@ -258,6 +264,15 @@ int rc, iMode;
         printf("Invalid refresh mode.\n");
         ShowHelp();
         return -1;
+    }
+    if (argc == 4) { // user specified a profile
+        uint8_t c = argv[3][0] & 0x5f; // force upper case
+        if (c != 'A' && c != 'B' && c != 'C') {
+            printf("Invalid profile.\n");
+            ShowHelp();
+            return -1;
+        }
+        iProfile = c - 'A';
     }
     if (PIN_PWR >= 0) {
         pinMode(PIN_PWR, OUTPUT);
@@ -279,11 +294,11 @@ int rc, iMode;
 #endif
 
     if (png.getBpp() == 1) {
-        bbep.setPanelType(BBEP1BIT);
+        bbep.setPanelType(dpList[iProfile].OneBit);
         bbep.allocBuffer(); // draw into RAM first
         bbep.fillScreen(BBEP_WHITE);
     } else {
-        bbep.setPanelType(BBEP2BIT);
+        bbep.setPanelType(dpList[iProfile].TwoBit);
         bbep.allocBuffer(); // draw into RAM first
         bbep.fillScreen(BBEP_GRAY3);
     }
@@ -292,7 +307,7 @@ int rc, iMode;
     }
     // convert+copy the image into the local EPD framebuffer
 #ifdef SHOW_DETAILS
-    printf("Preparing image for EPD as %d-bpp...\n", (bbep.getPanelType() == BBEP1BIT) ? 1 : 2);
+    printf("Preparing image for EPD as %d-bpp...\n", (bbep.getPanelType() == (int)dpList[iProfile].OneBit) ? 1 : 2);
 #endif
     PrepareImage();
     // Push the pixels from our RAM buffer to the e-epaper

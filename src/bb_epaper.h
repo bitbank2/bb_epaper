@@ -169,6 +169,7 @@ enum {
     EP75_800x480_GEN2, // GEDY075-D2 (Waveshare/Xiao V2 panels)
     EP75_800x480_4GRAY, // GDEW075T7 (older version) in 4 gray mode
     EP75_800x480_4GRAY_GEN2, // GDEY075T7-D2 (newer version)  in 4 gray mode
+    EP75_800x480_4GRAY_V2, // older panel, darker grays needed
     EP29_128x296, // Pimoroni Badger2040
     EP29_128x296_4GRAY, // Pimoroni Badger2040
     EP213R_122x250, // Inky phat 2.13 B/W/R
