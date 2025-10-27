@@ -4,7 +4,8 @@ LIBS=-g -lbb_epaper -lpngdec -lgpiod
 all: show_png
 
 show_png: main.o
-	$(CXX) main.o $(LIBS) -o show_png 
+	$(CXX) main.o $(LIBS) -o show_png ;\
+	sudo cp show_png /usr/local/bin
 
 main.o: main.cpp
 	$(CXX) $(CFLAGS) -c main.cpp
