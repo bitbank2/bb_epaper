@@ -63,6 +63,18 @@ typedef struct {
 } BB_RECT; 
 #endif
 
+// For Linux and esp-idf we add a file/device handle member
+// to the BBI2C structure
+#if !defined( ARDUINO ) && !defined(__BB_I2C__)
+#define __BB_I2C__
+typedef struct _tagbbi2c
+{
+  int file_i2c;
+  uint8_t iSDA, iSCL;
+  uint8_t bWire;
+} BBI2C;
+#endif
+
 #define LIGHT_SLEEP 0
 #define DEEP_SLEEP 1
 

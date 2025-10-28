@@ -45,6 +45,74 @@ static int spi_fd; // SPI handle
 // forward references
 void bbepWakeUp(BBEPDISP *pBBEP);
 
+// Initialize the I2C bus on Linux
+void I2CInit(BBI2C *pI2C, uint32_t iClock)
+{
+char filename[32];
+int iChannel = pI2C->iSDA;
+
+// Only try to initialize the handle if it hasn't already been done
+    if (pI2C->file_i2c == -1) {
+        sprintf(filename, "/dev/i2c-%d", iChannel);
+        if ((pI2C->file_i2c = open(filename, O_RDWR)) < 0)
+        {
+                fprintf(stderr, "Failed to open the i2c bus\n");
+        }
+    }
+} /* I2CInit() */
+//
+// Test if an I2C address responds
+// returns 1 for success, 0 for failure
+//
+uint8_t I2CTest(BBI2C *pI2C, uint8_t addr)
+{
+uint8_t response = 0;
+    if (ioctl(pI2C->file_i2c, I2C_SLAVE, addr) >= 0) {
+            // probe this address
+        uint8_t ucTemp;
+        if (read(pI2C->file_i2c, &ucTemp, 1) >= 0)
+            response = 1;
+    }
+    return response;
+} /* I2CTest() */
+//
+// Read n bytes from the given I2C address
+//
+int I2CRead(BBI2C *pI2C, uint8_t iAddr, uint8_t *pData, int iLen)
+{
+int rc;
+        ioctl(pI2C->file_i2c, I2C_SLAVE, iAddr);
+        rc = read(pI2C->file_i2c, pData, iLen);
+        return rc;
+} /* I2CRead() */
+//
+// Write n bytes to the given address
+//
+int I2CWrite(BBI2C *pI2C, uint8_t iAddr, uint8_t *pData, int iLen)
+{
+int rc;
+        ioctl(pI2C->file_i2c, I2C_SLAVE, iAddr);
+        rc = write(pI2C->file_i2c, pData, iLen);
+        return rc;
+} /* I2CWrite() */
+//
+// Read n bytes from the given address, after setting the register number
+//
+int I2CReadRegister(BBI2C *pI2C, uint8_t iAddr, uint8_t u8Register, uint8_t *pData, int iLen)
+{
+int rc;
+        // Reading from an I2C device involves first writing the 8-bit register
+        // followed by reading the data
+        ioctl(pI2C->file_i2c, I2C_SLAVE, iAddr);
+        rc = write(pI2C->file_i2c, &u8Register, 1); // write the register value
+        if (rc == 1)
+        {
+                rc = read(pI2C->file_i2c, pData, iLen);
+        }
+        return rc;
+
+} /* I2CReadRegister() */
+
 void SPI_transfer(BBEPDISP *pBBEP, uint8_t *pBuf, int iLen)
 {
 struct spi_ioc_transfer spi;

@@ -2685,7 +2685,7 @@ const EPD_PANEL panelDefs[] PROGMEM = {
     {400, 300, 0, epd42_init_sequence_full, epd42_init_sequence_fast, epd42_init_sequence_part, 0, BBEP_CHIP_UC81xx, u8Colors_2clr}, // EP42_400x300
     {400, 300, 0, epd42b_init_sequence_full, epd42b_init_sequence_fast, epd42b_init_sequence_part, 0, BBEP_CHIP_SSD16xx, u8Colors_2clr}, // EP42B_400x300
     {122, 250, 0, epd213_122x250_init_sequence_full, NULL, epd213_122x250_init_sequence_part, 0, BBEP_CHIP_SSD16xx, u8Colors_2clr}, // EP213_122x250 WaveShare
-    {122, 250, 0, epd213b_init_sequence_full, NULL, epd213b_init_sequence_part, 0, BBEP_CHIP_SSD16xx, u8Colors_2clr}, // EP213B_122x250, newer Inky phat 2.13" B/W
+    {122, 250, 0, epd213z_init_full, epd213z_init_fast, epd213b_init_sequence_part, 0, BBEP_CHIP_SSD16xx, u8Colors_2clr}, // EP213B_122x250, newer Inky phat 2.13" B/W
     {128, 296, 0, epd293_init_sequence_full, epd293_init_sequence_fast, epd293_init_sequence_part, 0, BBEP_CHIP_SSD16xx, u8Colors_2clr}, // EP293_128x296
     {128, 296, 0, epd294_init_sequence_full, NULL, NULL, 0, BBEP_CHIP_SSD16xx, u8Colors_2clr}, // EP294_128x296
     {128, 296, 0, epd293_init_sequence_full, epd293_init_sequence_fast, epd295_init_sequence_part, 0, BBEP_CHIP_SSD16xx, u8Colors_2clr}, // EP295_128x296
