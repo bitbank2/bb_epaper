@@ -131,6 +131,7 @@ struct spi_ioc_transfer spi;
 
 int digitalRead(int iPin)
 {
+	if (lines[iPin] == 0) return 0;
 #ifdef GPIOD_API // 1.x (old) API
   return gpiod_line_get_value(lines[iPin]);
 #else // 2.x (new)
@@ -140,6 +141,7 @@ int digitalRead(int iPin)
 
 void digitalWrite(int iPin, int iState)
 {
+	if (lines[iPin] == 0) return;
 #ifdef GPIOD_API // old 1.6 API
    gpiod_line_set_value(lines[iPin], iState);
 #else // new 2.x API
@@ -165,15 +167,20 @@ void pinMode(int iPin, int iMode)
    struct gpiod_line_settings *settings;
    struct gpiod_line_config *line_cfg;
    struct gpiod_request_config *req_cfg;
-
    chip = gpiod_chip_open("/dev/gpiochip0");
-   if (!chip) return;
+   if (!chip) {
+	printf("chip open failed\n");
+	   return;
+   }
    settings = gpiod_line_settings_new();
-   if (!settings) return;
+   if (!settings) {
+	printf("line_settings_new failed\n");
+	   return;
+   }
    gpiod_line_settings_set_direction(settings, (iMode == OUTPUT) ? GPIOD_LINE_DIRECTION_OUTPUT : GPIOD_LINE_DIRECTION_INPUT);
    line_cfg = gpiod_line_config_new();
    if (!line_cfg) return;
-   ret = gpiod_line_config_add_line_settings(line_cfg, (const unsigned int *)&iPin, 1, settings);
+   gpiod_line_config_add_line_settings(line_cfg, (const unsigned int *)&iPin, 1, settings);
    req_cfg = gpiod_request_config_new();
    gpiod_request_config_set_consumer(req_cfg, CONSUMER);
    lines[iPin] = gpiod_chip_request_lines(chip, req_cfg, line_cfg);
