@@ -31,6 +31,7 @@
 #include <linux/spi/spidev.h>
 #include <gpiod.h>
 #include <math.h>
+#include <time.h>
 #ifndef CONSUMER
 #define CONSUMER "Consumer"
 #endif
@@ -39,7 +40,11 @@
 #define pgm_read_dword(a) (*(uint32_t *)a)
 #define memcpy_P memcpy
 struct gpiod_chip *chip = NULL;
+#ifdef GPIOD_API
 struct gpiod_line *lines[64];
+#else
+struct gpiod_line_request *lines[64];
+#endif
 static int spi_fd; // SPI handle
 
 // forward references
@@ -126,16 +131,25 @@ struct spi_ioc_transfer spi;
 
 int digitalRead(int iPin)
 {
+#ifdef GPIOD_API // 1.x (old) API
   return gpiod_line_get_value(lines[iPin]);
+#else // 2.x (new)
+  return gpiod_line_request_get_value(lines[iPin], iPin) == GPIOD_LINE_VALUE_ACTIVE;
+#endif
 } /* digitalRead() */
 
 void digitalWrite(int iPin, int iState)
 {
+#ifdef GPIOD_API // old 1.6 API
    gpiod_line_set_value(lines[iPin], iState);
+#else // new 2.x API
+   gpiod_line_request_set_value(lines[iPin], iPin, (iState) ? GPIOD_LINE_VALUE_ACTIVE : GPIOD_LINE_VALUE_INACTIVE);
+#endif
 } /* digitalWrite() */
 
 void pinMode(int iPin, int iMode)
 {
+#ifdef GPIOD_API // old 1.6 API
    if (chip == NULL) {
        chip = gpiod_chip_open_by_name("gpiochip0");
    }
@@ -147,6 +161,27 @@ void pinMode(int iPin, int iMode)
    } else { // plain input
        gpiod_line_request_input(lines[iPin], CONSUMER);
    }
+#else // new 2.x API
+   struct gpiod_line_settings *settings;
+   struct gpiod_line_config *line_cfg;
+   struct gpiod_request_config *req_cfg;
+
+   chip = gpiod_chip_open("/dev/gpiochip0");
+   if (!chip) return;
+   settings = gpiod_line_settings_new();
+   if (!settings) return;
+   gpiod_line_settings_set_direction(settings, (iMode == OUTPUT) ? GPIOD_LINE_DIRECTION_OUTPUT : GPIOD_LINE_DIRECTION_INPUT);
+   line_cfg = gpiod_line_config_new();
+   if (!line_cfg) return;
+   ret = gpiod_line_config_add_line_settings(line_cfg, (const unsigned int *)&iPin, 1, settings);
+   req_cfg = gpiod_request_config_new();
+   gpiod_request_config_set_consumer(req_cfg, CONSUMER);
+   lines[iPin] = gpiod_chip_request_lines(chip, req_cfg, line_cfg);
+   gpiod_request_config_free(req_cfg);
+   gpiod_line_config_free(line_cfg);
+   gpiod_line_settings_free(settings);
+   gpiod_chip_close(chip);
+#endif
 } /* pinMode() */
 
 void delay(int iMS)
