@@ -51,6 +51,8 @@ const DISPLAY_PROFILE dpList[3] = { // 1-bit and 2-bit display types for each pr
 #define PIN_PWR 18
 
 PNG png;
+int iWidth, iHeight, iBpp, iPixelType;
+uint8_t *pBitmap, *pPalette;
 
 const char *szPNGErrors[] = {"Success", "Invalid Paremeter", "Decoding", "Out of memory", "No buffer allocated", "Unsupported feature", "Invalid file", "Too big", "Quit early"};
 //
@@ -70,15 +72,19 @@ void ConvertBpp(uint8_t *pBMP, int w, int h, int iBpp, uint8_t *palette)
     }
     // The bits per pixel info from PNG files is per color channel
     // Convert the value into a true bits per pixel
-    switch (png.getPixelType()) {
+    switch (iPixelType) {
         case PNG_PIXEL_INDEXED:
             break;
         case PNG_PIXEL_TRUECOLOR:
-            iBpp *= 3;
+	    if (iBpp <= 8) {
+                iBpp *= 3;
+	    }
             palette = NULL;
             break;
         case PNG_PIXEL_TRUECOLOR_ALPHA:
-            iBpp *= 4;
+	    if (iBpp <= 8) {
+                iBpp *= 4;
+	    }
             palette = NULL;
             break;
         case PNG_PIXEL_GRAYSCALE:
@@ -169,39 +175,100 @@ void ConvertBpp(uint8_t *pBMP, int w, int h, int iBpp, uint8_t *palette)
     } // for y
 } /* ConvertBpp() */
 //
+// Decode the BMP file
+//
+int DecodeBMP(uint8_t *pData, int iSize)
+{
+    int iOffBits; // offset to bitmap data
+    int y, iDestPitch=0, iPitch;
+    uint8_t bFlipped = 0;
+    uint8_t *s, *d;
+
+    iWidth = *(int16_t *)&pData[18];
+    iHeight = *(int16_t *)&pData[22];
+    if (iHeight < 0) {
+        iHeight = -iHeight;
+    } else {
+	bFlipped = 1;
+    }
+    iBpp = *(int16_t *)&pData[28];
+    iOffBits = *(int16_t *)&pData[10];
+    switch (iBpp) {
+        case 1:
+	    iDestPitch = ((iWidth+7)>>3);
+	    iPixelType = PNG_PIXEL_INDEXED;
+            break;
+	case 4:
+	    iDestPitch = ((iWidth+1)>>1);
+	    iPixelType = PNG_PIXEL_INDEXED;
+	    break;
+	case 8:
+	    iDestPitch = iWidth;
+	    iPixelType = PNG_PIXEL_INDEXED;
+	    break;
+	case 24:
+	    iDestPitch = iWidth*3;
+	    iPixelType = PNG_PIXEL_TRUECOLOR;
+	    break;
+	case 32:
+	    iDestPitch = iWidth*4;
+	    iPixelType = PNG_PIXEL_TRUECOLOR_ALPHA;
+	    break;
+    } // switch on bpp
+    iPitch = (iDestPitch + 3) & 0xfffc; // must be DWORD aligned
+    if (bFlipped)
+    {
+        iOffBits += ((iHeight-1) * iPitch); // start from bottom
+        iPitch = -iPitch;
+    }
+    pBitmap = (uint8_t *)malloc(iHeight * iDestPitch);
+    s = &pData[iOffBits];
+    d = pBitmap;
+    for (y=0; y<iHeight; y++) { // copy the bitmap to the common format
+        memcpy(d, s, iDestPitch);
+	s += iPitch;
+	d += iDestPitch;
+    }
+    // Adjust the palette for 3-byte entries (if there is one)
+    if (iBpp <= 8) {
+	int iColors = 1<<iBpp;
+	d = pPalette = pData;
+        s = &pData[iOffBits - (4 * iColors)];
+        for (y=0; y<iColors; y++) {
+            d[0] = s[0]; d[1] = s[1]; d[2] = s[2];
+	    s += 4;
+	    d += 3;
+	}
+    } else {
+        pPalette = NULL;
+    }
+    return PNG_SUCCESS; // re-use this return code
+} /* DecodeBMP() */
+
+//
 // Decode the PNG file into an uncompressed bitmap
 //
-int DecodePNG(const char *fname)
+int DecodePNG(uint8_t *pData, int iSize)
 {
-int rc, iSize;
-FILE *ihandle;
-uint8_t *pData;
-
-    ihandle = fopen(fname, "r+b");
-    if (ihandle == NULL) {
-        return PNG_INVALID_FILE;
-    }
-    fseek(ihandle, 0, SEEK_END);
-    iSize = (int)ftell(ihandle);
-    fseek(ihandle, 0, SEEK_SET);
-    pData = (uint8_t *)malloc(iSize);
-    fread(pData, 1, iSize, ihandle);
-    fclose(ihandle);
+int rc;
     rc = png.openRAM(pData, iSize, NULL);
     if (rc != PNG_SUCCESS) {
         printf("PNG open returned error: %s\n", szPNGErrors[rc]);
-        free(pData);
         return -1; // only show the error once
     }
     if (png.getWidth() > EPD_WIDTH || png.getHeight() > EPD_HEIGHT) {
         printf("Requested image is too large for the EPD.\n");
         printf("Image Size: %d x %d\nEPD size: %d x %d\n", png.getWidth(), png.getHeight(), EPD_WIDTH, EPD_HEIGHT);
-        free(pData);
         return -1;
     }
-    png.setBuffer((uint8_t *)malloc(png.getBufferSize()));
+    iWidth = png.getWidth();
+    iHeight = png.getHeight();
+    iBpp = png.getBpp();
+    pPalette = png.getPalette();
+    iPixelType = png.getPixelType();
+    pBitmap = (uint8_t *)malloc(png.getBufferSize());
+    png.setBuffer(pBitmap);
     rc = png.decode(NULL, 0);
-    free(pData);
     return rc;
 } /* DecodePNG() */
 //
@@ -212,24 +279,24 @@ void PrepareImage(void)
 {
 	int x, y, iPlaneOffset, iSrcPitch, iDestPitch;
 	uint8_t *s, *d;
-	s = png.getBuffer();
+	s = pBitmap;
 	d = (uint8_t *)bbep.getBuffer();
 	iDestPitch = (bbep.width()+7)/8;
-	if (png.getBpp() == 1) {
-	    iSrcPitch = (png.getWidth()+7)/8;
-	    for (y=0; y<png.getHeight(); y++) {
+	if (iBpp == 1) {
+	    iSrcPitch = (iWidth+7)/8;
+	    for (y=0; y<iHeight; y++) {
 		memcpy(d, s, iSrcPitch);
 		s += iSrcPitch;
 		d += iDestPitch;
 	    }
 	} else { // >=2 bpp
-	    iPlaneOffset = iDestPitch * png.getHeight(); // offset to 2nd memory plane
-	    iSrcPitch = (png.getWidth()+3)/4; // every source pixel depth will become 2-bpp
+	    iPlaneOffset = iDestPitch * iHeight; // offset to 2nd memory plane
+	    iSrcPitch = (iWidth+3)/4; // every source pixel depth will become 2-bpp
 	    // Convert the source bitmap to 2-bit grayscale
-	    ConvertBpp(s, png.getWidth(), png.getHeight(), png.getBpp(), png.getPalette());
-	    for (y=0; y<png.getHeight(); y++) {
+	    ConvertBpp(s, iWidth, iHeight, iBpp, pPalette);
+	    for (y=0; y<iHeight; y++) {
 	    // Split the 2-bit packed pixels into 2 bit planes for the EPD
-		for (x=0; x<png.getWidth()/4; x+=2) { // work with pairs of bytes
+		for (x=0; x<iWidth/4; x+=2) { // work with pairs of bytes
 		    uint8_t s0 = ~s[x]; // grayscale is inverted on the EPD
 		    uint8_t s1 = ~s[x+1];
 		    uint8_t u8Mask = 0x80, d0=0, d1=0;
@@ -247,13 +314,13 @@ void PrepareImage(void)
 		d += iDestPitch;
 	    } // for y
 	} // >= 2bpp
-	free(png.getBuffer());
+	free(pBitmap);
 } /* PrepareImage() */
 
 void ShowHelp(void)
 {
-    printf("show_png utility - display PNG images on ePaper displays\nwritten by Larry Bank (bitbank@pobox.com)\nCopyright(c) 2025 BitBank Software, inc.\n");
-    printf("Usage: show_png <filename.png> <display_mode> <optional panel profile>\nValid display modes: full, fast, partial\nValid profiles: (empty=A), B, C\n");
+    printf("show_png utility - display PNG (and BMP) images on ePaper displays\nwritten by Larry Bank (bitbank@pobox.com)\nCopyright(c) 2025 BitBank Software, inc.\n");
+    printf("Usage: show_png <image file> <display_mode> <optional panel profile>\nValid display modes: full, fast, partial\nValid profiles: (empty=A), B, C\n");
     printf("Color images and bit depths greater than 2-bpp will be\nautomatically converted to 2-bit (4 grays).\n");
 } /* ShowHelp() */
 //
@@ -261,8 +328,11 @@ void ShowHelp(void)
 //
 int main(int argc, const char * argv[]) {
 int rc, iMode;
+int iSize;
+FILE *ihandle;
+uint8_t *pData;
 
-    if (argc < 3 || argc > 4) { // print instructions
+if (argc < 3 || argc > 4) { // print instructions
         ShowHelp();
         return -1;
     }
@@ -289,9 +359,29 @@ int rc, iMode;
     }
     bbep.initIO(PIN_DC, PIN_RST, PIN_BUSY, PIN_CS, SPI_BUS, 0, 8000000);
 #ifdef SHOW_DETAILS
-    printf("Decoding PNG...\n");
+    printf("Decoding image...\n");
 #endif
-    rc = DecodePNG(argv[1]);
+
+    // Read the file into RAM
+    ihandle = fopen(argv[1], "r+b");
+    if (ihandle == NULL) {
+        printf("Error opening file %s\n", argv[1]);
+    }
+    fseek(ihandle, 0, SEEK_END);
+    iSize = (int)ftell(ihandle);
+    fseek(ihandle, 0, SEEK_SET);
+    pData = (uint8_t *)malloc(iSize);
+    fread(pData, 1, iSize, ihandle);
+    fclose(ihandle);
+    if (iSize < 64) { // invalid file
+        printf("Invalid image file\n");
+	return -1;
+    }
+    if (pData[0] == 'B' && pData[1] == 'M') { // it's a BMP file
+        rc = DecodeBMP(pData, iSize);
+    } else {
+        rc = DecodePNG(pData, iSize);
+    }
     if (rc != PNG_SUCCESS) {
         if (rc > 0) {
             printf("PNG decode returned error: %s\n", szPNGErrors[rc]);
@@ -299,10 +389,10 @@ int rc, iMode;
         return -1;
     }
 #ifdef SHOW_DETAILS
-    printf("image specs: %d x %d, %d-bpp\n", png.getWidth(), png.getHeight(), png.getBpp());
+    printf("image specs: %d x %d, %d-bpp\n", iWidth, iHeight, iBpp);
 #endif
 
-    if (png.getBpp() == 1) {
+    if (iBpp == 1) {
         bbep.setPanelType(dpList[iProfile].OneBit);
         bbep.allocBuffer(); // draw into RAM first
         bbep.fillScreen(BBEP_WHITE);
@@ -323,7 +413,7 @@ int rc, iMode;
 #ifdef SHOW_DETAILS
     printf("Writing data to EPD...\n");
 #endif
-    if (png.getBpp() == 1) {
+    if (iBpp == 1) {
         bbep.writePlane((iMode == REFRESH_PARTIAL) ? PLANE_FALSE_DIFF : PLANE_0);
         bbep.refresh(iMode);
     } else { // 4 gray mode
