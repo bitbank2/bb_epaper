@@ -143,6 +143,15 @@ void ConvertBpp(uint8_t *pBMP, int w, int h, int iBpp, uint8_t *palette)
                         }
                     }
                     break;
+		case 2:
+		    if (palette) {
+			pPal = &palette[(s[0] >> ((3-(x&3))*2)) & 3];
+			r = pPal[0]; g = pPal[1]; b = pPal[2];
+		    } else {
+			r = g = b = (s[0] << ((x&3)*2)) & 0xc0;
+		    }
+		    if ((x & 3) == 3) s++;
+		    break;
             } // switch on bpp
             // Convert the source rgb into gray with a simple formula which favors green
             gray = (r + g*2 + b)/4;
