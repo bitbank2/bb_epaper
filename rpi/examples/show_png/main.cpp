@@ -18,22 +18,49 @@
 //
 #include <bb_epaper.h>
 #include <PNGdec.h>
+#include "cJSON.h"
+#include <unistd.h>
 #define SHOW_DETAILS
 
 BBEPAPER bbep;
-#define EPD_WIDTH 800
-#define EPD_HEIGHT 480
+int iAdapter, iMode;
+int iPanel1Bit, iPanel2Bit;
 
-typedef struct dp_tag
+typedef struct tagAdapter
 {
-  uint32_t OneBit, TwoBit; // profiles for 1 and 2-bit modes
-} DISPLAY_PROFILE;
-int iProfile = 0; // default
-const DISPLAY_PROFILE dpList[3] = { // 1-bit and 2-bit display types for each profile
-    {EP75_800x480, EP75_800x480_4GRAY}, // default (for original EPD)
-    {EP75_800x480_GEN2, EP75_800x480_4GRAY_GEN2}, // a = uses built-in fast + 4-gray
-    {EP75_800x480, EP75_800x480_4GRAY_V2}, // b = darker grays
+  uint8_t u8DC, u8RST, u8BUSY, u8CS, u8PWR;
+} ADAPTER;
+const char *szAdapters[] = {"pimoroni", "waveshare_2", NULL};
+const char *szModes[] = {"full", "fast", "partial", NULL};
+const char *szPanels[] = {
+    "EP_PANEL_UNDEFINED","EP42_400x300","EP42B_400x300", // 0-2
+    "EP213_122x250", "EP213B_122x250", "EP293_128x296", // 3-5
+    "EP294_128x296", "EP295_128x296", "EP295_128x296_4GRAY", // 6-8
+    "EP266_152x296", "EP102_80x128", "EP27B_176x264", // 9-11
+    "EP29R_128x296", "EP122_192x176", "EP154R_152x152", // 12-14
+    "EP42R_400x300", "EP42R2_400x300", "EP37_240x416", // 15-17
+    "EP37B_240x416", "EP213_104x212", "EP75_800x480", // 18-20
+    "EP75_800x480_GEN2", "EP75_800x480_4GRAY", "EP75_800x480_4GRAY_GEN2", // 21-23 
+    "EP75_800x480_4GRAY_V2", "EP29_128x296", "EP29_128x296_4GRAY", // 24-26
+    "EP213R_122x250", "EP154_200x200", "EP154B_200x200", // 27-29
+    "EP266YR_184x360", "EP29YR_128x296", "EP29YR_168x384", // 30-32
+    "EP583_648x480", "EP296_128x296", "EP26R_152x296", // 33-35
+    "EP73_800x480", "EP73_SPECTRA_800x480", "EP74R_640x384", // 36-38
+    "EP583R_600x448", "EP75R_800x480", "EP426_800x480", // 39-41
+    "EP426_800x480_4GRAY", "EP29R2_128x296", "EP41_640x400", // 42-44
+    "EP81_SPECTRA_1024x576", "EP7_960x640", "EP213R2_122x250", // 45-47
+    "EP29Z_128x296", "EP29Z_128x296_4GRAY", "EP213Z_122x250", // 48-50
+    "EP213Z_122x250_4GRAY", "EP154Z_152x152", "EP579_792x272", // 51-53
+    "EP213YR_122x250", "EP37YR_240x416", "EP35YR_184x384", // 54-56
+    "EP397YR_800x480", "EP154YR_200x200", "EP266YR2_184x360", // 57-59
+    "EP42YR_400x300", "EP215YR_160x296", // 60-61
+    NULL // must be last entry
 };
+// DC, RST, BUSY, CS, PWR
+ADAPTER adapters[2] = {{22, 27, 17, 8, 0xff}, // Pimoroni
+		       {25, 17, 24, 8, 18}, // Waveshare 2.x
+		      };
+
 //BBEPAPER bbep(EP75_800x480);
 // BCM GPIO numbers used by Pimoroni e-paper "HATs"
 //#define PIN_DC 22
@@ -55,6 +82,21 @@ int iWidth, iHeight, iBpp, iPixelType;
 uint8_t *pBitmap, *pPalette;
 
 const char *szPNGErrors[] = {"Success", "Invalid Paremeter", "Decoding", "Out of memory", "No buffer allocated", "Unsupported feature", "Invalid file", "Too big", "Quit early"};
+//
+// Find the index value of a string within a list
+// The list must be terminated with a NULL pointer
+// Returns a value 0-N or -1 for not found
+//
+int FindItemName(const char **pList, const char *pName)
+{
+int i = 0;
+    while (pList[i] != NULL && strcasecmp(pName, pList[i]) != 0) {
+	    i++;
+    }
+    if (pList[i] == NULL) return -1; // not found
+    return i;
+} /* FindItemName() */
+
 //
 // The user passed a file which has 2 or more bits per pixel
 // convert it to 2-bpp grayscale
@@ -256,9 +298,9 @@ int rc;
         printf("PNG open returned error: %s\n", szPNGErrors[rc]);
         return -1; // only show the error once
     }
-    if (png.getWidth() > EPD_WIDTH || png.getHeight() > EPD_HEIGHT) {
+    if (png.getWidth() > bbep.width() || png.getHeight() > bbep.height()) {
         printf("Requested image is too large for the EPD.\n");
-        printf("Image Size: %d x %d\nEPD size: %d x %d\n", png.getWidth(), png.getHeight(), EPD_WIDTH, EPD_HEIGHT);
+        printf("Image Size: %d x %d\nEPD size: %d x %d\n", png.getWidth(), png.getHeight(), bbep.width(), bbep.height());
         return -1;
     }
     iWidth = png.getWidth();
@@ -286,6 +328,9 @@ void PrepareImage(void)
 	    iSrcPitch = (iWidth+7)/8;
 	    for (y=0; y<iHeight; y++) {
 		memcpy(d, s, iSrcPitch);
+		if (iWidth & 7) { // fill partial byte with white
+                    d[iWidth>>3] |= (0xff >> (iWidth & 7));
+		}
 		s += iSrcPitch;
 		d += iDestPitch;
 	    }
@@ -320,44 +365,101 @@ void PrepareImage(void)
 void ShowHelp(void)
 {
     printf("show_png utility - display PNG (and BMP) images on ePaper displays\nwritten by Larry Bank (bitbank@pobox.com)\nCopyright(c) 2025 BitBank Software, inc.\n");
-    printf("Usage: show_png <image file> <display_mode> <optional panel profile>\nValid display modes: full, fast, partial\nValid profiles: (empty=A), B, C\n");
+    printf("A JSON file in the current directory (config.json) can contain the setup\nor the parameters can be passed on the command line (in any order):\n");
+    printf("file=<filename> any PNG or BMP file\nmode=<update mode> can be full, fast or partial\nadapter=<epaper PCB> can be waveshare_2 or pimoroni\npanel_1bit=<bb_epaper panel name>\npanel_2bit=<bb_epaper panel name>\n");
     printf("Color images and bit depths greater than 2-bpp will be\nautomatically converted to 2-bit (4 grays).\n");
+    printf("example: ./show_png file=\"/home/me/test.png\" mode=fast panel_1bit=EP75_800x480 adapter=waveshare_2\n");
 } /* ShowHelp() */
 //
 // Main program entry point
 //
 int main(int argc, const char * argv[]) {
-int rc, iMode;
+int rc;
 int iSize;
 FILE *ihandle;
 uint8_t *pData;
+char szJSON[256]; // current dir
+cJSON *pJSON, *pItem;
+char szFile[256];
 
-if (argc < 3 || argc > 4) { // print instructions
+    iAdapter = iPanel1Bit = iPanel2Bit = iMode = -1;
+    szFile[0] = 0;
+
+    getcwd(szJSON, sizeof(szJSON));
+    strcat(szJSON, "/config.json"); // name of local config file
+    //printf("config name: %s\n", szJSON);
+    ihandle = fopen(szJSON, "r+b");
+    if (ihandle) {
+	    printf("config.json found!\n");
+	    fseek(ihandle, 0, SEEK_END);
+            iSize = (int)ftell(ihandle);
+	    fseek(ihandle, 0, SEEK_SET);
+	    pData = (uint8_t *)malloc(iSize);
+	    fread(pData, 1, iSize, ihandle);
+	    fclose(ihandle);
+	    pJSON = cJSON_ParseWithLength((const char *)pData, iSize);
+	    if (pJSON) {
+		    printf("JSON parsed successfully!\n");
+		    if (cJSON_HasObjectItem(pJSON, "adapter")) {
+                         pItem = cJSON_GetObjectItem(pJSON, "adapter");
+			 iAdapter = FindItemName(szAdapters, pItem->valuestring);
+			 printf("Adapter = %d\n", iAdapter);
+		    }
+		    if (cJSON_HasObjectItem(pJSON, "panel_1bit")) {
+		         pItem = cJSON_GetObjectItem(pJSON, "panel_1bit");
+			 iPanel1Bit = FindItemName(szPanels, pItem->valuestring);
+                         printf("panel1bit = %d\n", iPanel1Bit);
+		    }
+		    if (cJSON_HasObjectItem(pJSON, "panel_2bit")) {
+			 pItem = cJSON_GetObjectItem(pJSON, "panel_2bit");
+			 iPanel2Bit = FindItemName(szPanels, pItem->valuestring);
+                         printf("panel2bit = %d\n", iPanel2Bit);
+		    }
+		    if (cJSON_HasObjectItem(pJSON, "mode")) {
+			 pItem = cJSON_GetObjectItem(pJSON, "mode");
+			 iMode = FindItemName(szModes, pItem->valuestring);
+			 printf("mode = %d\n", iMode);
+		    }
+		    if (cJSON_HasObjectItem(pJSON, "file")) {
+                         pItem = cJSON_GetObjectItem(pJSON, "file");
+			 strcpy(szFile, pItem->valuestring);
+		    }
+		    cJSON_Delete(pJSON);
+	    } else {
+		    printf("Error parsing JSON!\n");
+	    }
+	    free(pData);
+    } // if config.json file exists
+
+    for (int i=1; i<argc; i++) {
+        char *pName, *pValue, *saveptr;
+        pName = strtok_r((char *)argv[i], "=", &saveptr);
+	pValue = strtok_r(NULL, "=", &saveptr);
+//	printf("%d: %s %s\n", i, pName, pValue); 
+        if (strcmp(pName, "mode") == 0) {
+		iMode = FindItemName(szModes, pValue);
+	} else if (strcmp(pName, "file") == 0) {
+		strcpy(szFile, pValue);
+	} else if (strcmp(pName, "panel_1bit") == 0) {
+		iPanel1Bit = FindItemName(szPanels, pValue);
+	} else if (strcmp(pName, "panel_2bit") == 0) {
+		iPanel2Bit = FindItemName(szPanels, pValue);
+	} else if (strcmp(pName, "adapter") == 0) {
+		iAdapter = FindItemName(szAdapters, pValue);
+	}
+    }
+
+    if (szFile[0] == 0 || iAdapter == -1 || iMode == -1 || iPanel1Bit == -1) { // print instructions
         ShowHelp();
         return -1;
     }
-    if (strcasecmp(argv[2], "full") == 0) iMode = REFRESH_FULL;
-    else if (strcasecmp(argv[2], "fast") == 0) iMode = REFRESH_FAST;
-    else if (strcasecmp(argv[2], "partial") == 0) iMode = REFRESH_PARTIAL;
-    else {
-        printf("Invalid refresh mode.\n");
-        ShowHelp();
-        return -1;
+
+    if (adapters[iAdapter].u8PWR != 0xff) {
+        pinMode(adapters[iAdapter].u8PWR, OUTPUT);
+        digitalWrite(adapters[iAdapter].u8PWR, 1); // enable power to EPD
     }
-    if (argc == 4) { // user specified a profile
-        uint8_t c = argv[3][0] & 0x5f; // force upper case
-        if (c != 'A' && c != 'B' && c != 'C') {
-            printf("Invalid profile.\n");
-            ShowHelp();
-            return -1;
-        }
-        iProfile = c - 'A';
-    }
-    if (PIN_PWR >= 0) {
-        pinMode(PIN_PWR, OUTPUT);
-        digitalWrite(PIN_PWR, 1); // enable power to EPD
-    }
-    bbep.initIO(PIN_DC, PIN_RST, PIN_BUSY, PIN_CS, SPI_BUS, 0, 8000000);
+    bbep.initIO(adapters[iAdapter].u8DC, adapters[iAdapter].u8RST, adapters[iAdapter].u8BUSY, adapters[iAdapter].u8CS, SPI_BUS, 0, 8000000);
+    bbep.setPanelType(iPanel1Bit); // start by assuming 1-bit mode
 #ifdef SHOW_DETAILS
     printf("Decoding image...\n");
 #endif
@@ -393,11 +495,10 @@ if (argc < 3 || argc > 4) { // print instructions
 #endif
 
     if (iBpp == 1) {
-        bbep.setPanelType(dpList[iProfile].OneBit);
         bbep.allocBuffer(); // draw into RAM first
         bbep.fillScreen(BBEP_WHITE);
     } else {
-        bbep.setPanelType(dpList[iProfile].TwoBit);
+        bbep.setPanelType(iPanel2Bit);
         bbep.allocBuffer(); // draw into RAM first
         bbep.fillScreen(BBEP_GRAY3);
     }
@@ -406,7 +507,7 @@ if (argc < 3 || argc > 4) { // print instructions
     }
     // convert+copy the image into the local EPD framebuffer
 #ifdef SHOW_DETAILS
-    printf("Preparing image for EPD as %d-bpp...\n", (bbep.getPanelType() == (int)dpList[iProfile].OneBit) ? 1 : 2);
+    printf("Preparing image for EPD as %d-bpp...\n", (bbep.getPanelType() == iPanel1Bit) ? 1 : 2);
 #endif
     PrepareImage();
     // Push the pixels from our RAM buffer to the e-epaper
@@ -424,8 +525,8 @@ if (argc < 3 || argc > 4) { // print instructions
     printf("Refresh complete, shutting down...\n");
 #endif
     bbep.sleep(DEEP_SLEEP); // turn off the epaper power circuit
-    if (PIN_PWR > 0) {
-        digitalWrite(PIN_PWR, 0); // disable power to EPD
+    if (adapters[iAdapter].u8PWR != 0xff) {
+        digitalWrite(adapters[iAdapter].u8PWR, 0); // disable power to EPD
     }
     return 0;
 } /* main() */
