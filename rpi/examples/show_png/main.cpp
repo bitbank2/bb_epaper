@@ -460,6 +460,9 @@ char szFile[256];
     }
     bbep.initIO(adapters[iAdapter].u8DC, adapters[iAdapter].u8RST, adapters[iAdapter].u8BUSY, adapters[iAdapter].u8CS, SPI_BUS, 0, 8000000);
     bbep.setPanelType(iPanel1Bit); // start by assuming 1-bit mode
+    if (bbep.width() < bbep.height()) {
+	    bbep.setRotation(270);
+    }
 #ifdef SHOW_DETAILS
     printf("Decoding image...\n");
 #endif
@@ -503,7 +506,7 @@ char szFile[256];
         bbep.fillScreen(BBEP_GRAY3);
     }
     if (bbep.width() < bbep.height()) {
-        bbep.setRotation(90); // assume landscape mode for all images
+        bbep.setRotation(270); // assume landscape mode for all images
     }
     // convert+copy the image into the local EPD framebuffer
 #ifdef SHOW_DETAILS
