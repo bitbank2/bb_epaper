@@ -53,7 +53,7 @@ const char *szPanels[] = {
     "EP213Z_122x250_4GRAY", "EP154Z_152x152", "EP579_792x272", // 51-53
     "EP213YR_122x250", "EP37YR_240x416", "EP35YR_184x384", // 54-56
     "EP397YR_800x480", "EP154YR_200x200", "EP266YR2_184x360", // 57-59
-    "EP42YR_400x300", "EP215YR_160x296", // 60-61
+    "EP42YR_400x300", "EP215YR_160x296", // 60-62
     NULL // must be last entry
 };
 // DC, RST, BUSY, CS, PWR
@@ -518,7 +518,7 @@ char szFile[256];
     printf("Writing data to EPD...\n");
 #endif
     if (iBpp == 1) {
-        bbep.writePlane((iMode == REFRESH_PARTIAL) ? PLANE_FALSE_DIFF : PLANE_DUPLICATE);
+        bbep.writePlane((iMode == REFRESH_PARTIAL) ? PLANE_FALSE_DIFF : PLANE_0);
         bbep.refresh(iMode);
     } else { // 4 gray mode
         bbep.writePlane();
