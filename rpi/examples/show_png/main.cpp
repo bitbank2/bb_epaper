@@ -365,7 +365,7 @@ void PrepareImage(void)
 void ShowHelp(void)
 {
     printf("show_png utility - display PNG (and BMP) images on ePaper displays\nwritten by Larry Bank (bitbank@pobox.com)\nCopyright(c) 2025 BitBank Software, inc.\n");
-    printf("A JSON file in the current directory (config.json) can contain the setup\nor the parameters can be passed on the command line (in any order):\n");
+    printf("A JSON file in the current directory (epaper.json) can contain the setup\nor the parameters can be passed on the command line (in any order):\n");
     printf("file=<filename> any PNG or BMP file\nmode=<update mode> can be full, fast or partial\nadapter=<epaper PCB> can be waveshare_2 or pimoroni\npanel_1bit=<bb_epaper panel name>\npanel_2bit=<bb_epaper panel name>\n");
     printf("Color images and bit depths greater than 2-bpp will be\nautomatically converted to 2-bit (4 grays).\n");
     printf("example: ./show_png file=\"/home/me/test.png\" mode=fast panel_1bit=EP75_800x480 adapter=waveshare_2\n");
@@ -386,11 +386,11 @@ char szFile[256];
     szFile[0] = 0;
 
     getcwd(szJSON, sizeof(szJSON));
-    strcat(szJSON, "/config.json"); // name of local config file
+    strcat(szJSON, "/epaper.json"); // name of local config file
     //printf("config name: %s\n", szJSON);
     ihandle = fopen(szJSON, "r+b");
     if (ihandle) {
-	    printf("config.json found!\n");
+	    printf("epaper.json found!\n");
 	    fseek(ihandle, 0, SEEK_END);
             iSize = (int)ftell(ihandle);
 	    fseek(ihandle, 0, SEEK_SET);
@@ -429,13 +429,13 @@ char szFile[256];
 		    printf("Error parsing JSON!\n");
 	    }
 	    free(pData);
-    } // if config.json file exists
+    } // if epaper.json file exists
 
     for (int i=1; i<argc; i++) {
         char *pName, *pValue, *saveptr;
         pName = strtok_r((char *)argv[i], "=", &saveptr);
 	pValue = strtok_r(NULL, "=", &saveptr);
-//	printf("%d: %s %s\n", i, pName, pValue); 
+	printf("%d: %s %s\n", i, pName, pValue); 
         if (strcmp(pName, "mode") == 0) {
 		iMode = FindItemName(szModes, pValue);
 	} else if (strcmp(pName, "file") == 0) {
@@ -465,9 +465,9 @@ char szFile[256];
 #endif
 
     // Read the file into RAM
-    ihandle = fopen(argv[1], "r+b");
+    ihandle = fopen(szFile, "r+b");
     if (ihandle == NULL) {
-        printf("Error opening file %s\n", argv[1]);
+        printf("Error opening file %s\n", szFile);
     }
     fseek(ihandle, 0, SEEK_END);
     iSize = (int)ftell(ihandle);
@@ -515,7 +515,7 @@ char szFile[256];
     printf("Writing data to EPD...\n");
 #endif
     if (iBpp == 1) {
-        bbep.writePlane((iMode == REFRESH_PARTIAL) ? PLANE_FALSE_DIFF : PLANE_0);
+        bbep.writePlane((iMode == REFRESH_PARTIAL) ? PLANE_FALSE_DIFF : PLANE_DUPLICATE);
         bbep.refresh(iMode);
     } else { // 4 gray mode
         bbep.writePlane();
