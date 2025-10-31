@@ -83,29 +83,27 @@ uint8_t *pBitmap, *pPalette;
 
 const char *szPNGErrors[] = {"Success", "Invalid Paremeter", "Decoding", "Out of memory", "No buffer allocated", "Unsupported feature", "Invalid file", "Too big", "Quit early"};
 //
-// Display the list of options
-//
-void ShowList(const char **pList)
-{
-int i = 0;
-    while (pList[i] != NULL) {
-        printf("%s, ", pList[i]);
-        i++; 
-    }
-    printf("\n");
-} /* ShowList() */
-//
 // Find the index value of a string within a list
 // The list must be terminated with a NULL pointer
 // Returns a value 0-N or -1 for not found
 //
-int FindItemName(const char **pList, const char *pName)
+int FindItemName(const char **pList, const char *pName, const char *szLabel)
 {
 int i = 0;
     while (pList[i] != NULL && strcasecmp(pName, pList[i]) != 0) {
 	    i++;
     }
-    if (pList[i] == NULL) return -1; // not found
+    if (pList[i] == NULL) {
+        printf("Invalid %s; must be one of: ", szLabel); 
+        // Print the list of valid values
+        i = 0;
+        while (pList[i] != NULL) {
+            printf("%s, ", pList[i]);
+            i++; 
+        }
+        printf("\b\b  \n"); // erase the last comma
+        return -1; // not found
+    }
     return i;
 } /* FindItemName() */
 
@@ -386,8 +384,7 @@ void ShowHelp(void)
 // Main program entry point
 //
 int main(int argc, const char * argv[]) {
-int rc;
-int iSize;
+int rc, iSize;
 FILE *ihandle;
 uint8_t *pData;
 char szJSON[256]; // current dir
@@ -418,13 +415,8 @@ char szFile[256];
 #endif
 		    if (cJSON_HasObjectItem(pJSON, "adapter")) {
                          pItem = cJSON_GetObjectItem(pJSON, "adapter");
-			 iAdapter = FindItemName(szAdapters, pItem->valuestring);
-			 if (iAdapter < 0) {
-                             printf("Invalid adapter; must be one of: ");
-                             ShowList(szAdapters);
-                             ShowHelp();
-                             return -1;
-                         } else {
+			 iAdapter = FindItemName(szAdapters, pItem->valuestring, "adapter");
+                         if (iAdapter >= 0) {
 #ifdef SHOW_DETAILS
                              printf("Adapter = %d\n", iAdapter);
 #endif
@@ -432,13 +424,8 @@ char szFile[256];
 		    }
 		    if (cJSON_HasObjectItem(pJSON, "panel_1bit")) {
 		         pItem = cJSON_GetObjectItem(pJSON, "panel_1bit");
-			 iPanel1Bit = FindItemName(szPanels, pItem->valuestring);
-                         if (iPanel1Bit < 0) {
-                             printf("Invalid 1bit panel name; must be one of: ");
-                             ShowList(szPanels);
-                             ShowHelp();
-                             return -1;
-                         } else {
+			 iPanel1Bit = FindItemName(szPanels, pItem->valuestring, "1-bit panel");
+                         if (iPanel1Bit >= 0) {
 #ifdef SHOW_DETAILS
                              printf("panel1bit = %d\n", iPanel1Bit);
 #endif
@@ -446,13 +433,8 @@ char szFile[256];
 		    }
 		    if (cJSON_HasObjectItem(pJSON, "panel_2bit")) {
 			 pItem = cJSON_GetObjectItem(pJSON, "panel_2bit");
-			 iPanel2Bit = FindItemName(szPanels, pItem->valuestring);
-                         if (iPanel2Bit < 0) {
-                             printf("Invalid 2bit panel name; must be one of: ");
-                             ShowList(szPanels);
-                             ShowHelp();
-                             return -1;
-                         } else {
+			 iPanel2Bit = FindItemName(szPanels, pItem->valuestring, "2-bit panel");
+                         if (iPanel2Bit >= 0) {
 #ifdef SHOW_DETAILS          
                              printf("panel2bit = %d\n", iPanel2Bit);
 #endif
@@ -460,13 +442,8 @@ char szFile[256];
 		    }
 		    if (cJSON_HasObjectItem(pJSON, "mode")) {
 			 pItem = cJSON_GetObjectItem(pJSON, "mode");
-			 iMode = FindItemName(szModes, pItem->valuestring);
-                         if (iMode < 0) {
-                             printf("Invalid update mode; must be one of: ");
-                             ShowList(szModes);
-                             ShowHelp();
-                             return -1;
-                         } else {
+			 iMode = FindItemName(szModes, pItem->valuestring, "update mode");
+                         if (iMode >= 0) {
 #ifdef SHOW_DETAILS
 			     printf("mode = %d\n", iMode);
 #endif
@@ -489,19 +466,19 @@ char szFile[256];
 	pValue = strtok_r(NULL, "=", &saveptr);
 	printf("%d: %s %s\n", i, pName, pValue); 
         if (strcmp(pName, "mode") == 0) {
-		iMode = FindItemName(szModes, pValue);
+		iMode = FindItemName(szModes, pValue, "update mode");
 	} else if (strcmp(pName, "file") == 0) {
 		strcpy(szFile, pValue);
 	} else if (strcmp(pName, "panel_1bit") == 0) {
-		iPanel1Bit = FindItemName(szPanels, pValue);
+		iPanel1Bit = FindItemName(szPanels, pValue, "1-bit panel");
 	} else if (strcmp(pName, "panel_2bit") == 0) {
-		iPanel2Bit = FindItemName(szPanels, pValue);
+		iPanel2Bit = FindItemName(szPanels, pValue, "2-bit panel");
 	} else if (strcmp(pName, "adapter") == 0) {
-		iAdapter = FindItemName(szAdapters, pValue);
+		iAdapter = FindItemName(szAdapters, pValue, "adapter");
 	}
     }
 
-    if (szFile[0] == 0 || iAdapter == -1 || iMode == -1 || iPanel1Bit == -1) { // print instructions
+    if (szFile[0] == 0 || iAdapter == -1 || iMode == -1 || iPanel1Bit == -1 || iPanel2Bit == -1) { // print instructions
         ShowHelp();
         return -1;
     }

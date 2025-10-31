@@ -1,6 +1,6 @@
 {
 	"adapter": "waveshare_2",
-	"panel_1bit": "EP75_800x480_GEN2",
-	"panel_2bit": "EP75_800x480_4GRAY_GEN2",
-	"mode": "full"
+	"panel_1bit": "EP213Z_122x250",
+	"panel_2bit": "EP213Z_122x250_4GRAY",
+	"mode": "spartial"
 }
