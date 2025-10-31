@@ -83,6 +83,18 @@ uint8_t *pBitmap, *pPalette;
 
 const char *szPNGErrors[] = {"Success", "Invalid Paremeter", "Decoding", "Out of memory", "No buffer allocated", "Unsupported feature", "Invalid file", "Too big", "Quit early"};
 //
+// Display the list of options
+//
+void ShowList(const char **pList)
+{
+int i = 0;
+    while (pList[i] != NULL) {
+        printf("%s, ", pList[i]);
+        i++; 
+    }
+    printf("\n");
+} /* ShowList() */
+//
 // Find the index value of a string within a list
 // The list must be terminated with a NULL pointer
 // Returns a value 0-N or -1 for not found
@@ -390,7 +402,9 @@ char szFile[256];
     //printf("config name: %s\n", szJSON);
     ihandle = fopen(szJSON, "r+b");
     if (ihandle) {
+#ifdef SHOW_DETAILS
 	    printf("epaper.json found!\n");
+#endif
 	    fseek(ihandle, 0, SEEK_END);
             iSize = (int)ftell(ihandle);
 	    fseek(ihandle, 0, SEEK_SET);
@@ -399,26 +413,64 @@ char szFile[256];
 	    fclose(ihandle);
 	    pJSON = cJSON_ParseWithLength((const char *)pData, iSize);
 	    if (pJSON) {
+#ifdef SHOW_DETAILS
 		    printf("JSON parsed successfully!\n");
+#endif
 		    if (cJSON_HasObjectItem(pJSON, "adapter")) {
                          pItem = cJSON_GetObjectItem(pJSON, "adapter");
 			 iAdapter = FindItemName(szAdapters, pItem->valuestring);
-			 printf("Adapter = %d\n", iAdapter);
+			 if (iAdapter < 0) {
+                             printf("Invalid adapter; must be one of: ");
+                             ShowList(szAdapters);
+                             ShowHelp();
+                             return -1;
+                         } else {
+#ifdef SHOW_DETAILS
+                             printf("Adapter = %d\n", iAdapter);
+#endif
+                         }
 		    }
 		    if (cJSON_HasObjectItem(pJSON, "panel_1bit")) {
 		         pItem = cJSON_GetObjectItem(pJSON, "panel_1bit");
 			 iPanel1Bit = FindItemName(szPanels, pItem->valuestring);
-                         printf("panel1bit = %d\n", iPanel1Bit);
+                         if (iPanel1Bit < 0) {
+                             printf("Invalid 1bit panel name; must be one of: ");
+                             ShowList(szPanels);
+                             ShowHelp();
+                             return -1;
+                         } else {
+#ifdef SHOW_DETAILS
+                             printf("panel1bit = %d\n", iPanel1Bit);
+#endif
+                         }
 		    }
 		    if (cJSON_HasObjectItem(pJSON, "panel_2bit")) {
 			 pItem = cJSON_GetObjectItem(pJSON, "panel_2bit");
 			 iPanel2Bit = FindItemName(szPanels, pItem->valuestring);
-                         printf("panel2bit = %d\n", iPanel2Bit);
+                         if (iPanel2Bit < 0) {
+                             printf("Invalid 2bit panel name; must be one of: ");
+                             ShowList(szPanels);
+                             ShowHelp();
+                             return -1;
+                         } else {
+#ifdef SHOW_DETAILS          
+                             printf("panel2bit = %d\n", iPanel2Bit);
+#endif
+                         }
 		    }
 		    if (cJSON_HasObjectItem(pJSON, "mode")) {
 			 pItem = cJSON_GetObjectItem(pJSON, "mode");
 			 iMode = FindItemName(szModes, pItem->valuestring);
-			 printf("mode = %d\n", iMode);
+                         if (iMode < 0) {
+                             printf("Invalid update mode; must be one of: ");
+                             ShowList(szModes);
+                             ShowHelp();
+                             return -1;
+                         } else {
+#ifdef SHOW_DETAILS
+			     printf("mode = %d\n", iMode);
+#endif
+                         }
 		    }
 		    if (cJSON_HasObjectItem(pJSON, "file")) {
                          pItem = cJSON_GetObjectItem(pJSON, "file");
@@ -458,8 +510,10 @@ char szFile[256];
         pinMode(adapters[iAdapter].u8PWR, OUTPUT);
         digitalWrite(adapters[iAdapter].u8PWR, 1); // enable power to EPD
     }
-    bbep.initIO(adapters[iAdapter].u8DC, adapters[iAdapter].u8RST, adapters[iAdapter].u8BUSY, adapters[iAdapter].u8CS, SPI_BUS, 0, 8000000);
+    // This MUST be set before initializing the I/O so that the initial
+    // command sequence is sent to properly prepare the EPD for receiving data
     bbep.setPanelType(iPanel1Bit); // start by assuming 1-bit mode
+    bbep.initIO(adapters[iAdapter].u8DC, adapters[iAdapter].u8RST, adapters[iAdapter].u8BUSY, adapters[iAdapter].u8CS, SPI_BUS, 0, 8000000);
     if (bbep.width() < bbep.height()) {
 	    bbep.setRotation(270);
     }
