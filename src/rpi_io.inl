@@ -49,6 +49,7 @@ static int spi_fd; // SPI handle
 
 // forward references
 void bbepWakeUp(BBEPDISP *pBBEP);
+void bbepSendCMDSequence(BBEPDISP *pBBEP, const uint8_t *pSeq);
 
 // Initialize the I2C bus on Linux
 void I2CInit(BBI2C *pI2C, uint32_t iClock)
@@ -236,6 +237,8 @@ char szName[32];
     sprintf(szName, "/dev/spidev%d.0", pBBEP->iMOSIPin); // SPI channel #
     spi_fd = open(szName, O_RDWR);
     //spi_fd = open("/dev/spidev0.1", O_RDWR); // DEBUG - open SPI channel 0
+// Before we can start sending pixels, many panels need to know the display resolution
+    bbepSendCMDSequence(pBBEP, pBBEP->pInitFull);
 } /* bbepInitIO() */
 //
 // Convenience function to write a command byte along with a data
