@@ -28,9 +28,9 @@ int iPanel1Bit, iPanel2Bit;
 
 typedef struct tagAdapter
 {
-  uint8_t u8DC, u8RST, u8BUSY, u8CS, u8PWR;
+  uint8_t u8DC, u8RST, u8BUSY, u8CS, u8PWR, u8SPI;
 } ADAPTER;
-const char *szAdapters[] = {"pimoroni", "waveshare_2", NULL};
+const char *szAdapters[] = {"pimoroni", "waveshare_2", "waveshare_2_opi_rv2", NULL};
 const char *szModes[] = {"full", "fast", "partial", NULL};
 const char *szPanels[] = {
     "EP_PANEL_UNDEFINED","EP42_400x300","EP42B_400x300", // 0-2
@@ -57,8 +57,9 @@ const char *szPanels[] = {
     NULL // must be last entry
 };
 // DC, RST, BUSY, CS, PWR
-ADAPTER adapters[2] = {{22, 27, 17, 8, 0xff}, // Pimoroni
-		       {25, 17, 24, 8, 18}, // Waveshare 2.x
+ADAPTER adapters[] = {{22, 27, 17, 8, 0xff, 0}, // Pimoroni
+		       {25, 17, 24, 8, 18, 0}, // Waveshare 2.x
+                       {49, 71, 92, 76, 70, 3}, // Waveshare 2.x on OPi RV2
 		      };
 
 //BBEPAPER bbep(EP75_800x480);
@@ -580,7 +581,7 @@ char szFile[256];
     // This MUST be set before initializing the I/O so that the initial
     // command sequence is sent to properly prepare the EPD for receiving data
     bbep.setPanelType((iPanel1Bit == -1) ? iPanel2Bit : iPanel1Bit);
-    bbep.initIO(adapters[iAdapter].u8DC, adapters[iAdapter].u8RST, adapters[iAdapter].u8BUSY, adapters[iAdapter].u8CS, SPI_BUS, 0, 8000000);
+    bbep.initIO(adapters[iAdapter].u8DC, adapters[iAdapter].u8RST, adapters[iAdapter].u8BUSY, adapters[iAdapter].u8CS, adapters[iAdapter].u8SPI, 0, 8000000);
     if (bbep.width() < bbep.height()) {
 	    bbep.setRotation(270);
     }
