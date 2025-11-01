@@ -106,17 +106,85 @@ int i = 0;
     }
     return i;
 } /* FindItemName() */
+//
+// Match the given pixel to black (00), white (01), or red (1x)
+//
+unsigned char GetBWRPixel(int r, int g, int b)
+{
+    uint8_t ucOut=BBEP_BLACK;
+    int gr;
 
+    gr = (b + r + g*2)>>2; // gray
+    // match the color to closest of black/white/red
+    if (r > g && r > b) { // red is dominant
+        if (gr < 100 && r < 80) {
+            // black
+        } else {
+            if (r-b > 32 && r-g > 32) {
+                // is red really dominant?
+                ucOut = BBEP_RED; // red (can be 2 or 3, but 3 is compatible w/BWYR)
+            } else { // yellowish should be white
+                // no, use white instead of pink/yellow
+                ucOut = BBEP_WHITE;
+            }
+        }
+    } else { // check for white/black
+        if (gr >= 128) {
+            ucOut = BBEP_WHITE; // white
+        } else {
+            // black
+        }
+    }
+    return ucOut;
+} /* GetBWRPixel() */
+//
+// Match the given pixel to black (00), white (01), yellow (10), or red (11)
+// returns 2 bit value of closest matching color
+//
+unsigned char GetBWYRPixel(int r, int g, int b)
+{
+    uint8_t ucOut=BBEP_BLACK;
+    int gr;
+
+    gr = (b + r + g*2)>>2; // gray
+    // match the color to closest of black/white/yellow/red
+    if (r > b || g > b) { // red or yellow is dominant
+        if (gr < 90 && r < 80 && g < 80) {
+            // black
+        } else {
+            if (r-b > 32 && r-g > r/2) {
+                // is red really dominant?
+                ucOut = BBEP_RED; // red
+            } else if (r-b > 32 && g-b > 32) {
+                // yes, yellow
+                ucOut = BBEP_YELLOW;
+            } else {
+                ucOut = BBEP_WHITE; // gray/white
+            }
+        }
+    } else { // check for white/black
+        if (gr >= 100) {
+            ucOut = BBEP_WHITE; // white
+        } else {
+            // black
+        }
+    }
+    return ucOut;
+} /* GetBWYRPixel() */
 //
 // The user passed a file which has 2 or more bits per pixel
-// convert it to 2-bpp grayscale
+// convert it to 1 or 2-bpp grayscale
 //
-void ConvertBpp(uint8_t *pBMP, int w, int h, int iBpp, uint8_t *palette)
+int ConvertBpp(uint8_t *pBMP, int w, int h, int iBpp, uint8_t *palette)
 {
     int gray, r=0, g=0, b=0, x, y, iDelta, iPitch, iDestPitch, iDestBpp;
     uint8_t *s, *d, *pPal, u8, count;
 
-    iDestBpp = 2;
+    if (iPanel2Bit == -1) { // only 1 bit panel available
+        iDestBpp = 1;
+    } else {
+        iDestBpp = 2;
+    }
     if (iDestBpp == 1) {
         iDestPitch = (w+7)/8;
     } else {
@@ -196,6 +264,7 @@ void ConvertBpp(uint8_t *pBMP, int w, int h, int iBpp, uint8_t *palette)
                     } else {
                         if (x & 1) {
                            r = g = b = (s[0] & 0xf) | (s[0] << 4);
+                           s++;
                         } else {
                             r = g = b = (s[0] >> 4) | (s[0] & 0xf0);
                         }
@@ -211,9 +280,18 @@ void ConvertBpp(uint8_t *pBMP, int w, int h, int iBpp, uint8_t *palette)
 		    if ((x & 3) == 3) s++;
 		    break;
             } // switch on bpp
-            // Convert the source rgb into gray with a simple formula which favors green
-            gray = (r + g*2 + b)/4;
-            u8 |= gray >> (8-iDestBpp); // pack 1 or 2 bit gray pixels into a destination byte
+            // 3 and 4-color epaper need the colors translated
+            // through custom color tables because different panels use
+            // different bit patterns to mean different things.
+            if (bbep.capabilities() & BBEP_3COLOR) { // B/W/R
+                bbep.drawPixel(x, y, GetBWRPixel(r, g, b));
+            } else if (bbep.capabilities() & BBEP_4COLOR) { // B/W/Y/R
+                bbep.drawPixel(x, y, GetBWYRPixel(r, g, b));
+            } else { // Assume 1 or 2 bit grayscale
+                // Convert the source rgb into gray with a simple formula which favors green
+                gray = (r + g*2 + b)/4;
+                u8 |= gray >> (8-iDestBpp); // pack 1 or 2 bit gray pixels into a destination byte
+            }
             count -= iDestBpp;
             if (count == 0) { // byte is full, store it and prepare the next
                 *d++ = u8;
@@ -225,6 +303,7 @@ void ConvertBpp(uint8_t *pBMP, int w, int h, int iBpp, uint8_t *palette)
             *d++ = (u8 << count); // store last partial byte
         }
     } // for y
+    return iDestBpp;
 } /* ConvertBpp() */
 //
 // Decode the BMP file
@@ -330,25 +409,36 @@ int rc;
 void PrepareImage(void)
 {
 	int x, y, iPlaneOffset, iSrcPitch, iDestPitch;
-	uint8_t *s, *d;
+	uint8_t *s, *d, uc=0;
 	s = pBitmap;
 	d = (uint8_t *)bbep.getBuffer();
 	iDestPitch = (bbep.width()+7)/8;
+        // Convert the source bitmap to 1 or 2-bit grayscale
+        if (iBpp >= 2) {
+            iBpp = ConvertBpp(s, iWidth, iHeight, iBpp, pPalette);
+        }
 	if (iBpp == 1) {
 	    iSrcPitch = (iWidth+7)/8;
 	    for (y=0; y<iHeight; y++) {
-		memcpy(d, s, iSrcPitch);
-		if (iWidth & 7) { // fill partial byte with white
-                    d[iWidth>>3] |= (0xff >> (iWidth & 7));
-		}
+                if (bbep.capabilities() & BBEP_4COLOR) {
+                // memory layout is different
+                    for (x=0; x<iWidth; x++) {
+                        if ((x & 7) == 0) uc = s[x>>3];
+                        if (!(uc & 0x80)) bbep.drawPixel(x, y, BBEP_BLACK); // background is already white
+                        uc <<= 1;
+                    }
+                } else {
+		    memcpy(d, s, iSrcPitch);
+		    if (iWidth & 7) { // fill partial byte with white
+                        d[iWidth>>3] |= (0xff >> (iWidth & 7));
+		    }
+                }
 		s += iSrcPitch;
 		d += iDestPitch;
 	    }
-	} else { // >=2 bpp
+	} else if (!(bbep.capabilities() & (BBEP_3COLOR | BBEP_4COLOR))) { // >=2 bpp
 	    iPlaneOffset = iDestPitch * iHeight; // offset to 2nd memory plane
 	    iSrcPitch = (iWidth+3)/4; // every source pixel depth will become 2-bpp
-	    // Convert the source bitmap to 2-bit grayscale
-	    ConvertBpp(s, iWidth, iHeight, iBpp, pPalette);
 	    for (y=0; y<iHeight; y++) {
 	    // Split the 2-bit packed pixels into 2 bit planes for the EPD
 		for (x=0; x<iWidth/4; x+=2) { // work with pairs of bytes
@@ -478,7 +568,7 @@ char szFile[256];
 	}
     }
 
-    if (szFile[0] == 0 || iAdapter == -1 || iMode == -1 || iPanel1Bit == -1 || iPanel2Bit == -1) { // print instructions
+    if (szFile[0] == 0 || iAdapter == -1 || iMode == -1 || (iPanel1Bit == -1 && iPanel2Bit == -1)) { // print instructions
         ShowHelp();
         return -1;
     }
@@ -489,7 +579,7 @@ char szFile[256];
     }
     // This MUST be set before initializing the I/O so that the initial
     // command sequence is sent to properly prepare the EPD for receiving data
-    bbep.setPanelType(iPanel1Bit); // start by assuming 1-bit mode
+    bbep.setPanelType((iPanel1Bit == -1) ? iPanel2Bit : iPanel1Bit);
     bbep.initIO(adapters[iAdapter].u8DC, adapters[iAdapter].u8RST, adapters[iAdapter].u8BUSY, adapters[iAdapter].u8CS, SPI_BUS, 0, 8000000);
     if (bbep.width() < bbep.height()) {
 	    bbep.setRotation(270);
@@ -502,6 +592,7 @@ char szFile[256];
     ihandle = fopen(szFile, "r+b");
     if (ihandle == NULL) {
         printf("Error opening file %s\n", szFile);
+        return -1;
     }
     fseek(ihandle, 0, SEEK_END);
     iSize = (int)ftell(ihandle);
@@ -528,13 +619,17 @@ char szFile[256];
     printf("image specs: %d x %d, %d-bpp\n", iWidth, iHeight, iBpp);
 #endif
 
-    if (iBpp == 1) {
+    if (iBpp == 1 || iPanel2Bit == -1) {
         bbep.allocBuffer(); // draw into RAM first
         bbep.fillScreen(BBEP_WHITE);
     } else {
         bbep.setPanelType(iPanel2Bit);
         bbep.allocBuffer(); // draw into RAM first
-        bbep.fillScreen(BBEP_GRAY3);
+        if (bbep.capabilities() & (BBEP_3COLOR | BBEP_4COLOR)) {
+            bbep.fillScreen(BBEP_WHITE);
+        } else {
+            bbep.fillScreen(BBEP_GRAY3);
+        }
     }
     if (bbep.width() < bbep.height()) {
         bbep.setRotation(270); // assume landscape mode for all images
@@ -548,12 +643,12 @@ char szFile[256];
 #ifdef SHOW_DETAILS
     printf("Writing data to EPD...\n");
 #endif
-    if (iBpp == 1) {
+    if (iBpp == 1 && bbep.getPanelType() == iPanel1Bit) {
         bbep.writePlane((iMode == REFRESH_PARTIAL) ? PLANE_FALSE_DIFF : PLANE_0);
         bbep.refresh(iMode);
-    } else { // 4 gray mode
+    } else { // 3-color, 4-color, or 4 gray mode
         bbep.writePlane();
-        bbep.refresh(REFRESH_FULL);
+        bbep.refresh(iMode); // some 4-color panels support fast update
     }
 #ifdef SHOW_DETAILS
     printf("Refresh complete, shutting down...\n");

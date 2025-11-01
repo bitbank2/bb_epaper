@@ -2711,7 +2711,7 @@ const EPD_PANEL panelDefs[] PROGMEM = {
     {122, 250, 1, epd213r_inky_init_sequence_full, NULL, NULL, BBEP_3COLOR, BBEP_CHIP_SSD16xx, u8Colors_3clr}, // EP213R_122x250 Inky phat 2.13" B/W/R
     {200, 200, 0, epd154_init_sequence_full, epd154_init_sequence_fast, epd154_init_sequence_part, 0, BBEP_CHIP_SSD16xx, u8Colors_2clr}, // EP154_200x200
     {200, 200, 0, epd154_init_sequence_full, epd154_init_sequence_fast, epd154b_init_sequence_part, 0, BBEP_CHIP_SSD16xx, u8Colors_2clr}, // EP154B_200x200
-    {184, 360, 0, epd266yr_init_sequence_full, NULL, NULL, BBEP_4COLOR, BBEP_CHIP_UC81xx, u8Colors_4clr}, // EP266YR_184x360
+    {184, 360, 0, epd266yr_init_sequence_full, NULL, NULL, BBEP_4COLOR, BBEP_CHIP_UC81xx, u8Colors_4clr_v2}, // EP266YR_184x360
     {128, 296, 0, epd29yr_init_sequence_full, NULL, NULL, BBEP_4COLOR, BBEP_CHIP_UC81xx, u8Colors_4clr}, // EP29YR_128x296
     {168, 384, 0, epd29yrh_init_sequence_full, NULL, NULL, BBEP_4COLOR, BBEP_CHIP_UC81xx ,u8Colors_4clr}, // EP29YR_168x384
     {648, 480, 0, epd583_init_sequence_full, NULL, epd583_init_sequence_part, 0, BBEP_CHIP_UC81xx, u8Colors_2clr}, // EP583_648x480
@@ -2855,13 +2855,17 @@ void bbepLightSleep(uint32_t u32Millis)
 void bbepWaitBusy(BBEPDISP *pBBEP)
 {
     int iTimeout = 0;
+    int iMaxTime = 5000; // for B/W panels
 
     if (!pBBEP) return;
     if (pBBEP->iBUSYPin == 0xff) return;
     delay(10); // give time for the busy status to be valid
     uint8_t busy_idle =  (pBBEP->chip_type == BBEP_CHIP_UC81xx) ? HIGH : LOW;
     delay(1); // some panels need a short delay before testing the BUSY line
-    while (iTimeout < 5000) {
+    if (pBBEP->iFlags & (BBEP_3COLOR | BBEP_4COLOR | BBEP_7COLOR)) {
+        iMaxTime = 30000; // multi-color panels can take a long time
+    }
+    while (iTimeout < iMaxTime) {
         if (digitalRead(pBBEP->iBUSYPin) == busy_idle) break;
         // delay(1);
         bbepLightSleep(20); // save battery power by checking every 20ms
