@@ -20,11 +20,13 @@
 #include <PNGdec.h>
 #include "cJSON.h"
 #include <unistd.h>
+#include <dirent.h>
 #define SHOW_DETAILS
 
 BBEPAPER bbep;
 int iAdapter, iMode;
 int iPanel1Bit, iPanel2Bit;
+int iInvert = 0; // assume not inverted
 
 typedef struct tagAdapter
 {
@@ -504,6 +506,13 @@ char szFile[256];
 #ifdef SHOW_DETAILS
 		    printf("JSON parsed successfully!\n");
 #endif
+                    if (cJSON_HasObjectItem(pJSON, "invert")) {
+                         pItem = cJSON_GetObjectItem(pJSON, "invert");
+                         iInvert = !strcmp(pItem->valuestring, "true");
+#ifdef SHOW_DETAILS
+                         printf("invert = %s\n", (iInvert) ? "true" : "false");
+#endif
+                    }
 		    if (cJSON_HasObjectItem(pJSON, "adapter")) {
                          pItem = cJSON_GetObjectItem(pJSON, "adapter");
 			 iAdapter = FindItemName(szAdapters, pItem->valuestring, "adapter");
@@ -566,7 +575,9 @@ char szFile[256];
 		iPanel2Bit = FindItemName(szPanels, pValue, "2-bit panel");
 	} else if (strcmp(pName, "adapter") == 0) {
 		iAdapter = FindItemName(szAdapters, pValue, "adapter");
-	}
+	} else if (strcmp(pName, "invert") == 0) {
+                iInvert = !strcmp(pValue, "true");
+        }
     }
 
     if (szFile[0] == 0 || iAdapter == -1 || iMode == -1 || (iPanel1Bit == -1 && iPanel2Bit == -1)) { // print instructions
@@ -577,6 +588,31 @@ char szFile[256];
     if (adapters[iAdapter].u8PWR != 0xff) {
         pinMode(adapters[iAdapter].u8PWR, OUTPUT);
         digitalWrite(adapters[iAdapter].u8PWR, 1); // enable power to EPD
+    }
+    // Make sure SPI is enabled; if not, we can enable it from here
+    // (at least on Raspberry Pi SBCs)
+    {
+        DIR *pDir;
+        struct dirent *pDE;
+        int bFound = 0;
+
+        pDir = opendir("/dev");
+        if (!pDir) {
+            printf("Error searching /dev directory; try running as sudo. Aborting...\n");
+            return -1;
+        }
+        // Search all names for "spidev"
+        while ((pDE = readdir(pDir)) != NULL) {
+            if (memcmp(pDE->d_name, "spidev", 6) == 0) { // found one!
+                bFound = 1;
+                break;
+            }
+        } // while searching
+        if (!bFound) { // SPI is disabled, enable it
+            printf("Enabling the SPI bus...\n");
+            system("sudo dtparam spi=on");
+            usleep(1000000); // allow time for it to start
+        }
     }
     // This MUST be set before initializing the I/O so that the initial
     // command sequence is sent to properly prepare the EPD for receiving data
@@ -645,10 +681,10 @@ char szFile[256];
     printf("Writing data to EPD...\n");
 #endif
     if (iBpp == 1 && bbep.getPanelType() == iPanel1Bit) {
-        bbep.writePlane((iMode == REFRESH_PARTIAL) ? PLANE_FALSE_DIFF : PLANE_0);
+        bbep.writePlane((iMode == REFRESH_PARTIAL) ? PLANE_FALSE_DIFF : PLANE_0, iInvert);
         bbep.refresh(iMode);
     } else { // 3-color, 4-color, or 4 gray mode
-        bbep.writePlane();
+        bbep.writePlane(PLANE_BOTH, iInvert);
         bbep.refresh(iMode); // some 4-color panels support fast update
     }
 #ifdef SHOW_DETAILS
