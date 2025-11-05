@@ -18,9 +18,16 @@
 //
 #include <bb_epaper.h>
 #include <PNGdec.h>
+#include <JPEGDEC.h>
 #include "cJSON.h"
 #include <unistd.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <fcntl.h>
 #include <dirent.h>
+#include <linux/fb.h>
+#include <sys/mman.h>
+#include <sys/ioctl.h>
 #define SHOW_DETAILS
 
 BBEPAPER bbep;
@@ -32,7 +39,7 @@ typedef struct tagAdapter
 {
   uint8_t u8DC, u8RST, u8BUSY, u8CS, u8PWR, u8SPI;
 } ADAPTER;
-const char *szAdapters[] = {"pimoroni", "waveshare_2", "waveshare_2_opi_rv2", NULL};
+const char *szAdapters[] = {"framebuffer", "pimoroni", "waveshare_2", "waveshare_2_opi_rv2", NULL};
 const char *szModes[] = {"full", "fast", "partial", NULL};
 const char *szPanels[] = {
     "EP_PANEL_UNDEFINED","EP42_400x300","EP42B_400x300", // 0-2
@@ -81,10 +88,13 @@ ADAPTER adapters[] = {{22, 27, 17, 8, 0xff, 0}, // Pimoroni
 #define PIN_PWR 18
 
 PNG png;
+JPEGDEC jpg;
 int iWidth, iHeight, iBpp, iPixelType;
 uint8_t *pBitmap, *pPalette;
 
-const char *szPNGErrors[] = {"Success", "Invalid Paremeter", "Decoding", "Out of memory", "No buffer allocated", "Unsupported feature", "Invalid file", "Too big", "Quit early"};
+const char *szPNGErrors[] = {"Success", "Invalid Parameter", "Decoding", "Out of memory", "No buffer allocated", "Unsupported feature", "Invalid file", "Too big", "Quit early"};
+const char *szJPEGErrors[] = {"Success", "Invalid Parameter", "Decoding", "Unsupported feature", "Invalid file", "Out of memory"};
+
 //
 // Find the index value of a string within a list
 // The list must be terminated with a NULL pointer
@@ -378,6 +388,41 @@ int DecodeBMP(uint8_t *pData, int iSize)
     }
     return PNG_SUCCESS; // re-use this return code
 } /* DecodeBMP() */
+//
+// Decode the JPEG file into an uncompressed bitmap
+//
+int DecodeJPEG(uint8_t *pData, int iSize)
+{
+int rc, iPitch;
+    rc = jpg.openRAM(pData, iSize, NULL);
+    if (!rc) {
+        rc = jpg.getLastError();
+        printf("JPEG open returned error: %s\n", szJPEGErrors[rc]);
+        return -1; // only show the error once
+    }
+    if (iAdapter !=0 && (jpg.getWidth() > bbep.width() || jpg.getHeight() > bbep.height())) {
+        printf("Requested image is too large for the EPD.\n");
+        printf("Image Size: %d x %d\nEPD size: %d x %d\n", png.getWidth(), png.getHeight(), bbep.width(), bbep.height());
+        return -1;
+    }
+    iWidth = jpg.getWidth();
+    iHeight = jpg.getHeight();
+    iBpp = jpg.getBpp();
+    if (iBpp == 8) {
+        iPixelType = PNG_PIXEL_GRAYSCALE;
+        jpg.setPixelType(EIGHT_BIT_GRAYSCALE);
+        iPitch = iWidth;
+    } else {
+        iPixelType = PNG_PIXEL_TRUECOLOR_ALPHA;
+        jpg.setPixelType(RGB8888);
+        iPitch = iWidth*4;
+        iBpp = 32; // output is 32-bits
+    }
+    pBitmap = (uint8_t *)malloc(iPitch * (iHeight+15));
+    jpg.setFramebuffer(pBitmap);
+    jpg.decode(0, 0, 0);
+    return jpg.getLastError();
+} /* DecodeJPEG() */
 
 //
 // Decode the PNG file into an uncompressed bitmap
@@ -390,7 +435,7 @@ int rc;
         printf("PNG open returned error: %s\n", szPNGErrors[rc]);
         return -1; // only show the error once
     }
-    if (png.getWidth() > bbep.width() || png.getHeight() > bbep.height()) {
+    if (iAdapter != 0 && (png.getWidth() > bbep.width() || png.getHeight() > bbep.height())) {
         printf("Requested image is too large for the EPD.\n");
         printf("Image Size: %d x %d\nEPD size: %d x %d\n", png.getWidth(), png.getHeight(), bbep.width(), bbep.height());
         return -1;
@@ -406,7 +451,7 @@ int rc;
     return rc;
 } /* DecodePNG() */
 //
-// Prepare the decoded image for the framebuffer layout of the EPD
+// Prepare the decoded image for the internal memory layout of the EPD
 // For 1-bit images, just memcpy since PNG uses the same layout.
 // For 2-bit images, the EPD splits the memory into 2x 1-bit planes.
 void PrepareImage(void)
@@ -464,6 +509,103 @@ void PrepareImage(void)
 	} // >= 2bpp
 	free(pBitmap);
 } /* PrepareImage() */
+//
+// Draw the current image on the Linux framebuffer
+//
+void UpdateFramebuffer(void)
+{
+struct fb_var_screeninfo vinfo;
+struct fb_fix_screeninfo finfo;
+uint8_t *fbp;
+int iScreenWidth, iScreenHeight, iNewWidth, iNewHeight;
+int fbfd;
+uint32_t u32Frac, u32AccX, u32AccY; // fractional scaling
+int iCenterX, iCenterY;
+
+    fbfd = open("/dev/fb0", O_RDWR);
+    if (!fbfd) {
+        printf("Error opening framebuffer device; try running as sudo\n");
+        return;
+    }
+    // Get the fixed screen information
+    if (ioctl(fbfd, FBIOGET_FSCREENINFO, &finfo)) {
+       printf("Error reading the framebuffer fixed information.\n");
+       close(fbfd);
+       return;
+    }
+      // Get variable screen information
+    if (ioctl(fbfd, FBIOGET_VSCREENINFO, &vinfo)) {
+       printf("Error reading the framebuffer variable information.\n");
+       close(fbfd);
+       return;
+    }
+    printf("%dx%d, %d bpp\n", vinfo.xres, vinfo.yres, vinfo.bits_per_pixel );
+    // Map framebuffer to user memory
+    iScreenWidth = vinfo.xres;
+    iScreenHeight = vinfo.yres;
+    // Calculate the image scale
+    u32AccX = (iWidth << 16) / iScreenWidth;
+    u32AccY = (iHeight << 16) / iScreenHeight;
+    u32Frac = u32AccX;
+    if (u32AccY > u32AccX) u32Frac = u32AccY; // aspect-fit
+    iNewHeight = (iHeight << 16) / u32Frac;
+    iNewWidth = (iWidth << 16) / u32Frac;
+    iCenterX = (iScreenWidth - iNewWidth)/2;
+    iCenterY = (iScreenHeight - iNewHeight)/2;
+    fbp = (uint8_t*)mmap(0, finfo.smem_len, PROT_READ | PROT_WRITE, MAP_SHARED, fbfd, 0);
+    if ((intptr_t)fbp == -1) {
+       printf("Failed to mmap the framebuffer.\n");
+       close(fbfd);
+       return;
+    }
+    if (vinfo.bits_per_pixel == 16) {
+        uint16_t *d, u16;
+        uint8_t *s;
+        int iSrcPitch, x, y, tx;
+        iSrcPitch = (iWidth * iBpp)/8;
+        u32AccY = 0;
+        for (y=0; y<iNewHeight; y++) {
+            u32AccX = 0;
+            s = pBitmap + ((u32AccY >> 16)*iSrcPitch);
+            d = (uint16_t *)fbp;
+            d += (y+iCenterY) * iScreenWidth;
+            d += iCenterX;
+            if (iBpp == 1) {
+                uint8_t uc;
+                tx = 0;
+                uc = *s++;
+                for (x=0; x<iNewWidth; x++) {
+                    *d++ = (uc & 0x80) ? 0xffff : 0x0000;
+                    u32AccX += u32Frac;
+                    if (u32AccX >= 65536) {
+                        u32AccX -= 65536;
+                        uc <<= 1;
+                        tx++;
+                        if ((tx & 7) == 0) uc = *s++;
+                    }
+                }
+            } else if (iBpp == 8) {
+            } else if (iBpp == 32) {
+                for (x=0; x<iNewWidth; x++) {
+                    u16 = (s[2] & 0xf8)<<8; // R
+                    u16 |= (s[1] & 0xfc) << 3; // G
+                    u16 |= (s[0] >> 3); // B
+                    *d++ = u16; 
+                    u32AccX += u32Frac;
+                    if (u32AccX >= 65536) {
+                        u32AccX -= 65536;
+                        s += 4;
+                    }
+                }
+            } // 24-bpp
+            u32AccY += u32Frac;
+        } // for y
+    } else if (vinfo.bits_per_pixel == 32) {
+    }
+    // Cleanup
+    munmap(fbp, finfo.smem_len);
+    close(fbfd);
+} /* UpdateFramebuffer() */
 
 void ShowHelp(void)
 {
@@ -585,42 +727,45 @@ char szFile[256];
         return -1;
     }
 
-    if (adapters[iAdapter].u8PWR != 0xff) {
-        pinMode(adapters[iAdapter].u8PWR, OUTPUT);
-        digitalWrite(adapters[iAdapter].u8PWR, 1); // enable power to EPD
-    }
-    // Make sure SPI is enabled; if not, we can enable it from here
-    // (at least on Raspberry Pi SBCs)
-    {
-        DIR *pDir;
-        struct dirent *pDE;
-        int bFound = 0;
+    if (iAdapter == 0) { // framebuffer
+    } else {
+	    if (adapters[iAdapter].u8PWR != 0xff) {
+		pinMode(adapters[iAdapter].u8PWR, OUTPUT);
+		digitalWrite(adapters[iAdapter].u8PWR, 1); // enable power to EPD
+	    }
+	    // Make sure SPI is enabled; if not, we can enable it from here
+	    // (at least on Raspberry Pi SBCs)
+	    {
+		DIR *pDir;
+		struct dirent *pDE;
+		int bFound = 0;
 
-        pDir = opendir("/dev");
-        if (!pDir) {
-            printf("Error searching /dev directory; try running as sudo. Aborting...\n");
-            return -1;
-        }
-        // Search all names for "spidev"
-        while ((pDE = readdir(pDir)) != NULL) {
-            if (memcmp(pDE->d_name, "spidev", 6) == 0) { // found one!
-                bFound = 1;
-                break;
-            }
-        } // while searching
-        if (!bFound) { // SPI is disabled, enable it
-            printf("Enabling the SPI bus...\n");
-            system("sudo dtparam spi=on");
-            usleep(1000000); // allow time for it to start
-        }
-    }
-    // This MUST be set before initializing the I/O so that the initial
-    // command sequence is sent to properly prepare the EPD for receiving data
-    bbep.setPanelType((iPanel1Bit == -1) ? iPanel2Bit : iPanel1Bit);
-    bbep.initIO(adapters[iAdapter].u8DC, adapters[iAdapter].u8RST, adapters[iAdapter].u8BUSY, adapters[iAdapter].u8CS, adapters[iAdapter].u8SPI, 0, 8000000);
-    if (bbep.width() < bbep.height()) {
-	    bbep.setRotation(270);
-    }
+		pDir = opendir("/dev");
+		if (!pDir) {
+		    printf("Error searching /dev directory; try running as sudo. Aborting...\n");
+		    return -1;
+		}
+		// Search all names for "spidev"
+		while ((pDE = readdir(pDir)) != NULL) {
+		    if (memcmp(pDE->d_name, "spidev", 6) == 0) { // found one!
+		        bFound = 1;
+		        break;
+		    }
+		} // while searching
+		if (!bFound) { // SPI is disabled, enable it
+		    printf("Enabling the SPI bus...\n");
+		    system("sudo dtparam spi=on");
+		    usleep(1000000); // allow time for it to start
+		}
+	    }
+	    // This MUST be set before initializing the I/O so that the initial
+	    // command sequence is sent to properly prepare the EPD for receiving data
+	    bbep.setPanelType((iPanel1Bit == -1) ? iPanel2Bit : iPanel1Bit);
+	    bbep.initIO(adapters[iAdapter].u8DC, adapters[iAdapter].u8RST, adapters[iAdapter].u8BUSY, adapters[iAdapter].u8CS, adapters[iAdapter].u8SPI, 0, 8000000);
+	    if (bbep.width() < bbep.height()) {
+		    bbep.setRotation(270);
+	    }
+    } // use epaper as output
 #ifdef SHOW_DETAILS
     printf("Decoding image...\n");
 #endif
@@ -643,57 +788,69 @@ char szFile[256];
     }
     if (pData[0] == 'B' && pData[1] == 'M') { // it's a BMP file
         rc = DecodeBMP(pData, iSize);
+    } else if (pData[0] == 0xff && pData[1] == 0xd8) { // JPEG
+        rc = DecodeJPEG(pData, iSize);
+        if (rc != JPEG_SUCCESS) {
+            if (rc > 0) {
+                printf("JPEG decode returned error: %s\n", szJPEGErrors[rc]);
+            }
+            return -1;
+        }
     } else {
         rc = DecodePNG(pData, iSize);
-    }
-    if (rc != PNG_SUCCESS) {
-        if (rc > 0) {
-            printf("PNG decode returned error: %s\n", szPNGErrors[rc]);
+        if (rc != PNG_SUCCESS) {
+            if (rc > 0) {
+                printf("PNG decode returned error: %s\n", szPNGErrors[rc]);
+            }
+            return -1;
         }
-        return -1;
     }
 #ifdef SHOW_DETAILS
     printf("image specs: %d x %d, %d-bpp\n", iWidth, iHeight, iBpp);
 #endif
 
-    if (iBpp == 1 || iPanel2Bit == -1) {
-        bbep.allocBuffer(); // draw into RAM first
-        bbep.fillScreen(BBEP_WHITE);
-    } else {
-        bbep.setPanelType(iPanel2Bit);
-        bbep.allocBuffer(); // draw into RAM first
-        if (bbep.capabilities() & (BBEP_3COLOR | BBEP_4COLOR)) {
+    if (iAdapter == 0) { // framebuffer
+        UpdateFramebuffer();
+    } else { // e-paper
+        if (iBpp == 1 || iPanel2Bit == -1) {
+            bbep.allocBuffer(); // draw into RAM first
             bbep.fillScreen(BBEP_WHITE);
         } else {
-            bbep.fillScreen(BBEP_GRAY3);
+            bbep.setPanelType(iPanel2Bit);
+            bbep.allocBuffer(); // draw into RAM first
+            if (bbep.capabilities() & (BBEP_3COLOR | BBEP_4COLOR)) {
+                bbep.fillScreen(BBEP_WHITE);
+            } else {
+                bbep.fillScreen(BBEP_GRAY3);
+            }
         }
-    }
-    if (bbep.width() < bbep.height()) {
-        bbep.setRotation(270); // assume landscape mode for all images
-    }
-    // convert+copy the image into the local EPD framebuffer
+        if (bbep.width() < bbep.height()) {
+            bbep.setRotation(270); // assume landscape mode for all images
+        }
+        // convert+copy the image into the local EPD framebuffer
 #ifdef SHOW_DETAILS
-    printf("Preparing image for EPD as %d-bpp...\n", (bbep.getPanelType() == iPanel1Bit) ? 1 : 2);
+        printf("Preparing image for EPD as %d-bpp...\n", (bbep.getPanelType() == iPanel1Bit) ? 1 : 2);
 #endif
-    PrepareImage();
+        PrepareImage();
     // Push the pixels from our RAM buffer to the e-epaper
 #ifdef SHOW_DETAILS
-    printf("Writing data to EPD...\n");
+        printf("Writing data to EPD...\n");
 #endif
-    if (iBpp == 1 && bbep.getPanelType() == iPanel1Bit) {
-        bbep.writePlane((iMode == REFRESH_PARTIAL) ? PLANE_FALSE_DIFF : PLANE_0, iInvert);
-        bbep.refresh(iMode);
-    } else { // 3-color, 4-color, or 4 gray mode
-        bbep.writePlane(PLANE_BOTH, iInvert);
-        bbep.refresh(iMode); // some 4-color panels support fast update
-    }
+        if (iBpp == 1 && bbep.getPanelType() == iPanel1Bit) {
+            bbep.writePlane((iMode == REFRESH_PARTIAL) ? PLANE_FALSE_DIFF : PLANE_0, iInvert);
+            bbep.refresh(iMode);
+        } else { // 3-color, 4-color, or 4 gray mode
+            bbep.writePlane(PLANE_BOTH, iInvert);
+            bbep.refresh(iMode); // some 4-color panels support fast update
+        }
 #ifdef SHOW_DETAILS
-    printf("Refresh complete, shutting down...\n");
+        printf("Refresh complete, shutting down...\n");
 #endif
-    bbep.sleep(DEEP_SLEEP); // turn off the epaper power circuit
-    if (adapters[iAdapter].u8PWR != 0xff) {
-        digitalWrite(adapters[iAdapter].u8PWR, 0); // disable power to EPD
-    }
+        bbep.sleep(DEEP_SLEEP); // turn off the epaper power circuit
+        if (adapters[iAdapter].u8PWR != 0xff) {
+            digitalWrite(adapters[iAdapter].u8PWR, 0); // disable power to EPD
+        }
+    } // e-paper update
     return 0;
 } /* main() */
 

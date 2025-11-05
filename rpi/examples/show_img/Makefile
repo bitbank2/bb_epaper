@@ -1,11 +1,11 @@
 CFLAGS=-ggdb -D__LINUX__ -Wall -O2 -I../../
-LIBS=-g -lbb_epaper -lpngdec -lgpiod 
+LIBS=-g -lbb_epaper -lpngdec -lJPEGDEC -lgpiod 
 
-all: show_png
+all: show_img
 
-show_png: main.o cJSON.o cJSON_Utils.o
-	$(CXX) main.o cJSON.o cJSON_Utils.o $(LIBS) -o show_png ;\
-	sudo cp show_png /usr/local/bin
+show_img: main.o cJSON.o cJSON_Utils.o
+	$(CXX) main.o cJSON.o cJSON_Utils.o $(LIBS) -o show_img ;\
+	sudo cp show_img /usr/local/bin
 
 cJSON.o: cJSON.h cJSON.c
 	$(CC) $(CFLAGS) -c cJSON.c
@@ -17,4 +17,4 @@ main.o: main.cpp
 	$(CXX) $(CFLAGS) -c main.cpp
 
 clean:
-	rm -rf *.o show_png
+	rm -rf *.o show_img
