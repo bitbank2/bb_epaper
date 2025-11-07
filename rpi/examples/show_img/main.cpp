@@ -90,7 +90,7 @@ ADAPTER adapters[] = {{22, 27, 17, 8, 0xff, 0}, // Pimoroni
 PNG png;
 JPEGDEC jpg;
 int iWidth, iHeight, iBpp, iPixelType;
-uint8_t *pBitmap, *pPalette;
+uint8_t *pBitmap, *pPalette=NULL;
 
 const char *szPNGErrors[] = {"Success", "Invalid Parameter", "Decoding", "Out of memory", "No buffer allocated", "Unsupported feature", "Invalid file", "Too big", "Quit early"};
 const char *szJPEGErrors[] = {"Success", "Invalid Parameter", "Decoding", "Unsupported feature", "Invalid file", "Out of memory"};
@@ -336,7 +336,7 @@ int DecodeBMP(uint8_t *pData, int iSize)
 	bFlipped = 1;
     }
     iBpp = *(int16_t *)&pData[28];
-    iOffBits = *(int16_t *)&pData[10];
+    iOffBits = *(uint16_t *)&pData[10];
     switch (iBpp) {
         case 1:
 	    iDestPitch = ((iWidth+7)>>3);
@@ -377,6 +377,7 @@ int DecodeBMP(uint8_t *pData, int iSize)
     if (iBpp <= 8) {
 	int iColors = 1<<iBpp;
 	d = pPalette = pData;
+        iOffBits = *(uint16_t *)&pData[10];
         s = &pData[iOffBits - (4 * iColors)];
         for (y=0; y<iColors; y++) {
             d[0] = s[0]; d[1] = s[1]; d[2] = s[2];
@@ -445,6 +446,7 @@ int rc;
     iBpp = png.getBpp();
     pPalette = png.getPalette();
     iPixelType = png.getPixelType();
+    if (iPixelType != PNG_PIXEL_INDEXED) pPalette = NULL; // tell other code that there's no palette present
     pBitmap = (uint8_t *)malloc(png.getBufferSize());
     png.setBuffer(pBitmap);
     rc = png.decode(NULL, 0);
@@ -517,10 +519,11 @@ void UpdateFramebuffer(void)
 struct fb_var_screeninfo vinfo;
 struct fb_fix_screeninfo finfo;
 uint8_t *fbp;
-int iScreenWidth, iScreenHeight, iNewWidth, iNewHeight;
+int x, y, iScreenWidth, iScreenHeight, iNewWidth, iNewHeight;
 int fbfd;
 uint32_t u32Frac, u32AccX, u32AccY; // fractional scaling
 int iCenterX, iCenterY;
+uint8_t ucTemp[768]; // temporary palette for grayscale
 
     fbfd = open("/dev/fb0", O_RDWR);
     if (!fbfd) {
@@ -558,10 +561,25 @@ int iCenterX, iCenterY;
        close(fbfd);
        return;
     }
+    if (!pPalette) { // create a grayscale palette if needed
+       int iDelta, iCount = 1<<iBpp;
+       int iGray=0;
+       iDelta = 255/(iCount-1);
+       for (x=0; x<iCount; x++) {
+          ucTemp[x*3] = (uint8_t)iGray;
+          ucTemp[x*3+1] = (uint8_t)iGray;
+          ucTemp[x*3+2] = (uint8_t)iGray;
+          iGray += iDelta;
+       }
+       pPalette = ucTemp;
+    } else {
+    }
+    // Clear the display to black
+    //memset(fbp, 0, finfo.smem_len);
     if (vinfo.bits_per_pixel == 16) {
-        uint16_t *d, u16;
+        uint16_t *d, u16, r, g, b;
         uint8_t *s;
-        int iSrcPitch, x, y, tx;
+        int iSrcPitch, tx;
         iSrcPitch = (iWidth * iBpp)/8;
         u32AccY = 0;
         for (y=0; y<iNewHeight; y++) {
@@ -570,12 +588,23 @@ int iCenterX, iCenterY;
             d = (uint16_t *)fbp;
             d += (y+iCenterY) * iScreenWidth;
             d += iCenterX;
-            if (iBpp == 1) {
+            switch(iBpp) {
+                case 1:
+                {
                 uint8_t uc;
                 tx = 0;
                 uc = *s++;
                 for (x=0; x<iNewWidth; x++) {
-                    *d++ = (uc & 0x80) ? 0xffff : 0x0000;
+                    if (uc & 0x80) {
+                       r = pPalette[3];
+                       g = pPalette[4];
+                       b = pPalette[5];
+                    } else {
+                       r = pPalette[0];
+                       g = pPalette[1];
+                       b = pPalette[2];
+                    }
+                    *d++ = ((r & 0xf8)<<8) | ((g & 0xfc) << 3) | (b >> 3);
                     u32AccX += u32Frac;
                     if (u32AccX >= 65536) {
                         u32AccX -= 65536;
@@ -583,9 +612,73 @@ int iCenterX, iCenterY;
                         tx++;
                         if ((tx & 7) == 0) uc = *s++;
                     }
+                } // for x
                 }
-            } else if (iBpp == 8) {
-            } else if (iBpp == 32) {
+                break;
+                case 2:
+                {
+                uint8_t c, uc;
+                tx = 0;
+                uc = *s++;
+                for (x=0; x<iNewWidth; x++) {
+                    c = uc >> 6;
+                    r = pPalette[c*3];
+                    g = pPalette[c*3+1];
+                    b = pPalette[c*3+2];
+                    *d++ = ((r & 0xf8)<<8) | ((g & 0xfc) << 3) | (b >> 3);
+                    u32AccX += u32Frac;
+                    if (u32AccX >= 65536) {
+                        u32AccX -= 65536;
+                        uc <<= 2;
+                        tx++;
+                        if ((tx & 3) == 0) uc = *s++;
+                    }
+                } // for x
+                }
+                break;
+                case 4:
+                {
+                uint8_t c, uc;
+                tx = 0;
+                uc = *s++;
+                for (x=0; x<iNewWidth; x++) {
+                    c = uc >> 4;
+                    r = pPalette[c*3];
+                    g = pPalette[c*3+1];
+                    b = pPalette[c*3+2];
+                    *d++ = ((r & 0xf8)<<8) | ((g & 0xfc) << 3) | (b >> 3);
+                    u32AccX += u32Frac;
+                    if (u32AccX >= 65536) {
+                        u32AccX -= 65536;
+                        uc <<= 4;
+                        tx++;
+                        if ((tx & 1) == 0) uc = *s++;
+                    }
+                } // for x
+                }
+                break;
+                case 8:
+                {
+                uint8_t uc;
+                tx = 0;
+                uc = *s++;
+                for (x=0; x<iNewWidth; x++) {
+                    r = pPalette[uc*3];
+                    g = pPalette[uc*3+1];
+                    b = pPalette[uc*3+2];
+                    *d++ = ((r & 0xf8)<<8) | ((g & 0xfc) << 3) | (b >> 3);
+                    u32AccX += u32Frac;
+                    if (u32AccX >= 65536) {
+                        u32AccX -= 65536;
+                        tx++;
+                        uc = *s++;
+                    }
+                } // for x
+                }
+                break;
+                case 24:
+                case 32:
+                {
                 for (x=0; x<iNewWidth; x++) {
                     u16 = (s[2] & 0xf8)<<8; // R
                     u16 |= (s[1] & 0xfc) << 3; // G
@@ -594,13 +687,130 @@ int iCenterX, iCenterY;
                     u32AccX += u32Frac;
                     if (u32AccX >= 65536) {
                         u32AccX -= 65536;
-                        s += 4;
+                        s += (iBpp/8);
                     }
+                } // for x
                 }
-            } // 24-bpp
+                break;
+            } // switch on bpp
             u32AccY += u32Frac;
         } // for y
     } else if (vinfo.bits_per_pixel == 32) {
+        uint32_t *d, r, g, b;
+        uint8_t *s;
+        int iSrcPitch, tx;
+        iSrcPitch = (iWidth * iBpp)/8;
+        u32AccY = 0;
+        for (y=0; y<iNewHeight; y++) {
+            u32AccX = 0;
+            s = pBitmap + ((u32AccY >> 16)*iSrcPitch);
+            d = (uint32_t *)fbp;
+            d += (y+iCenterY) * iScreenWidth;
+            d += iCenterX;
+            switch(iBpp) {
+                case 1:
+                {
+                uint8_t uc;
+                tx = 0;
+                uc = *s++;
+                for (x=0; x<iNewWidth; x++) {
+                    if (uc & 0x80) {
+                       r = pPalette[3];
+                       g = pPalette[4];
+                       b = pPalette[5];
+                    } else {
+                       r = pPalette[0];
+                       g = pPalette[1];
+                       b = pPalette[2];
+                    }
+                    *d++ = 0xff000000 | r | (g << 8) | (b << 16);
+                    u32AccX += u32Frac;
+                    if (u32AccX >= 65536) {
+                        u32AccX -= 65536;
+                        uc <<= 1;
+                        tx++;
+                        if ((tx & 7) == 0) uc = *s++;
+                    }
+                } // for x
+                }
+                break;
+                case 2:
+                {
+                uint8_t c, uc;
+                tx = 0;
+                uc = *s++;
+                for (x=0; x<iNewWidth; x++) {
+                    c = uc >> 6;
+                    r = pPalette[c*3];
+                    g = pPalette[c*3+1];
+                    b = pPalette[c*3+2];
+                    *d++ = 0xff000000 | r | (g << 8) | (b << 16);
+                    u32AccX += u32Frac;
+                    if (u32AccX >= 65536) {
+                        u32AccX -= 65536;
+                        uc <<= 2;
+                        tx++;
+                        if ((tx & 3) == 0) uc = *s++;
+                    }
+                } // for x
+                }
+                break;
+                case 4:
+                {
+                uint8_t c, uc;
+                tx = 0;
+                uc = *s++;
+                for (x=0; x<iNewWidth; x++) {
+                    c = uc >> 4;
+                    r = pPalette[c*3];
+                    g = pPalette[c*3+1];
+                    b = pPalette[c*3+2];
+                    *d++ = 0xff000000 | r | (g << 8) | (b << 16);
+                    u32AccX += u32Frac;
+                    if (u32AccX >= 65536) {
+                        u32AccX -= 65536;
+                        uc <<= 4;
+                        tx++;
+                        if ((tx & 1) == 0) uc = *s++;
+                    }
+                } // for x
+                }
+                break;
+                case 8:
+                {
+                uint8_t uc;
+                tx = 0;
+                uc = *s++;
+                for (x=0; x<iNewWidth; x++) {
+                    r = pPalette[uc*3];
+                    g = pPalette[uc*3+1];
+                    b = pPalette[uc*3+2];
+                    *d++ = 0xff000000 | r | (g << 8) | (b << 16);
+                    u32AccX += u32Frac;
+                    if (u32AccX >= 65536) {
+                        u32AccX -= 65536;
+                        tx++;
+                        uc = *s++;
+                    }
+                } // for x
+                }
+                break;
+                case 24:
+                case 32:
+                {
+                for (x=0; x<iNewWidth; x++) {
+                    *d++ = 0xff000000 | s[0] | (s[1] << 8) | (s[2] << 16);
+                    u32AccX += u32Frac;
+                    if (u32AccX >= 65536) {
+                        u32AccX -= 65536;
+                        s += (iBpp/8);
+                    }
+                } // for x
+                }
+                break;
+            } // switch on bpp
+            u32AccY += u32Frac;
+        } // for y
     }
     // Cleanup
     munmap(fbp, finfo.smem_len);
