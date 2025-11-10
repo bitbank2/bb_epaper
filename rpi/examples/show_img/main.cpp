@@ -574,6 +574,11 @@ uint8_t ucTemp[768]; // temporary palette for grayscale
        pPalette = ucTemp;
     } else {
     }
+    if (iPixelType == PNG_PIXEL_TRUECOLOR) {
+	    iBpp = 24;
+    } else if (iPixelType == PNG_PIXEL_TRUECOLOR_ALPHA) {
+	    iBpp = 32;
+    }
     // Clear the display to black
     //memset(fbp, 0, finfo.smem_len);
     if (vinfo.bits_per_pixel == 16) {
@@ -596,13 +601,13 @@ uint8_t ucTemp[768]; // temporary palette for grayscale
                 uc = *s++;
                 for (x=0; x<iNewWidth; x++) {
                     if (uc & 0x80) {
-                       r = pPalette[3];
+                       r = pPalette[5];
                        g = pPalette[4];
-                       b = pPalette[5];
+                       b = pPalette[3];
                     } else {
-                       r = pPalette[0];
+                       r = pPalette[2];
                        g = pPalette[1];
-                       b = pPalette[2];
+                       b = pPalette[0];
                     }
                     *d++ = ((r & 0xf8)<<8) | ((g & 0xfc) << 3) | (b >> 3);
                     u32AccX += u32Frac;
@@ -622,9 +627,9 @@ uint8_t ucTemp[768]; // temporary palette for grayscale
                 uc = *s++;
                 for (x=0; x<iNewWidth; x++) {
                     c = uc >> 6;
-                    r = pPalette[c*3];
+                    r = pPalette[c*3+2];
                     g = pPalette[c*3+1];
-                    b = pPalette[c*3+2];
+                    b = pPalette[c*3+0];
                     *d++ = ((r & 0xf8)<<8) | ((g & 0xfc) << 3) | (b >> 3);
                     u32AccX += u32Frac;
                     if (u32AccX >= 65536) {
@@ -643,9 +648,9 @@ uint8_t ucTemp[768]; // temporary palette for grayscale
                 uc = *s++;
                 for (x=0; x<iNewWidth; x++) {
                     c = uc >> 4;
-                    r = pPalette[c*3];
+                    r = pPalette[c*3+2];
                     g = pPalette[c*3+1];
-                    b = pPalette[c*3+2];
+                    b = pPalette[c*3+0];
                     *d++ = ((r & 0xf8)<<8) | ((g & 0xfc) << 3) | (b >> 3);
                     u32AccX += u32Frac;
                     if (u32AccX >= 65536) {
@@ -663,9 +668,9 @@ uint8_t ucTemp[768]; // temporary palette for grayscale
                 tx = 0;
                 uc = *s++;
                 for (x=0; x<iNewWidth; x++) {
-                    r = pPalette[uc*3];
+                    r = pPalette[uc*3+2];
                     g = pPalette[uc*3+1];
-                    b = pPalette[uc*3+2];
+                    b = pPalette[uc*3+0];
                     *d++ = ((r & 0xf8)<<8) | ((g & 0xfc) << 3) | (b >> 3);
                     u32AccX += u32Frac;
                     if (u32AccX >= 65536) {
@@ -699,7 +704,15 @@ uint8_t ucTemp[768]; // temporary palette for grayscale
         uint32_t *d, r, g, b;
         uint8_t *s;
         int iSrcPitch, tx;
-        iSrcPitch = (iWidth * iBpp)/8;
+	if (iBpp == 1) {
+		iSrcPitch = (iWidth+7)/8;
+	} else if (iBpp == 2) {
+		iSrcPitch = (iWidth+3)/4;
+	} else if (iBpp == 4) {
+		iSrcPitch = (iWidth+1)/2;
+	} else {
+        	iSrcPitch = (iWidth * iBpp)/8;
+	}
         u32AccY = 0;
         for (y=0; y<iNewHeight; y++) {
             u32AccX = 0;
@@ -715,13 +728,13 @@ uint8_t ucTemp[768]; // temporary palette for grayscale
                 uc = *s++;
                 for (x=0; x<iNewWidth; x++) {
                     if (uc & 0x80) {
-                       r = pPalette[3];
+                       r = pPalette[5];
                        g = pPalette[4];
-                       b = pPalette[5];
+                       b = pPalette[3];
                     } else {
-                       r = pPalette[0];
+                       r = pPalette[2];
                        g = pPalette[1];
-                       b = pPalette[2];
+                       b = pPalette[0];
                     }
                     *d++ = 0xff000000 | r | (g << 8) | (b << 16);
                     u32AccX += u32Frac;
@@ -741,9 +754,9 @@ uint8_t ucTemp[768]; // temporary palette for grayscale
                 uc = *s++;
                 for (x=0; x<iNewWidth; x++) {
                     c = uc >> 6;
-                    r = pPalette[c*3];
+                    r = pPalette[c*3+2];
                     g = pPalette[c*3+1];
-                    b = pPalette[c*3+2];
+                    b = pPalette[c*3+0];
                     *d++ = 0xff000000 | r | (g << 8) | (b << 16);
                     u32AccX += u32Frac;
                     if (u32AccX >= 65536) {
@@ -762,9 +775,9 @@ uint8_t ucTemp[768]; // temporary palette for grayscale
                 uc = *s++;
                 for (x=0; x<iNewWidth; x++) {
                     c = uc >> 4;
-                    r = pPalette[c*3];
+                    r = pPalette[c*3+2];
                     g = pPalette[c*3+1];
-                    b = pPalette[c*3+2];
+                    b = pPalette[c*3+0];
                     *d++ = 0xff000000 | r | (g << 8) | (b << 16);
                     u32AccX += u32Frac;
                     if (u32AccX >= 65536) {
@@ -782,9 +795,9 @@ uint8_t ucTemp[768]; // temporary palette for grayscale
                 tx = 0;
                 uc = *s++;
                 for (x=0; x<iNewWidth; x++) {
-                    r = pPalette[uc*3];
+                    r = pPalette[uc*3+2];
                     g = pPalette[uc*3+1];
-                    b = pPalette[uc*3+2];
+                    b = pPalette[uc*3+0];
                     *d++ = 0xff000000 | r | (g << 8) | (b << 16);
                     u32AccX += u32Frac;
                     if (u32AccX >= 65536) {
@@ -796,18 +809,32 @@ uint8_t ucTemp[768]; // temporary palette for grayscale
                 }
                 break;
                 case 24:
-                case 32:
                 {
                 for (x=0; x<iNewWidth; x++) {
-                    *d++ = 0xff000000 | s[0] | (s[1] << 8) | (s[2] << 16);
+                    *d++ = 0xff000000 | s[2] | (s[1] << 8) | (s[0] << 16);
                     u32AccX += u32Frac;
                     if (u32AccX >= 65536) {
                         u32AccX -= 65536;
-                        s += (iBpp/8);
+                        s += 3;
                     }
                 } // for x
                 }
                 break;
+		case 32:
+		{
+		for (x=0; x<iNewWidth; x++) {
+		    r = (s[2] * s[3])>>8;
+		    g = (s[1] * s[3])>>8;
+		    b = (s[0] * s[3])>>8;
+		    *d++ = 0xff000000 | r | (g << 8) | (b << 16);
+		    u32AccX += u32Frac;
+		    if (u32AccX >= 65536) {
+                        u32AccX -= 65536;
+			s += 4;
+		    }
+		} // for x
+		}
+		break;
             } // switch on bpp
             u32AccY += u32Frac;
         } // for y
@@ -839,7 +866,10 @@ char szFile[256];
     iAdapter = iPanel1Bit = iPanel2Bit = iMode = -1;
     szFile[0] = 0;
 
-    getcwd(szJSON, sizeof(szJSON));
+    if (!getcwd(szJSON, sizeof(szJSON))) {
+	    printf("Unable to get current dir?!\n");
+	    return -1;
+    }
     strcat(szJSON, "/epaper.json"); // name of local config file
     //printf("config name: %s\n", szJSON);
     ihandle = fopen(szJSON, "r+b");
@@ -851,7 +881,13 @@ char szFile[256];
             iSize = (int)ftell(ihandle);
 	    fseek(ihandle, 0, SEEK_SET);
 	    pData = (uint8_t *)malloc(iSize);
-	    fread(pData, 1, iSize, ihandle);
+	    rc = fread(pData, 1, iSize, ihandle);
+	    if (rc != iSize) {
+		    printf("Error reading file!\n");
+		    fclose(ihandle);
+		    free(pData);
+		    return -1;
+	    }
 	    fclose(ihandle);
 	    pJSON = cJSON_ParseWithLength((const char *)pData, iSize);
 	    if (pJSON) {
@@ -964,7 +1000,10 @@ char szFile[256];
 		} // while searching
 		if (!bFound) { // SPI is disabled, enable it
 		    printf("Enabling the SPI bus...\n");
-		    system("sudo dtparam spi=on");
+		    if (system("sudo dtparam spi=on") == -1) { // problem
+			printf("Error trying to enable SPI!\n");
+			return -1;
+		    }
 		    usleep(1000000); // allow time for it to start
 		}
 	    }
@@ -990,8 +1029,12 @@ char szFile[256];
     iSize = (int)ftell(ihandle);
     fseek(ihandle, 0, SEEK_SET);
     pData = (uint8_t *)malloc(iSize);
-    fread(pData, 1, iSize, ihandle);
+    rc = fread(pData, 1, iSize, ihandle);
     fclose(ihandle);
+    if (rc != iSize) {
+	    printf("Error reading file!\n");
+	    return -1;
+    }
     if (iSize < 64) { // invalid file
         printf("Invalid image file\n");
 	return -1;

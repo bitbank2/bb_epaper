@@ -1,5 +1,5 @@
 {
-	"adapter": "waveshare_2",
+	"adapter": "framebuffer",
         "panel_1bit": "EP75_800x480_GEN2",
 	"panel_2bit": "EP75_800x480_4GRAY_GEN2",
 	"mode": "full",
