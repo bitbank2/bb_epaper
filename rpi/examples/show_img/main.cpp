@@ -67,7 +67,8 @@ const char *szPanels[] = {
     NULL // must be last entry
 };
 // DC, RST, BUSY, CS, PWR
-ADAPTER adapters[] = {{22, 27, 17, 8, 0xff, 0}, // Pimoroni
+ADAPTER adapters[] = {{0,0,0,0,0,0}, // framebuffer
+                       {22, 27, 17, 8, 0xff, 0}, // Pimoroni
 		       {25, 17, 24, 8, 18, 0}, // Waveshare 2.x
                        {49, 71, 92, 76, 70, 3}, // Waveshare 2.x on OPi RV2
 		      };
