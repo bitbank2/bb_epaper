@@ -34,6 +34,7 @@ BBEPAPER bbep;
 int iAdapter, iMode;
 int iPanel1Bit, iPanel2Bit;
 int iInvert = 0; // assume not inverted
+int iBGR = 0; // reversed R/B order
 
 typedef struct tagAdapter
 {
@@ -353,10 +354,12 @@ int DecodeBMP(uint8_t *pData, int iSize)
 	case 24:
 	    iDestPitch = iWidth*3;
 	    iPixelType = PNG_PIXEL_TRUECOLOR;
+	    iBGR = 1; // reversed R/B order
 	    break;
 	case 32:
 	    iDestPitch = iWidth*4;
 	    iPixelType = PNG_PIXEL_TRUECOLOR_ALPHA;
+	    iBGR = 1;
 	    break;
     } // switch on bpp
     iPitch = (iDestPitch + 3) & 0xfffc; // must be DWORD aligned
@@ -524,7 +527,12 @@ int fbfd;
 uint32_t u32Frac, u32AccX, u32AccY; // fractional scaling
 int iCenterX, iCenterY;
 uint8_t ucTemp[768]; // temporary palette for grayscale
+int rOff = 2, bOff = 0;
 
+    if (iBGR) {
+	    rOff = 0;
+	    bOff = 2;
+    }
     fbfd = open("/dev/fb0", O_RDWR);
     if (!fbfd) {
         printf("Error opening framebuffer device; try running as sudo\n");
@@ -561,7 +569,7 @@ uint8_t ucTemp[768]; // temporary palette for grayscale
        close(fbfd);
        return;
     }
-    if (!pPalette) { // create a grayscale palette if needed
+    if (!pPalette && iBpp <= 8) { // create a grayscale palette if needed
        int iDelta, iCount = 1<<iBpp;
        int iGray=0;
        iDelta = 255/(iCount-1);
@@ -685,9 +693,9 @@ uint8_t ucTemp[768]; // temporary palette for grayscale
                 case 32:
                 {
                 for (x=0; x<iNewWidth; x++) {
-                    u16 = (s[2] & 0xf8)<<8; // R
+                    u16 = (s[rOff] & 0xf8)<<8; // R
                     u16 |= (s[1] & 0xfc) << 3; // G
-                    u16 |= (s[0] >> 3); // B
+                    u16 |= (s[bOff] >> 3); // B
                     *d++ = u16; 
                     u32AccX += u32Frac;
                     if (u32AccX >= 65536) {
@@ -811,7 +819,7 @@ uint8_t ucTemp[768]; // temporary palette for grayscale
                 case 24:
                 {
                 for (x=0; x<iNewWidth; x++) {
-                    *d++ = 0xff000000 | s[2] | (s[1] << 8) | (s[0] << 16);
+                    *d++ = 0xff000000 | s[rOff] | (s[1] << 8) | (s[bOff] << 16);
                     u32AccX += u32Frac;
                     if (u32AccX >= 65536) {
                         u32AccX -= 65536;
@@ -823,9 +831,9 @@ uint8_t ucTemp[768]; // temporary palette for grayscale
 		case 32:
 		{
 		for (x=0; x<iNewWidth; x++) {
-		    r = (s[2] * s[3])>>8;
+		    r = (s[rOff] * s[3])>>8;
 		    g = (s[1] * s[3])>>8;
-		    b = (s[0] * s[3])>>8;
+		    b = (s[bOff] * s[3])>>8;
 		    *d++ = 0xff000000 | r | (g << 8) | (b << 16);
 		    u32AccX += u32Frac;
 		    if (u32AccX >= 65536) {
