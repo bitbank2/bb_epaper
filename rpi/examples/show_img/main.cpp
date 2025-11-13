@@ -35,13 +35,20 @@ int iAdapter, iMode;
 int iPanel1Bit, iPanel2Bit;
 int iInvert = 0; // assume not inverted
 int iBGR = 0; // reversed R/B order
+int iStretch = -1;
 
+enum {
+	STRETCH_NONE = 0,
+	STRETCH_FILL,
+	STRETCH_ASPECTFILL
+};
 typedef struct tagAdapter
 {
   uint8_t u8DC, u8RST, u8BUSY, u8CS, u8PWR, u8SPI;
 } ADAPTER;
 const char *szAdapters[] = {"framebuffer", "pimoroni", "waveshare_2", "waveshare_2_opi_rv2", NULL};
 const char *szModes[] = {"full", "fast", "partial", NULL};
+const char *szStretch[] = {"none", "fill", "aspectfill", NULL};
 const char *szPanels[] = {
     "EP_PANEL_UNDEFINED","EP42_400x300","EP42B_400x300", // 0-2
     "EP213_122x250", "EP213B_122x250", "EP293_128x296", // 3-5
@@ -525,7 +532,7 @@ struct fb_fix_screeninfo finfo;
 uint8_t *fbp;
 int x, y, iScreenWidth, iScreenHeight, iNewWidth, iNewHeight;
 int fbfd;
-uint32_t u32Frac, u32AccX, u32AccY; // fractional scaling
+uint32_t u32FracX, u32FracY, u32AccX, u32AccY; // fractional scaling
 int iCenterX, iCenterY;
 uint8_t ucTemp[768]; // temporary palette for grayscale
 int rOff = 2, bOff = 0;
@@ -555,13 +562,21 @@ int rOff = 2, bOff = 0;
     // Map framebuffer to user memory
     iScreenWidth = vinfo.xres;
     iScreenHeight = vinfo.yres;
+    u32FracX = u32FracY = 65536; // assume no stretch
     // Calculate the image scale
-    u32AccX = (iWidth << 16) / iScreenWidth;
-    u32AccY = (iHeight << 16) / iScreenHeight;
-    u32Frac = u32AccX;
-    if (u32AccY > u32AccX) u32Frac = u32AccY; // aspect-fit
-    iNewHeight = (iHeight << 16) / u32Frac;
-    iNewWidth = (iWidth << 16) / u32Frac;
+    if (iStretch != STRETCH_NONE) {
+        u32FracX = (iWidth << 16) / iScreenWidth;
+        u32FracY = (iHeight << 16) / iScreenHeight;
+	if (iStretch == STRETCH_ASPECTFILL) {
+            if (u32FracY > u32FracX) {
+		 u32FracX = u32FracY;
+	    } else {
+		 u32FracY = u32FracX;
+	    }
+	}
+    }
+    iNewHeight = (iHeight << 16) / u32FracY;
+    iNewWidth = (iWidth << 16) / u32FracX;
     iCenterX = (iScreenWidth - iNewWidth)/2;
     iCenterY = (iScreenHeight - iNewHeight)/2;
     fbp = (uint8_t*)mmap(0, finfo.smem_len, PROT_READ | PROT_WRITE, MAP_SHARED, fbfd, 0);
@@ -589,7 +604,7 @@ int rOff = 2, bOff = 0;
 	    iBpp = 32;
     }
     // Clear the display to black
-    //memset(fbp, 0, finfo.smem_len);
+    memset(fbp, 0, finfo.smem_len);
     if (vinfo.bits_per_pixel == 16) {
         uint16_t *d, u16, r, g, b;
         uint8_t *s;
@@ -619,7 +634,7 @@ int rOff = 2, bOff = 0;
                        b = pPalette[0];
                     }
                     *d++ = ((r & 0xf8)<<8) | ((g & 0xfc) << 3) | (b >> 3);
-                    u32AccX += u32Frac;
+                    u32AccX += u32FracX;
                     if (u32AccX >= 65536) {
                         u32AccX -= 65536;
                         uc <<= 1;
@@ -640,7 +655,7 @@ int rOff = 2, bOff = 0;
                     g = pPalette[c*3+1];
                     b = pPalette[c*3+0];
                     *d++ = ((r & 0xf8)<<8) | ((g & 0xfc) << 3) | (b >> 3);
-                    u32AccX += u32Frac;
+                    u32AccX += u32FracX;
                     if (u32AccX >= 65536) {
                         u32AccX -= 65536;
                         uc <<= 2;
@@ -661,7 +676,7 @@ int rOff = 2, bOff = 0;
                     g = pPalette[c*3+1];
                     b = pPalette[c*3+0];
                     *d++ = ((r & 0xf8)<<8) | ((g & 0xfc) << 3) | (b >> 3);
-                    u32AccX += u32Frac;
+                    u32AccX += u32FracX;
                     if (u32AccX >= 65536) {
                         u32AccX -= 65536;
                         uc <<= 4;
@@ -681,7 +696,7 @@ int rOff = 2, bOff = 0;
                     g = pPalette[uc*3+1];
                     b = pPalette[uc*3+0];
                     *d++ = ((r & 0xf8)<<8) | ((g & 0xfc) << 3) | (b >> 3);
-                    u32AccX += u32Frac;
+                    u32AccX += u32FracX;
                     if (u32AccX >= 65536) {
                         u32AccX -= 65536;
                         tx++;
@@ -698,7 +713,7 @@ int rOff = 2, bOff = 0;
                     u16 |= (s[1] & 0xfc) << 3; // G
                     u16 |= (s[bOff] >> 3); // B
                     *d++ = u16; 
-                    u32AccX += u32Frac;
+                    u32AccX += u32FracX;
                     if (u32AccX >= 65536) {
                         u32AccX -= 65536;
                         s += (iBpp/8);
@@ -707,7 +722,7 @@ int rOff = 2, bOff = 0;
                 }
                 break;
             } // switch on bpp
-            u32AccY += u32Frac;
+            u32AccY += u32FracY;
         } // for y
     } else if (vinfo.bits_per_pixel == 32) {
         uint32_t *d, r, g, b;
@@ -746,7 +761,7 @@ int rOff = 2, bOff = 0;
                        b = pPalette[0];
                     }
                     *d++ = 0xff000000 | r | (g << 8) | (b << 16);
-                    u32AccX += u32Frac;
+                    u32AccX += u32FracX;
                     if (u32AccX >= 65536) {
                         u32AccX -= 65536;
                         uc <<= 1;
@@ -767,7 +782,7 @@ int rOff = 2, bOff = 0;
                     g = pPalette[c*3+1];
                     b = pPalette[c*3+0];
                     *d++ = 0xff000000 | r | (g << 8) | (b << 16);
-                    u32AccX += u32Frac;
+                    u32AccX += u32FracX;
                     if (u32AccX >= 65536) {
                         u32AccX -= 65536;
                         uc <<= 2;
@@ -788,7 +803,7 @@ int rOff = 2, bOff = 0;
                     g = pPalette[c*3+1];
                     b = pPalette[c*3+0];
                     *d++ = 0xff000000 | r | (g << 8) | (b << 16);
-                    u32AccX += u32Frac;
+                    u32AccX += u32FracX;
                     if (u32AccX >= 65536) {
                         u32AccX -= 65536;
                         uc <<= 4;
@@ -808,7 +823,7 @@ int rOff = 2, bOff = 0;
                     g = pPalette[uc*3+1];
                     b = pPalette[uc*3+0];
                     *d++ = 0xff000000 | r | (g << 8) | (b << 16);
-                    u32AccX += u32Frac;
+                    u32AccX += u32FracX;
                     if (u32AccX >= 65536) {
                         u32AccX -= 65536;
                         tx++;
@@ -821,7 +836,7 @@ int rOff = 2, bOff = 0;
                 {
                 for (x=0; x<iNewWidth; x++) {
                     *d++ = 0xff000000 | s[rOff] | (s[1] << 8) | (s[bOff] << 16);
-                    u32AccX += u32Frac;
+                    u32AccX += u32FracX;
                     if (u32AccX >= 65536) {
                         u32AccX -= 65536;
                         s += 3;
@@ -836,7 +851,7 @@ int rOff = 2, bOff = 0;
 		    g = (s[1] * s[3])>>8;
 		    b = (s[bOff] * s[3])>>8;
 		    *d++ = 0xff000000 | r | (g << 8) | (b << 16);
-		    u32AccX += u32Frac;
+		    u32AccX += u32FracX;
 		    if (u32AccX >= 65536) {
                         u32AccX -= 65536;
 			s += 4;
@@ -845,7 +860,7 @@ int rOff = 2, bOff = 0;
 		}
 		break;
             } // switch on bpp
-            u32AccY += u32Frac;
+            u32AccY += u32FracY;
         } // for y
     }
     // Cleanup
@@ -903,6 +918,15 @@ char szFile[256];
 #ifdef SHOW_DETAILS
 		    printf("JSON parsed successfully!\n");
 #endif
+		    if (cJSON_HasObjectItem(pJSON, "stretch")) {
+			 pItem = cJSON_GetObjectItem(pJSON, "stretch");
+			 iStretch = FindItemName(szStretch, pItem->valuestring, "stretch");
+			 if (iStretch >= 0) {
+#ifdef SHOW_DETAILS
+				 printf("stretch = %s\n", szStretch[iStretch]);
+#endif
+			 }
+		    }
                     if (cJSON_HasObjectItem(pJSON, "invert")) {
                          pItem = cJSON_GetObjectItem(pJSON, "invert");
                          iInvert = !strcmp(pItem->valuestring, "true");
@@ -915,7 +939,7 @@ char szFile[256];
 			 iAdapter = FindItemName(szAdapters, pItem->valuestring, "adapter");
                          if (iAdapter >= 0) {
 #ifdef SHOW_DETAILS
-                             printf("Adapter = %d\n", iAdapter);
+                             printf("Adapter = %s\n", szAdapters[iAdapter]);
 #endif
                          }
 		    }
@@ -924,7 +948,7 @@ char szFile[256];
 			 iPanel1Bit = FindItemName(szPanels, pItem->valuestring, "1-bit panel");
                          if (iPanel1Bit >= 0) {
 #ifdef SHOW_DETAILS
-                             printf("panel1bit = %d\n", iPanel1Bit);
+                             printf("panel1bit = %s\n", szPanels[iPanel1Bit]);
 #endif
                          }
 		    }
@@ -933,7 +957,7 @@ char szFile[256];
 			 iPanel2Bit = FindItemName(szPanels, pItem->valuestring, "2-bit panel");
                          if (iPanel2Bit >= 0) {
 #ifdef SHOW_DETAILS          
-                             printf("panel2bit = %d\n", iPanel2Bit);
+                             printf("panel2bit = %s\n", szPanels[iPanel2Bit]);
 #endif
                          }
 		    }
@@ -942,7 +966,7 @@ char szFile[256];
 			 iMode = FindItemName(szModes, pItem->valuestring, "update mode");
                          if (iMode >= 0) {
 #ifdef SHOW_DETAILS
-			     printf("mode = %d\n", iMode);
+			     printf("mode = %s\n", szModes[iMode]);
 #endif
                          }
 		    }
@@ -964,6 +988,8 @@ char szFile[256];
 	printf("%d: %s %s\n", i, pName, pValue); 
         if (strcmp(pName, "mode") == 0) {
 		iMode = FindItemName(szModes, pValue, "update mode");
+	} else if (strcmp(pName, "stretch") == 0) {
+		iStretch = FindItemName(szStretch, pValue, "stretch");
 	} else if (strcmp(pName, "file") == 0) {
 		strcpy(szFile, pValue);
 	} else if (strcmp(pName, "panel_1bit") == 0) {
@@ -981,6 +1007,8 @@ char szFile[256];
         ShowHelp();
         return -1;
     }
+
+    if (iStretch < 0) iStretch = STRETCH_ASPECTFILL; // default
 
     if (iAdapter == 0) { // framebuffer
     } else {
