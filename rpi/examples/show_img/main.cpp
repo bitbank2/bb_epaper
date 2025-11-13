@@ -981,6 +981,9 @@ char szFile[256];
 	    free(pData);
     } // if epaper.json file exists
 
+    if (argc > 1) {
+	    printf("cli parameters overriding JSON...\n");
+    }
     for (int i=1; i<argc; i++) {
         char *pName, *pValue, *saveptr;
         pName = strtok_r((char *)argv[i], "=", &saveptr);
@@ -1002,7 +1005,9 @@ char szFile[256];
                 iInvert = !strcmp(pValue, "true");
         }
     }
-
+    if (iAdapter == 0) { // for framebuffer, some parameters don't matter
+        iMode = iPanel1Bit = iPanel2Bit = 0;
+    }
     if (szFile[0] == 0 || iAdapter == -1 || iMode == -1 || (iPanel1Bit == -1 && iPanel2Bit == -1)) { // print instructions
         ShowHelp();
         return -1;
