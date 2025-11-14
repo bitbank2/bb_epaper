@@ -205,6 +205,27 @@ const uint8_t epd42r2_init_sequence_full[] PROGMEM = {
     0x00
 };
 
+const uint8_t epd1085_init_full[] PROGMEM = {
+    2, 0x4d, 0x55,
+    2, 0xa6, 0x38,
+    2, 0xb4, 0x5d, 
+    2, 0xb6, 0x80,
+    2, 0xb7, 0x00,
+    2, 0xf7, 0x02,
+    2, 0xae, 0xa0,
+    2, 0xe0, 0x01,
+    3, 0x00, 0x9f, 0x0d, // panel setting
+    7, 0x06, 0x57, 0x24, 0x28, 0x32, 0x08, 0x48, // boost
+    5, 0x61, 0x02, 0xa8, 0x01, 0xe0, // resolution
+    5, 0x62, 0x00, 0x00, 0x00, 0x00,
+    2, 0x60, 0x31,
+    2, 0x50, 0x97,
+    2, 0xe8, 0x01,
+    1, 0x04, // power on
+    BUSY_WAIT,
+    0
+};
+
 const uint8_t epd42r2_init_sequence_fast[] PROGMEM = {
     0x02, UC8151_PSR, 0xbf, // LUT from register (0x20 or'd with first byte)
     0x06, UC8151_PWR, 0x03, 0x00, 0x26, 0x32, 3,
@@ -337,6 +358,7 @@ const uint8_t epd37xx_init_sequence_full[] PROGMEM = {
     0x02, UC8151_PLL, 0x09, // HZ_50
     0x00 // end of table
 };
+
 // initialization sequence for 2.9" 296x128 e-paper
 const uint8_t epd29_init_sequence_full[] PROGMEM = {
     0x02, UC8151_PSR, 0x80 | 0x00 | 0x10 | 0x08 | 0x04 | 0x02 | 0x01, // RES_128x296, LUT_OTP, FORMAT_BW, SHIFT_LEFT, BOOSTER_ON, RESET_NONE
@@ -1982,6 +2004,43 @@ const uint8_t ep7_init_partial[] PROGMEM =
     0
 };  
 
+const uint8_t epd31_init_full[] PROGMEM =
+{
+  3, 0x00, 0x1e, 0x0d, // panel setting + soft reset
+  BUSY_WAIT,
+  3, 0x00, 0x1f, 0x0d, // no reset
+  2, 0x50, 0x97,
+  1, 0x04, // power on
+  BUSY_WAIT,
+ 0,0,0,0
+};
+
+const uint8_t epd31_init_fast[] PROGMEM =
+{
+  3, 0x00, 0x1e, 0x0d, // panel setting + soft reset
+  BUSY_WAIT,
+  3, 0x00, 0x1f, 0x0d, // no reset
+  2, 0xe0, 0x02, // CCSET
+  2, 0xe5, 0x5a, // TSSET - temp
+  2, 0x50, 0x97,
+  1, 0x04, // power on
+  BUSY_WAIT,
+ 0,0,0,0
+};
+
+const uint8_t epd31_init_part[] PROGMEM =
+{
+  3, 0x00, 0x1e, 0x0d, // panel setting + soft reset
+  BUSY_WAIT,
+  3, 0x00, 0x1f, 0x0d, // no reset
+  2, 0xe0, 0x02, // CCSET
+  2, 0xe5, 0x79, // TSSET - temp
+  2, 0x50, 0xd7,
+  1, 0x04, // power on
+  BUSY_WAIT,
+ 0,0,0,0
+};
+
 // 2-bit grayscale mode initialization
 const uint8_t epd426g_init[] PROGMEM = 
 {
@@ -2745,6 +2804,8 @@ const EPD_PANEL panelDefs[] PROGMEM = {
     {400, 300, 0, epd42yr_init_full, epd42yr_init_fast, NULL, BBEP_4COLOR, BBEP_CHIP_UC81xx, u8Colors_4clr_v2}, // EP42YR_400x300
 //    {792, 272, 0, epd579yr_init_full, epd579yr_init_fast, NULL, BBEP_4COLOR, BBEP_CHIP_UC81xx, u8Colors_4clr_v2}, // EP579YR_792x272
     {160, 296, 0, epd215yr_init_full, epd215yr_init_full, NULL, BBEP_4COLOR, BBEP_CHIP_UC81xx, u8Colors_4clr_v2}, // EP215YR_160x296
+    {680, 480, 0, epd1085_init_full, NULL, NULL, 0, BBEP_CHIP_UC81xx, u8Colors_2clr}, // EP1085_1360x480
+    {240, 320, 0, epd31_init_full, epd31_init_fast, epd31_init_part, BBEP_CS_EVERY_BYTE, BBEP_CHIP_UC81xx, u8Colors_2clr}, // EP31_240x320
 };
 //
 // Set the e-paper panel type
@@ -2868,7 +2929,8 @@ void bbepWaitBusy(BBEPDISP *pBBEP)
     while (iTimeout < iMaxTime) {
         if (digitalRead(pBBEP->iBUSYPin) == busy_idle) break;
         // delay(1);
-        bbepLightSleep(20); // save battery power by checking every 20ms
+//        bbepLightSleep(20); // save battery power by checking every 20ms
+        delay(20);
         iTimeout += 20;
     }
 } /* bbepWaitBusy() */
@@ -2890,6 +2952,8 @@ bool bbepIsBusy(BBEPDISP *pBBEP)
 void bbepWakeUp(BBEPDISP *pBBEP)
 {
     if (!pBBEP) return;
+    if (pBBEP->iRSTPin == 0xff) return;
+
     digitalWrite(pBBEP->iRSTPin, LOW);
     delay(10);
     digitalWrite(pBBEP->iRSTPin, HIGH);
@@ -3121,10 +3185,12 @@ void bbepSendCMDSequence(BBEPDISP *pBBEP, const uint8_t *pSeq)
 int bbepTestPanelType(BBEPDISP *pBBEP)
 {
     if (!pBBEP) return BBEP_CHIP_NOT_DEFINED;
-    digitalWrite(pBBEP->iRSTPin, LOW);
-    delay(40);
-    digitalWrite(pBBEP->iRSTPin, HIGH);
-    delay(50);
+    if (pBBEP->iRSTPin != 0xff) {
+        digitalWrite(pBBEP->iRSTPin, LOW);
+        delay(40);
+        digitalWrite(pBBEP->iRSTPin, HIGH);
+        delay(50);
+    }
     if (digitalRead(pBBEP->iBUSYPin))
         return BBEP_CHIP_UC81xx; // high state = UltraChip ready
     else

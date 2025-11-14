@@ -69,6 +69,22 @@ int BBEPAPER::begin(int iProduct)
 int rc = BBEP_ERROR_BAD_PARAMETER;
 
     switch (iProduct) {
+        case EPD_LILYGO_T_DECK_PRO: // DC:35 RST:-1 BUSY:37 CS:34 MOSI:33 SCK:36
+// make sure other devices' CS lines are inactive
+            pinMode(3 /*BOARD_LORA_CS*/, OUTPUT); 
+            digitalWrite(3 /*BOARD_LORA_CS*/, HIGH);
+            pinMode(4 /*BOARD_LORA_RST*/, OUTPUT); 
+            digitalWrite(4 /*BOARD_LORA_RST*/, HIGH);
+            pinMode(48 /*BOARD_SD_CS*/, OUTPUT); 
+            digitalWrite(48 /*BOARD_SD_CS*/, HIGH);
+            pinMode(34/*BOARD_EPD_CS*/, OUTPUT); 
+            digitalWrite(34/*BOARD_EPD_CS*/, HIGH);
+            if (setPanelType(EP31_240x320) == BBEP_SUCCESS) {
+                initIO(35, -1, 37, 34, 33, 36, 10000000);
+                return BBEP_SUCCESS;
+            }
+            break;
+
         case EPD_LILYGO_S3_MINI: // DC:12 CS:13 RST: 11 BUSY: 10 SCK: 14 MOSI: 15
             if (setPanelType(EP102_80x128) == BBEP_SUCCESS) {
                 initIO(12, 11, 10, 13, 15, 14, 8000000);

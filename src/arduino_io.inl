@@ -62,11 +62,13 @@ void bbepInitIO(BBEPDISP *pBBEP, uint8_t u8DC, uint8_t u8RST, uint8_t u8BUSY, ui
     pBBEP->iBUSYPin = u8BUSY;
 
     pinMode(pBBEP->iDCPin, OUTPUT);
-    pinMode(pBBEP->iRSTPin, OUTPUT);
-    digitalWrite(pBBEP->iRSTPin, LOW);
-    delay(100);
-    digitalWrite(pBBEP->iRSTPin, HIGH);
-    delay(100);
+    if (pBBEP->iRSTPin != 0xff) {
+        pinMode(pBBEP->iRSTPin, OUTPUT);
+        digitalWrite(pBBEP->iRSTPin, LOW);
+        delay(100);
+        digitalWrite(pBBEP->iRSTPin, HIGH);
+        delay(100);
+    }
     if (pBBEP->iBUSYPin != 0xff) {
         pinMode(pBBEP->iBUSYPin, INPUT);
     }
