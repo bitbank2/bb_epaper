@@ -5,7 +5,7 @@ all: show_img
 
 show_img: main.o cJSON.o cJSON_Utils.o
 	$(CXX) main.o cJSON.o cJSON_Utils.o $(LIBS) -o show_img ;\
-	sudo cp show_img /usr/local/bin
+	sudo cp show_img /usr/bin
 
 cJSON.o: cJSON.h cJSON.c
 	$(CC) $(CFLAGS) -c cJSON.c

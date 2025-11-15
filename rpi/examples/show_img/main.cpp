@@ -870,11 +870,11 @@ int rOff = 2, bOff = 0;
 
 void ShowHelp(void)
 {
-    printf("show_png utility - display PNG (and BMP) images on ePaper displays\nwritten by Larry Bank (bitbank@pobox.com)\nCopyright(c) 2025 BitBank Software, inc.\n");
+    printf("show_img utility - display PNG (and BMP) images on ePaper displays\nwritten by Larry Bank (bitbank@pobox.com)\nCopyright(c) 2025 BitBank Software, inc.\n");
     printf("A JSON file (~/.config/trmnl/show_img.json) can contain the setup\nor the parameters can be passed on the command line (in any order):\n");
     printf("file=<filename> any PNG or BMP file\nmode=<update mode> can be full, fast or partial\nadapter=<epaper PCB> can be waveshare_2 or pimoroni\npanel_1bit=<bb_epaper panel name>\npanel_2bit=<bb_epaper panel name>\n");
     printf("Color images and bit depths greater than 2-bpp will be\nautomatically converted to 2-bit (4 grays).\n");
-    printf("example: ./show_png file=\"/home/me/test.png\" mode=fast panel_1bit=EP75_800x480 adapter=waveshare_2\n");
+    printf("example: ./show_img file=\"/home/me/test.png\" mode=fast panel_1bit=EP75_800x480 adapter=waveshare_2\n");
 } /* ShowHelp() */
 //
 // Main program entry point
