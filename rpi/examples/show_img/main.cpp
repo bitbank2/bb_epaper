@@ -871,7 +871,7 @@ int rOff = 2, bOff = 0;
 void ShowHelp(void)
 {
     printf("show_png utility - display PNG (and BMP) images on ePaper displays\nwritten by Larry Bank (bitbank@pobox.com)\nCopyright(c) 2025 BitBank Software, inc.\n");
-    printf("A JSON file in the current directory (epaper.json) can contain the setup\nor the parameters can be passed on the command line (in any order):\n");
+    printf("A JSON file (~/.config/trmnl/show_img.json) can contain the setup\nor the parameters can be passed on the command line (in any order):\n");
     printf("file=<filename> any PNG or BMP file\nmode=<update mode> can be full, fast or partial\nadapter=<epaper PCB> can be waveshare_2 or pimoroni\npanel_1bit=<bb_epaper panel name>\npanel_2bit=<bb_epaper panel name>\n");
     printf("Color images and bit depths greater than 2-bpp will be\nautomatically converted to 2-bit (4 grays).\n");
     printf("example: ./show_png file=\"/home/me/test.png\" mode=fast panel_1bit=EP75_800x480 adapter=waveshare_2\n");
@@ -890,16 +890,16 @@ char szFile[256];
     iAdapter = iPanel1Bit = iPanel2Bit = iMode = -1;
     szFile[0] = 0;
 
-    if (!getcwd(szJSON, sizeof(szJSON))) {
-	    printf("Unable to get current dir?!\n");
-	    return -1;
+    pData = (uint8_t*)getenv("HOME"); // try to get the home directory
+    if (pData) {
+         strcpy(szJSON, (const char *)pData);
     }
-    strcat(szJSON, "/epaper.json"); // name of local config file
+    strcat(szJSON, "/.config/trmnl/show_img.json"); // name of local config file
     //printf("config name: %s\n", szJSON);
     ihandle = fopen(szJSON, "r+b");
     if (ihandle) {
 #ifdef SHOW_DETAILS
-	    printf("epaper.json found!\n");
+	    printf("show_img.json found!\n");
 #endif
 	    fseek(ihandle, 0, SEEK_END);
             iSize = (int)ftell(ihandle);
@@ -979,7 +979,7 @@ char szFile[256];
 		    printf("Error parsing JSON!\n");
 	    }
 	    free(pData);
-    } // if epaper.json file exists
+    } // if show_img.json file exists
 
     if (argc > 1) {
 	    printf("cli parameters overriding JSON...\n");
