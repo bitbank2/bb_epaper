@@ -26,12 +26,16 @@
 #endif // __LINUX__
 
 #include "bb_epaper.h"
+#ifdef __MEM_ONLY__
+#include "mem_io.inl"
+#endif // __MEM_ONLY__
+
 #ifdef __LINUX__
 #include "rpi_io.inl"
 #else
 #ifdef ARDUINO
 #include "arduino_io.inl" // I/O (non-portable) code is in here
-#else
+#elif !defined(__MACH__)
 #include "../esp_idf/esp_generic.inl" // ESP-IDF specific
 #endif // ARDUINO
 #endif // __LINUX__
