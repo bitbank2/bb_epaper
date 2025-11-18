@@ -120,6 +120,16 @@ enum {
 };
 #endif // __BB_FONT_SIZES__
 
+// Pattern dither options
+enum {
+    DITHER_NONE=0,
+    DITHER_75, // 75%
+    DITHER_50, // 50%
+    DITHER_25_REG, // 25%, regular
+    DITHER_25_ALT, // alternating
+    DITHER_12, // 12.5%
+    DITHER_COUNT
+};
 // Centering coordinates to pass to the character drawing functions
 #define CENTER_X 9998
 #define CENTER_Y 9999
@@ -469,7 +479,7 @@ uint32_t iTimeout; // for e-paper panels
 uint8_t iDCPin, iMOSIPin, iCLKPin, iCSPin, iRSTPin, iBUSYPin;
 uint8_t iCS1Pin, iCS2Pin;
 uint8_t x_offset, y_offset; // memory offsets
-uint8_t is_awake, iPlane;
+uint8_t is_awake, iPlane, iDither;
 const uint8_t *pColorLookup; // color translation table
 const uint8_t *pInitFull; // full update init sequence
 const uint8_t *pInitFast; // fast update init sequence
@@ -569,6 +579,7 @@ class BBEPAPER
     void wake(void);
     void wait(bool bQuick = false);
     bool isBusy(void);
+    void setDitherPattern(uint8_t iPattern);
     void drawString(const char *pText, int x, int y);
     void setPlane(int iPlane);
     int getPlane(void);

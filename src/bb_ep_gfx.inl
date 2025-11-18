@@ -26,6 +26,16 @@ static G5DECIMAGE g5dec;
 // forward declarations
 void InvertBytes(uint8_t *pData, int bLen);
 void bbepUnicodeString(const char *szMsg, uint8_t *szExtMsg);
+
+// 8x8 pixel (8 byte) dither patterns
+const uint8_t pDitherPatterns[] = {
+  0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff, // all on (DITHER_NONE)
+  0x77,0xff,0xdd,0xff,0x77,0xff,0xdd,0xff, // DITHER_75
+  0x55,0xaa,0x55,0xaa,0x55,0xaa,0x55,0xaa, // DITHER_50
+  0x55,0x00,0x55,0x00,0x55,0x00,0x55,0x00, // DITHER_25_REG
+  0x55,0x00,0xaa,0x00,0x55,0x00,0xaa,0x00, // DITHER_25_ALT
+  0x88,0x00,0x00,0x00,0x88,0x00,0x00,0x00, // DITHER_12
+};
 const uint8_t ucFont[]PROGMEM = {
     0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x06,0x5f,0x5f,0x06,0x00,
     0x00,0x07,0x07,0x00,0x07,0x07,0x00,0x14,0x7f,0x7f,0x14,0x7f,0x7f,0x14,
@@ -521,6 +531,34 @@ BBEPDISP *pBBEP = (BBEPDISP *)pb;
         }
     }
 } /* bbepSetPixelFast3Clr() */
+
+void bbepSetPixel2ClrDither(void *pb, int x, int y, unsigned char ucColor)
+{
+    int i;
+    int iPitch, iSize;
+    uint8_t u8;
+    BBEPDISP *pBBEP = (BBEPDISP *)pb;
+    uint8_t *pDither;
+    
+    ucColor = pBBEP->pColorLookup[ucColor & 0xf]; // translate the color for this display type
+    
+    iPitch = (pBBEP->width+7)>>3;
+    iSize = ((pBBEP->native_width+7)>>3) * pBBEP->native_height;
+    
+    i = (x >> 3) + (y * iPitch);
+    pDither = (uint8_t *)&pDitherPatterns[(pBBEP->iDither * 8) + (y & 7)];
+    if (!(pDither[0] & (0x80 >> (x & 7)))) return; // non-drawn pixel
+    if (pBBEP->iPlane == PLANE_1) {
+        i += iSize;
+    }
+    u8 = pBBEP->ucScreen[i];
+    if (ucColor == BBEP_WHITE) {
+        u8 |= (0x80 >> (x & 7));
+    } else { // must be black
+        u8 &= ~(0x80 >> (x & 7));
+    }
+    pBBEP->ucScreen[i] = u8;
+} /* bbepSetPixel2ClrDither() */
 
 int bbepSetPixel2Clr(void *pb, int x, int y, unsigned char ucColor)
 {

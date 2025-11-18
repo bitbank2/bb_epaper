@@ -58,6 +58,11 @@ BBEPAPER::BBEPAPER(int iPanel)
     bbepSetPanelType(&_bbep, iPanel);
 }
 
+void BBEPAPER::setDitherPattern(uint8_t iPattern)
+{
+    bbepSetDitherPattern(&_bbep, iPattern);
+} /* setDitherPattern() */
+
 void BBEPAPER::setPasses(int iPasses)
 {
    _bbep.iPasses = iPasses;

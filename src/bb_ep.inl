@@ -29,6 +29,7 @@ int bbepSetPixel4Clr(void *pb, int x, int y, unsigned char ucColor);
 int bbepSetPixel3Clr(void *pb, int x, int y, unsigned char ucColor);
 int bbepSetPixel2Clr(void *pb, int x, int y, unsigned char ucColor);
 int bbepSetPixel16Clr(void *pb, int x, int y, unsigned char ucColor);
+void bbepSetPixel2ClrDither(void *pb, int x, int y, unsigned char ucColor);
 
 // Color mapping tables for each type of display
 // the 7 basic colors (and 9 unsupported) are translated into the correct colors
@@ -2900,6 +2901,28 @@ int bbepSetPanelType(BBEPDISP *pBBEP, int iPanel)
     }
     return BBEP_SUCCESS;
 } /* bbepSetPanelType() */
+
+void bbepSetDitherPattern(BBEPDISP *pBBEP, uint8_t iPattern)
+{
+    if (iPattern >= DITHER_COUNT) return;
+
+    pBBEP->iDither = iPattern;
+    if (iPattern == DITHER_NONE) { // reset to default behavior
+        if (pBBEP->iFlags & BBEP_4COLOR) {
+            pBBEP->pfnSetPixelFast = bbepSetPixelFast4Clr;
+        } else if (pBBEP->iFlags & BBEP_4GRAY) {
+            pBBEP->pfnSetPixelFast = bbepSetPixelFast4Gray;
+        } else if (pBBEP->iFlags & BBEP_3COLOR) {
+            pBBEP->pfnSetPixelFast = bbepSetPixelFast3Clr;
+        } else if (pBBEP->iFlags & BBEP_7COLOR) {
+            pBBEP->pfnSetPixelFast = bbepSetPixelFast16Clr;
+        } else { // must be B/W
+            pBBEP->pfnSetPixelFast = bbepSetPixelFast2Clr;
+        }
+    } else { // use the dithered pixel drawing functions
+        pBBEP->pfnSetPixelFast = bbepSetPixel2ClrDither;
+    }
+} /* bbepSetDitherPattern() */
 
 int bbepCreateVirtual(BBEPDISP *pBBEP, int iWidth, int iHeight, int iFlags)
 {
