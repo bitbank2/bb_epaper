@@ -127,7 +127,8 @@ enum {
     DITHER_50, // 50%
     DITHER_25_REG, // 25%, regular
     DITHER_25_ALT, // alternating
-    DITHER_12, // 12.5%
+    DITHER_12_REG, // 12.5%
+    DITHER_12_ALT,
     DITHER_COUNT
 };
 // Centering coordinates to pass to the character drawing functions
@@ -163,6 +164,7 @@ enum {
     EPD_RETERMINAL_SPECTRA,
     EPD_BBBADGE,
     EPD_LILYGO_T_DECK_PRO,
+    EPD_WAVESHARE_154,
     EPD_PRODUCT_COUNT
 };
 
