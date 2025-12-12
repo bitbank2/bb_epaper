@@ -47,3 +47,5 @@ mode has the advantage that it can do fast and partial updates while
 2-bit grayscale mode cannot use these options. All update modes become
 'full' when displaying images with more than 1-bit per pixel.
 
+N.B. For Spectra6 panels like the Inky Impression 7.3" 800x480, choose the
+adapter as 'pimoroni' and the panel_1bit as 'EP73_SPECTRA_800x480'.
