@@ -2960,12 +2960,17 @@ int bbepCreateVirtual(BBEPDISP *pBBEP, int iWidth, int iHeight, int iFlags)
     }
 }
 // Put the ESP32 into light sleep for N milliseconds
-void bbepLightSleep(uint32_t u32Millis)
+void bbepLightSleep(uint32_t u32Millis, uint8_t bLightSleep)
 {
 #ifdef ARDUINO_ARCH_ESP32
-  esp_sleep_enable_timer_wakeup(u32Millis * 1000L);
-  esp_light_sleep_start();
+  if (bLightSleep) {
+      esp_sleep_enable_timer_wakeup(u32Millis * 1000L);
+      esp_light_sleep_start();
+  } else {
+      delay(u32Millis);
+  }
 #else
+  (void)bLightSleep;
   delay(u32Millis);
 #endif
 }
@@ -2990,8 +2995,7 @@ void bbepWaitBusy(BBEPDISP *pBBEP)
     while (iTimeout < iMaxTime) {
         if (digitalRead(pBBEP->iBUSYPin) == busy_idle) break;
         // delay(1);
-//        bbepLightSleep(20); // save battery power by checking every 20ms
-        delay(20);
+        bbepLightSleep(20, pBBEP->bLightSleep); // save battery power by checking every 20ms
         iTimeout += 20;
     }
 } /* bbepWaitBusy() */

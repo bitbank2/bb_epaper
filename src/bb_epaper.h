@@ -481,7 +481,7 @@ uint32_t iTimeout; // for e-paper panels
 uint8_t iDCPin, iMOSIPin, iCLKPin, iCSPin, iRSTPin, iBUSYPin;
 uint8_t iCS1Pin, iCS2Pin;
 uint8_t x_offset, y_offset; // memory offsets
-uint8_t is_awake, iPlane, iDither;
+uint8_t is_awake, iPlane, iDither, bLightSleep;
 const uint8_t *pColorLookup; // color translation table
 const uint8_t *pInitFull; // full update init sequence
 const uint8_t *pInitFast; // fast update init sequence
@@ -533,6 +533,7 @@ class BBEPAPER
     int refresh(int iMode, bool bWait = true);
     void setPasses(int iPasses);
     void setBuffer(uint8_t *pBuffer);
+    void setLightSleep(uint8_t bEnable) {_bbep.bLightSleep = bEnable;}
     int allocBuffer(bool bSecondPlane = false);
     void * getBuffer(void);
     int getPanelType(void) { return _panel_type;}
