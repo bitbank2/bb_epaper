@@ -1,22 +1,26 @@
 //
 // bb_epaper I/O wrapper functions for Arduino
-// Copyright (c) 2024 BitBank Software, Inc.
 // Written by Larry Bank (bitbank@pobox.com)
 // Project started 9/11/2024
 //
-// Use of this software is governed by the Business Source License
-// included in the file ./LICENSE.
+// SPDX-FileCopyrightText: 2024 BitBank Software, Inc.
+// SPDX-License-Identifier: GPL-3.0-or-later
 //
-// As of the Change Date specified in that file, in accordance with
-// the Business Source License, use of this software will be governed
-// by the Apache License, Version 2.0, included in the file
-// ./APL.txt.
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
 //
-// Adapt these functions to whatever target platform you're using
-// and the rest of the code can remain unchanged
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
 //
-#ifndef __BB_EP_IO__
-#define __BB_EP_IO__
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <http://www.gnu.org/licenses/>.
+//
+#ifndef __ARDUINO_IO__
+#define __ARDUINO_IO__
 
 #include <Arduino.h>
 #include <SPI.h>
@@ -233,4 +237,4 @@ void bbepCMD2(BBEPDISP *pBBEP, uint8_t cmd1, uint8_t cmd2)
     bbepWriteData(pBBEP, &cmd2, 1);
 } /* bbepCMD2() */
 
-#endif // __BB_EP_IO__
+#endif // __ARDUINO_IO__

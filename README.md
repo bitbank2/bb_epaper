@@ -55,7 +55,10 @@ In the photo below, the custom font and ellipse were drawn without using a local
 ![bb_epaper](/bb_epaper_demo.jpg?raw=true "bb_epaper")
 <br>
 
-If you find this code useful, please consider sending a donation or becomming a Github sponsor.
+Thank you to the Open Home Foundation for being a sponsor of this work:<br>
+https://www.openhomefoundation.org/<br>
+
+If you find this code useful, please consider sending a donation or becoming a Github sponsor.
 
 [![paypal](https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=SR4F44J2UR8S4)
 
