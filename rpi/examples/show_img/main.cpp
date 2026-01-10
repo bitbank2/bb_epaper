@@ -250,6 +250,9 @@ int ConvertBpp(uint8_t *pBMP, int w, int h, int iBpp, uint8_t *palette)
     } else {
         iDestBpp = 2;
     }
+    if (iBpp == 2 && bbep.capabilities() & BBEP_7COLOR) {
+        iDestBpp = 1; // Spectra6 can't display 4 gray levels
+    }
     if (iDestBpp == 1) {
         iDestPitch = (w+7)/8;
     } else if (iDestBpp == 2) {
@@ -534,7 +537,7 @@ void PrepareImage(void)
         if (iBpp >= 2 || (bbep.capabilities() & BBEP_7COLOR)) {
             iBpp = ConvertBpp(s, iWidth, iHeight, iBpp, pPalette);
         }
-	if (iBpp == 1) {
+	if (iBpp == 1 && !(bbep.capabilities() & BBEP_7COLOR)) {
 	    iSrcPitch = (iWidth+7)/8;
 	    for (y=0; y<iHeight; y++) {
                 if (bbep.capabilities() & BBEP_4COLOR) {
@@ -1193,6 +1196,9 @@ char szFile[256];
 #ifdef SHOW_DETAILS
         printf("Writing data to EPD...\n");
 #endif
+        if (bbep.capabilities() & BBEP_7COLOR) { // Spectra6
+            iMode = REFRESH_FULL; // the only option for Spectra6
+        }
         if (iBpp == 1 && bbep.getPanelType() == iPanel1Bit) {
             bbep.writePlane((iMode == REFRESH_PARTIAL) ? PLANE_FALSE_DIFF : PLANE_0, iInvert);
             bbep.refresh(iMode);
