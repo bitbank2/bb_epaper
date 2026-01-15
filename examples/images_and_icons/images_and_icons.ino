@@ -6,12 +6,11 @@
 #include "bomb.h" // uncompressed 40x40 image
 #include "bart.h" // compressed 128x64 image
 #include "smiley.h" // 100x100 compressed image
-
 BBEPAPER bbep;
 
 void setup()
 {
-  bbep.begin(EPD_CROWPANEL29);
+  bbep.begin(EPD_XTEINK_X4);
   bbep.allocBuffer();
   // Do everything with no local buffer
   bbep.fillScreen(BBEP_WHITE);

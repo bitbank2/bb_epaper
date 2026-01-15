@@ -2828,8 +2828,8 @@ const EPD_PANEL panelDefs[] PROGMEM = {
     {640, 384, 0, epd74r_init, NULL, NULL,  BBEP_3COLOR | BBEP_4BPP_DATA, BBEP_CHIP_UC81xx, u8Colors_3clr}, // EP74R_640x384, 3-color 640x384
     {600, 448, 0, epd583r_init, NULL, NULL,  BBEP_3COLOR | BBEP_4BPP_DATA, BBEP_CHIP_UC81xx, u8Colors_3clr}, // EP583R_600x448, 3-color 600x448
     {800, 480, 0, epd75r_init, NULL, NULL, BBEP_3COLOR | BBEP_RED_SWAPPED, BBEP_CHIP_UC81xx, u8Colors_3clr}, // EP75R_800x480, waveshare 7.5 800x480 B/W/R
-    {800, 480, 0, epd426_init_full, epd426_init_fast, epd426_init_part, 0, BBEP_CHIP_SSD16xx, u8Colors_2clr},
-    {800, 480, 0, epd426g_init, NULL, NULL, BBEP_4GRAY, BBEP_CHIP_SSD16xx, u8Colors_4gray}, // 2-bit grayscale mode
+    {800, 480, 0, epd426_init_full, epd426_init_fast, epd426_init_part, BBEP_NEEDS_EXTRA_INIT, BBEP_CHIP_SSD16xx, u8Colors_2clr}, // EP426_800x480
+    {800, 480, 0, epd426g_init, NULL, NULL, BBEP_4GRAY | BBEP_NEEDS_EXTRA_INIT, BBEP_CHIP_SSD16xx, u8Colors_4gray}, // EP426_800x480_4GRAY
     {128, 296, 0, epd29r2_init_sequence_full, NULL, NULL, BBEP_RED_SWAPPED | BBEP_3COLOR, BBEP_CHIP_UC81xx, u8Colors_3clr}, // EP29R2_128x296 Adafruit 2.9" 128x296 Tricolor FeatherWing
     {640, 400, 0, epd41_init_sequence_full, NULL, NULL, BBEP_4BPP_DATA, BBEP_CHIP_UC81xx, u8Colors_2clr}, // EP41_640x400 Eink ED040TC1
     {1024, 576, 0, epd81c_init_full, NULL, NULL, BBEP_SPLIT_BUFFER | BBEP_7COLOR, BBEP_CHIP_UC81xx, u8Colors_spectra}, // 8.1" 1024x576 dual cable Spectra 6 EP81_SPECTRA_1024x576
@@ -4101,6 +4101,13 @@ int bbepWritePlane(BBEPDISP *pBBEP, int iPlane, int bInvert)
     if (pBBEP == NULL || pBBEP->ucScreen == NULL || iPlane < PLANE_0 || iPlane > PLANE_FALSE_DIFF) {
         return BBEP_ERROR_BAD_PARAMETER;
     }
+// Some panels need to be told their resolution before you can write data
+// to the internal framebuffer (e.g. 4.26" 800x480), otherwise the writes
+// are ignored.
+    if (pBBEP->iFlags & BBEP_NEEDS_EXTRA_INIT) {
+        bbepSendCMDSequence(pBBEP, pBBEP->pInitFull);
+    }
+
     if (pBBEP->native_width != 792) { // special case of split buffer
         bbepSetAddrWindow(pBBEP, 0,0, pBBEP->native_width, pBBEP->native_height);
     }

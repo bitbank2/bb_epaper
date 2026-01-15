@@ -84,6 +84,13 @@ int BBEPAPER::begin(int iProduct)
 int rc = BBEP_ERROR_BAD_PARAMETER;
 
     switch (iProduct) {
+        case EPD_XTEINK_X4: // DC:4 RST:5 BUSY:6 CS:21 MOSI:10 SCK:8
+            if (setPanelType(EP426_800x480) == BBEP_SUCCESS) {
+                initIO(4,5,6,21,10,8, 10000000);
+                return BBEP_SUCCESS;
+            }
+            break;
+
         case EPD_WAVESHARE_154: // DC:10 RST:9 BUSY:8 CS:11 MOSI:13 SCK:12
             pinMode(6, OUTPUT); // EPD power enable
             digitalWrite(6, LOW);
