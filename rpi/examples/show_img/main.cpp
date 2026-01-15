@@ -1216,10 +1216,10 @@ char szFile[256];
 #ifdef SHOW_DETAILS
         printf("Writing data to EPD...\n");
 #endif
-        if (bbep.capabilities() & BBEP_7COLOR) { // Spectra6
-            iMode = REFRESH_FULL; // the only option for Spectra6
+        if (bbep.capabilities() & (BBEP_7COLOR | BBEP_3COLOR | BBEP_4COLOR | BBEP_4GRAY)) { // if it's not 1-bit, it only supports full refresh
+            iMode = REFRESH_FULL;
         }
-        if (iBpp == 1 && bbep.getPanelType() == iPanel1Bit) {
+        if (iBpp == 1 && !(bbep.capabilities() & (BBEP_3COLOR | BBEP_4COLOR | BBEP_7COLOR | BBEP_4GRAY))) {
             bbep.writePlane((iMode == REFRESH_PARTIAL) ? PLANE_FALSE_DIFF : PLANE_0, iInvert);
             bbep.refresh(iMode);
         } else { // 3-color, 4-color, or 4 gray mode
