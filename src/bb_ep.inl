@@ -3410,9 +3410,11 @@ int bbepRefresh(BBEPDISP *pBBEP, int iMode)
             }
             break;
         case REFRESH_PARTIAL:
-            if (!pBBEP->pInitPart)
-                return BBEP_ERROR_BAD_PARAMETER;
-            bbepSendCMDSequence(pBBEP, pBBEP->pInitPart);
+            if (!pBBEP->pInitPart) { // do a full refresh if partial not defined
+                bbepSendCMDSequence(pBBEP, pBBEP->pInitFull);
+            } else {
+                bbepSendCMDSequence(pBBEP, pBBEP->pInitPart);
+            }
             break;
         default:
             return BBEP_ERROR_BAD_PARAMETER;
