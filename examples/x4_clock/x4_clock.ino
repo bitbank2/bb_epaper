@@ -106,20 +106,11 @@ int iTimeout;
   bbep.fillScreen(BBEP_WHITE);
 } /* setup() */
 
-void lightSleep(uint64_t time_in_ms)
-{
-  esp_sleep_enable_timer_wakeup(time_in_ms * 1000L);
-  esp_light_sleep_start();
-}
-
 void deepSleep(uint64_t time_in_ms)
 {
-//  esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH, ESP_PD_OPTION_OFF); // hibernation mode - only RTC powered
-//  esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_SLOW_MEM, ESP_PD_OPTION_OFF);
-//  esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_FAST_MEM, ESP_PD_OPTION_OFF);
-//  esp_sleep_pd_config(ESP_PD_DOMAIN_XTAL,         ESP_PD_OPTION_OFF);
   esp_sleep_enable_timer_wakeup(time_in_ms * 1000L);
   esp_deep_sleep_enable_gpio_wakeup(1ULL << 3, ESP_GPIO_WAKEUP_GPIO_LOW);  // Power button pin
+  gpio_deep_sleep_hold_en(); // needed to keep the X4's LDO enabled
   esp_deep_sleep_start();
 }
 
@@ -130,6 +121,5 @@ void loop() {
     DisplayTime(true); // otherwise do a partial update
   }
   iCount++;
-  lightSleep(60000);
-  //deepSleep(60000); // sleep for 1 minute
+  deepSleep(60000); // sleep for 1 minute
 } /* loop() */
