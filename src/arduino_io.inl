@@ -83,16 +83,18 @@ void bbepInitIO(BBEPDISP *pBBEP, uint8_t u8DC, uint8_t u8RST, uint8_t u8BUSY, ui
         pinMode(pBBEP->iMOSIPin, OUTPUT);
         pinMode(pBBEP->iCLKPin, OUTPUT);
     } else {
+        if (u8MOSI != 0xff) { // Not shared SPI?
 #ifdef ARDUINO_ARCH_ESP32
-        SPI.begin(pBBEP->iCLKPin, -1, pBBEP->iMOSIPin, -1); //pBBEP->iCSPin);
+            SPI.begin(pBBEP->iCLKPin, -1, pBBEP->iMOSIPin, -1); //pBBEP->iCSPin);
 #else
-        SPI.begin(); // other architectures have fixed SPI pins
+            SPI.begin(); // other architectures have fixed SPI pins
 #endif
-        SPI.beginTransaction(SPISettings(u32Speed, MSBFIRST, SPI_MODE0));
+            SPI.beginTransaction(SPISettings(u32Speed, MSBFIRST, SPI_MODE0));
 #ifdef ARDUINO_ARCH_ESP32
 // For NRF52, you have to leave an 'open' transaction
-        SPI.endTransaction(); // N.B. - if you call beginTransaction() again without a matching endTransaction(), it will hang on ESP32
+            SPI.endTransaction(); // N.B. - if you call beginTransaction() again without a matching endTransaction(), it will hang on ESP32
 #endif
+        }
     }
     pBBEP->is_awake = 1;
 // Before we can start sending pixels, many panels need to know the display resolution

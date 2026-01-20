@@ -518,7 +518,7 @@ class BBEPAPER
     int createVirtual(int iWidth, int iHeight, int iFlags);
     void setAddrWindow(int x, int y, int w, int h);
     int setPanelType(int iPanel);
-    int begin(int iProduct);
+    int begin(int iProduct, bool bSharedSPI = false);
     void setCS2(uint8_t cs);
     bool hasFastRefresh();
     bool hasPartialRefresh();

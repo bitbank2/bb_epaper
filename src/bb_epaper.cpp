@@ -79,14 +79,18 @@ void BBEPAPER::setAddrWindow(int x, int y, int w, int h)
     bbepSetAddrWindow(&_bbep, x, y, w, h);
 }
 
-int BBEPAPER::begin(int iProduct)
+int BBEPAPER::begin(int iProduct, bool bSharedSPI)
 {
 int rc = BBEP_ERROR_BAD_PARAMETER;
 
     switch (iProduct) {
         case EPD_XTEINK_X4: // DC:4 RST:5 BUSY:6 CS:21 MOSI:10 SCK:8
             if (setPanelType(EP426_800x480) == BBEP_SUCCESS) {
-                initIO(4,5,6,21,10,8, 10000000);
+                if (bSharedSPI) { // SPI is already initialized
+                    initIO(4,5,6,21,-1,-1, 10000000);
+                } else {
+                    initIO(4,5,6,21,10,8, 10000000);
+                }
                 return BBEP_SUCCESS;
             }
             break;
