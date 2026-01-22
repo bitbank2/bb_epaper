@@ -243,6 +243,7 @@ enum {
     EP215YR_160x296, // Waveshare 2.15" 4 color
     EP1085_1360x480, // GDEM1085T51
     EP31_240x320, // GDEQ031T10 LilyGo T-Deck Pro
+    EP75YR_800x480, // GDEM075F52
     EP_PANEL_COUNT
 };
 #ifdef FUTURE
