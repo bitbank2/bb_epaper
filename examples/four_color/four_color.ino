@@ -12,19 +12,19 @@ BBEPAPER bbep(EP75YR_800x480); //EP29YR_168x384);
 //#define MOSI_PIN -1
 //#define SCK_PIN -1
 // Seeed Xiao ePaper Display Board (ESP32-S3)
-//#define DC_PIN 4
-//#define BUSY_PIN 3
-//#define CS_PIN 2
-//#define RESET_PIN 1
-//#define SCK_PIN 7
-//#define MOSI_PIN 9
-// TRMNL OG
-#define DC_PIN 5
+#define DC_PIN 10
 #define BUSY_PIN 4
-#define CS_PIN 6
-#define RESET_PIN 10
+#define CS_PIN 44
+#define RESET_PIN 38
 #define SCK_PIN 7
-#define MOSI_PIN 8
+#define MOSI_PIN 9
+// TRMNL OG
+//#define DC_PIN 5
+//#define BUSY_PIN 4
+//#define CS_PIN 6
+//#define RESET_PIN 10
+//#define SCK_PIN 7
+//#define MOSI_PIN 8
 
 void setup()
 {
@@ -37,13 +37,12 @@ void setup()
   bbep.println("bb_epaper v1");
   bbep.setTextColor(BBEP_BLACK);
   bbep.println("B/W/Y/R Test");
-  for (int i=1; i<44; i++) {
-    bbep.drawCircle(bbep.width()/2, 80, i, (i < 22) ? BBEP_BLACK : BBEP_RED);
-  }
- // bbep.loadG5Image(smiley_hearts, 0, 160, 0,0,1.0f);
+  bbep.fillCircle(bbep.width()/2, bbep.height()/2, 66, BBEP_YELLOW);
+  bbep.fillCircle(bbep.width()/2, bbep.height()/2, 44, BBEP_RED);
+  bbep.fillCircle(bbep.width()/2, bbep.height()/2, 22, BBEP_BLACK);
+  bbep.loadG5Image(smiley_hearts, 0, 160, 0,0,1.0f);
   bbep.writePlane();
-  bbep.refresh(REFRESH_FAST);
-  bbep.wait();
+  bbep.refresh(REFRESH_FULL);
   bbep.sleep(DEEP_SLEEP);
 }
 

@@ -690,7 +690,7 @@ int BBEPAPER::testPanelType(void)
 void BBEPAPER::wake(void)
 {
     bbepWakeUp(&_bbep);
-    if (_bbep.iFlags & BBEP_7COLOR) { // need to send before you can send it data
+    if (_bbep.iFlags & (BBEP_7COLOR | BBEP_4COLOR)) { // need to send before you can send it data
         bbepSendCMDSequence(&_bbep, _bbep.pInitFull);
         if (_bbep.iFlags & BBEP_SPLIT_BUFFER) { // dual cable EPD
             _bbep.iCSPin = _bbep.iCS2Pin;

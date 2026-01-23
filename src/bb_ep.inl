@@ -1083,33 +1083,18 @@ const uint8_t epd42yr_init_fast[] PROGMEM =
    0
 };
 
+//
+// This is the 'fast' update of approx 11 seconds
+// The slow (18-25 second) update is not worth implementing
+//
 const uint8_t epd75yr_init_full[] PROGMEM =
 {   
    EPD_RESET,
+   BUSY_WAIT,
    0x03, 0x00, 0x0f, 0x29,
    0x05, 0x06, 0x0f, 0x8b, 0x93, 0xa1, // BTST
    0x02, 0x41, 0x00,
    0x02, 0x50, 0x37,
-   0x03, 0x60, 0x02, 0x02,
-   0x05, UC8151_TRES, 0x03, 0x20, 0x01, 0xe0, // resolution (800x480)
-   0x09, 0x62, 0x98, 0x98, 0x98, 0x75, 0xca, 0xb2, 0x98, 0x7e,
-   0x05, 0x65, 0x00, 0x00, 0x00, 0x00,
-   0x02, 0xe7, 0x1c,
-   0x02, 0xe3, 0x00,
-   0x02, 0xe9, 0x01,
-   0x02, 0x30, 0x08,
-   0x01, 0x04, // power on
-   BUSY_WAIT,
-   0
-};
-
-const uint8_t epd75yr_init_fast[] PROGMEM =
-{
-   EPD_RESET,
-   0x03, 0x00, 0x0f, 0x29, // PSR
-   0x05, 0x06, 0x0f, 0x8b, 0x93, 0xa1, // BTST_P
-   0x02, 0x41, 0x00,
-   0x02, 0x50, 0x37, // CDI
    0x03, 0x60, 0x02, 0x02,
    0x05, UC8151_TRES, 0x03, 0x20, 0x01, 0xe0, // resolution (800x480)
    0x09, 0x62, 0x98, 0x98, 0x98, 0x75, 0xca, 0xb2, 0x98, 0x7e,
@@ -2896,7 +2881,7 @@ const EPD_PANEL panelDefs[] PROGMEM = {
     {160, 296, 0, epd215yr_init_full, epd215yr_init_full, NULL, BBEP_4COLOR, BBEP_CHIP_UC81xx, u8Colors_4clr_v2}, // EP215YR_160x296
     {680, 480, 0, epd1085_init_full, NULL, NULL, 0, BBEP_CHIP_UC81xx, u8Colors_2clr}, // EP1085_1360x480
     {240, 320, 0, epd31_init_full, epd31_init_fast, epd31_init_part, 0, BBEP_CHIP_UC81xx, u8Colors_2clr}, // EP31_240x320
-    {800, 480, 0, epd75yr_init_full, epd75yr_init_fast, NULL, BBEP_4COLOR, BBEP_CHIP_UC81xx, u8Colors_4clr_v2}, // EP75YR_800x480
+    {800, 480, 0, epd75yr_init_full, NULL, NULL, BBEP_NEEDS_EXTRA_INIT | BBEP_4COLOR, BBEP_CHIP_UC81xx, u8Colors_4clr_v2}, // EP75YR_800x480
 };
 //
 // Set the e-paper panel type
@@ -3192,6 +3177,12 @@ void bbepSleep(BBEPDISP *pBBEP, int bDeep)
                bbepCMD2(pBBEP, UC8151_POFF, 0x00); // second controller
                pBBEP->iCSPin = pBBEP->iCS1Pin;
             }
+        } else if (pBBEP->iFlags & BBEP_4COLOR) {
+            bbepCMD2(pBBEP, 0x02, 0x00); // power off
+            bbepWaitBusy(pBBEP);
+            if (bDeep) {
+                bbepCMD2(pBBEP, 0x07, 0xa5); // deep sleep
+            }
         } else {
             bbepCMD2(pBBEP, UC8151_CDI, 0x17); // border floating
             bbepWriteCmd(pBBEP, UC8151_POFF); // power off
@@ -3439,7 +3430,9 @@ int bbepRefresh(BBEPDISP *pBBEP, int iMode)
     
     switch (iMode) {
         case REFRESH_FULL:
-            bbepSendCMDSequence(pBBEP, pBBEP->pInitFull);
+            if (!(pBBEP->iFlags & BBEP_NEEDS_EXTRA_INIT)) { // already sent?
+                bbepSendCMDSequence(pBBEP, pBBEP->pInitFull);
+            }
             if (pBBEP->iFlags & BBEP_SPLIT_BUFFER) {
                // Send the same sequence to the second controller
                pBBEP->iCSPin = pBBEP->iCS2Pin;
@@ -3450,13 +3443,17 @@ int bbepRefresh(BBEPDISP *pBBEP, int iMode)
         case REFRESH_FAST:
             if (!pBBEP->pInitFast) { // fall back to full
                 bbepSendCMDSequence(pBBEP, pBBEP->pInitFull);
-            } else if (!(pBBEP->iFlags & BBEP_4COLOR)) {
+            } else {
                 bbepSendCMDSequence(pBBEP, pBBEP->pInitFast);
             }
             break;
         case REFRESH_PARTIAL:
-            if (!pBBEP->pInitPart) { // do a full refresh if partial not defined
-                bbepSendCMDSequence(pBBEP, pBBEP->pInitFull);
+            if (!pBBEP->pInitPart) { // Do a fast or full refresh if partial not defined
+                if (pBBEP->pInitFast) {
+                    bbepSendCMDSequence(pBBEP, pBBEP->pInitFast);
+                } else { // fall back to full
+                    bbepSendCMDSequence(pBBEP, pBBEP->pInitFull);
+                }
             } else {
                 bbepSendCMDSequence(pBBEP, pBBEP->pInitPart);
             }
@@ -3788,10 +3785,10 @@ int tx, ty, iPitch;
 uint8_t *s, *d, uc, uc1, ucMask;
 uint8_t *pBuffer;
 
-    if (pBBEP->pInitFast) { // fast mode on 4-color displays
-     // requires sending the init sequence BEFORE the image data
-        bbepSendCMDSequence(pBBEP, pBBEP->pInitFast);
-    }
+//    if (pBBEP->pInitFast) { // fast mode on 4-color displays
+//     // requires sending the init sequence BEFORE the image data
+//        bbepSendCMDSequence(pBBEP, pBBEP->pInitFast);
+//    }
     pBuffer = pBBEP->ucScreen;
     if (ucCMD) {
         bbepWriteCmd(pBBEP, ucCMD); // start write
