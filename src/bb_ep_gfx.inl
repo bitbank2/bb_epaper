@@ -1380,7 +1380,7 @@ int bbepWriteStringCustom(BBEPDISP *pBBEP, void *pFont, int x, int y, char *szMs
                     u8 = *s++;
                     u8Count = 8;
                     if (ty >= 0) {
-                        for (tx=x; tx<x+tw; tx++) {
+                        for (tx=dx; tx<dx+tw; tx++) {
                             if (u8 & 0x80) {
                                 if (iColor != BBEP_TRANSPARENT) {
                                     (*pBBEP->pfnSetPixelFast)(pBBEP, tx, ty, iColor);
