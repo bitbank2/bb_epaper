@@ -71,7 +71,8 @@ const char *szPanels[] = {
     "EP213Z_122x250_4GRAY", "EP154Z_152x152", "EP579_792x272", // 51-53
     "EP213YR_122x250", "EP37YR_240x416", "EP35YR_184x384", // 54-56
     "EP397YR_800x480", "EP154YR_200x200", "EP266YR2_184x360", // 57-59
-    "EP42YR_400x300", "EP215YR_160x296", // 60-62
+    "EP42YR_400x300", "EP215YR_160x296", "EP1085_1360x480", // 60-62 
+    "EP31_240x320", "EP75YR_800x480", // 63-64
     NULL // must be last entry
 };
 // DC, RST, BUSY, CS, PWR
@@ -361,7 +362,7 @@ int ConvertBpp(uint8_t *pBMP, int w, int h, int iBpp, uint8_t *palette)
                     break;
 		case 2:
 		    if (palette) {
-			pPal = &palette[(s[0] >> ((3-(x&3))*2)) & 3];
+			pPal = &palette[((s[0] >> ((3-(x&3))*2)) & 3)*3];
 			r = pPal[0]; g = pPal[1]; b = pPal[2];
 		    } else {
 			r = g = b = (s[0] << ((x&3)*2)) & 0xc0;
@@ -370,7 +371,7 @@ int ConvertBpp(uint8_t *pBMP, int w, int h, int iBpp, uint8_t *palette)
 		    break;
                 case 1:
                     if (palette) {
-                        pPal = &palette[(s[0] >> (7-(x&7))) & 1];
+                        pPal = &palette[((s[0] >> (7-(x&7))) & 1)*3];
                         r = pPal[0]; g = pPal[1]; b = pPal[2];
                     } else {
                         r = g = b = ((s[0] << (x&7)) & 0x80);
@@ -1027,7 +1028,7 @@ char szFile[256];
 			 iPanel1Bit = FindItemName(szPanels, pItem->valuestring, "1-bit panel");
                          if (iPanel1Bit >= 0) {
 #ifdef SHOW_DETAILS
-                             printf("panel1bit = %s\n", szPanels[iPanel1Bit]);
+                             printf("panel1bit = %d (%s)\n", iPanel1Bit, szPanels[iPanel1Bit]);
 #endif
                          }
 		    }
@@ -1036,7 +1037,7 @@ char szFile[256];
 			 iPanel2Bit = FindItemName(szPanels, pItem->valuestring, "2-bit panel");
                          if (iPanel2Bit >= 0) {
 #ifdef SHOW_DETAILS          
-                             printf("panel2bit = %s\n", szPanels[iPanel2Bit]);
+                             printf("panel2bit = %d (%s)\n", iPanel2Bit, szPanels[iPanel2Bit]);
 #endif
                          }
 		    }
