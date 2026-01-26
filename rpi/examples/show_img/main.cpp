@@ -202,6 +202,13 @@ unsigned char GetBWYRPixel(int r, int g, int b)
 // Spectra6 color indices by the setPixel() method.
 //
 const int iSpectraRGB[] = { // r, g, b
+//    18,  12,   16,  // black
+//    165, 165,  165, // white
+//    150, 131,  39,  // yellow
+//    82,  24,   10,  // red
+//    40,  72,   123, // blue
+//    89,  104,  63,  // green
+
     0, 0, 0, // black = 0
     192,192,192, // white = 1
     192,192,0, // yellow = 2
