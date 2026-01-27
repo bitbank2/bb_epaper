@@ -12,19 +12,19 @@ BBEPAPER bbep(EP75YR_800x480); //EP29YR_168x384);
 //#define MOSI_PIN -1
 //#define SCK_PIN -1
 // Seeed Xiao ePaper Display Board (ESP32-S3)
-#define DC_PIN 10
-#define BUSY_PIN 4
-#define CS_PIN 44
-#define RESET_PIN 38
-#define SCK_PIN 7
-#define MOSI_PIN 9
-// TRMNL OG
-//#define DC_PIN 5
+//#define DC_PIN 10
 //#define BUSY_PIN 4
-//#define CS_PIN 6
-//#define RESET_PIN 10
+//#define CS_PIN 44
+//#define RESET_PIN 38
 //#define SCK_PIN 7
-//#define MOSI_PIN 8
+//#define MOSI_PIN 9
+// TRMNL OG
+#define DC_PIN 5
+#define BUSY_PIN 4
+#define CS_PIN 6
+#define RESET_PIN 10
+#define SCK_PIN 7
+#define MOSI_PIN 8
 
 void setup()
 {
@@ -32,6 +32,8 @@ void setup()
   bbep.allocBuffer(); // use a back buffer
  // bbep.setRotation(270);
   bbep.fillScreen(BBEP_WHITE);
+  bbep.writePlane();
+  bbep.refresh(REFRESH_FULL);
   bbep.setTextColor(BBEP_RED);
   bbep.setFont(FONT_12x16);
   bbep.println("bb_epaper v1");
