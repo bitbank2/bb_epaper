@@ -768,13 +768,12 @@ int bbepLoadG5_2Bit(BBEPDISP *pBBEP, const uint8_t *pG5, int x, int y, float fSc
 //
 // Load a 1-bpp Group5 compressed bitmap
 // Pass the pointer to the beginning of the G5 file
-// If the FG == BG color, and there is a back buffer, it will
-// draw the 1's bits as the FG color and leave
-// the background (0 pixels) unchanged - aka transparent.
+// The foreground or background color can be set to transparent
 //
 int bbepLoadG5(BBEPDISP *pBBEP, const uint8_t *pG5, int x, int y, int iFG, int iBG, float fScale)
 {
-    uint16_t rc, tx, ty, cx, cy, dx, dy, size;
+    int rc, tx, ty, cx, cy, dx, dy;
+    uint16_t size;
     int width, height;
     BB_BITMAP *pbbb;
     uint32_t u32Frac, u32XAcc, u32YAcc; // integer fraction vars
@@ -848,10 +847,10 @@ int bbepLoadG5(BBEPDISP *pBBEP, const uint8_t *pG5, int x, int y, int iFG, int i
             for (tx=x; tx<x+dx && tx < width; tx++) {
                 if (u8 & src_mask) {
                     if (iFG != BBEP_TRANSPARENT)
-                        (*pBBEP->pfnSetPixelFast)(pBBEP, tx, ty, (uint8_t)iFG);
+                        (*pBBEP->pfnSetPixel)(pBBEP, tx, ty, (uint8_t)iFG);
                 } else {
                     if (iBG != BBEP_TRANSPARENT)
-                        (*pBBEP->pfnSetPixelFast)(pBBEP, tx, ty, (uint8_t)iBG);
+                        (*pBBEP->pfnSetPixel)(pBBEP, tx, ty, (uint8_t)iBG);
                 }
                 u32XAcc += u32Frac;
                 while (u32XAcc >= 65536) {

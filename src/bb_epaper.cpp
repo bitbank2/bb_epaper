@@ -85,7 +85,8 @@ int rc = BBEP_ERROR_BAD_PARAMETER;
 
     switch (iProduct) {
         case EPD_XTEINK_X4: // DC:4 RST:5 BUSY:6 CS:21 MOSI:10 SCK:8
-            if (setPanelType(EP426_800x480) == BBEP_SUCCESS) {
+        case EPD_XTEINK_X4_4GRAY:
+            if (setPanelType((iProduct == EPD_XTEINK_X4) ? EP426_800x480:EP426_800x480_4GRAY) == BBEP_SUCCESS) {
                 if (bSharedSPI) { // SPI is already initialized
                     initIO(4,5,6,21,-1,-1, 10000000);
                 } else {
@@ -96,9 +97,10 @@ int rc = BBEP_ERROR_BAD_PARAMETER;
             break;
 
         case EPD_WAVESHARE_154: // DC:10 RST:9 BUSY:8 CS:11 MOSI:13 SCK:12
+        case EPD_WAVESHARE_154_4GRAY:
             pinMode(6, OUTPUT); // EPD power enable
             digitalWrite(6, LOW);
-            if (setPanelType(EP154_200x200) == BBEP_SUCCESS) {
+            if (setPanelType((iProduct == EPD_WAVESHARE_154) ? EP154_200x200:EP154_200x200_4GRAY) == BBEP_SUCCESS) {
                 initIO(10, 9, 8, 11, 13, 12, 10000000);
                 return BBEP_SUCCESS;
             }
@@ -183,9 +185,10 @@ int rc = BBEP_ERROR_BAD_PARAMETER;
             }
             break;
         case EPD_CROWPANEL42: // DC:46 CS:45 RST:47 BUSY:48 MOSI:11 SCK:12
+        case EPD_CROWPANEL42_4GRAY:
             pinMode(7, OUTPUT); 
             digitalWrite(7, HIGH); // screen power on
-            if (setPanelType(EP42B_400x300) == BBEP_SUCCESS) {
+            if (setPanelType((iProduct == EPD_CROWPANEL42) ? EP42B_400x300:EP42B_400x300_4GRAY) == BBEP_SUCCESS) {
                 initIO(46, 47, 48, 45, 11, 12, 12000000);
                 return BBEP_SUCCESS;
             }
