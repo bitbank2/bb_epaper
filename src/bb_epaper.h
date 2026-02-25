@@ -509,7 +509,7 @@ BB_SET_PIXEL *pfnSetPixel;
 BB_SET_PIXEL_FAST *pfnSetPixelFast;
 BB_SET_GPIO *pfnSetGPIO;
 BB_GET_GPIO *pfnGetGPIO;
-BB_SPI_WRITE *pfnSPIWrite;
+BB_SPI_WRITE *pfnWrite;
 } BBEPDISP;
 
 #ifdef __cplusplus
@@ -536,7 +536,7 @@ class BBEPAPER
     void setCS2(uint8_t cs);
     bool hasFastRefresh();
     bool hasPartialRefresh();
-    void setWriteFn(BB_SPI_WRITE *pWrite) {_bbep.pfnSPIWrite = pWrite;}
+    void setWritefn(BB_SPI_WRITE *pWrite) {_bbep.pfnWrite = pWrite;}
     void setSetGPIOfn(BB_SET_GPIO *pSet) {_bbep.pfnSetGPIO = pSet;}
     void setGetGPIOfn(BB_GET_GPIO *pGet) {_bbep.pfnGetGPIO = pGet;}
 #ifndef __LINUX__
