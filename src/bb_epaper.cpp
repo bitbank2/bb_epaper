@@ -39,7 +39,9 @@
 #ifdef __LINUX__
 #include "rpi_io.inl"
 #else
-#ifdef ARDUINO
+#ifdef ESPHOME_VERSION
+#include "esphome_io.inl" // I/O for the ESPHome / HomeAssistant project
+#elif defined( ARDUINO )
 #include "arduino_io.inl" // I/O (non-portable) code is in here
 #elif !defined(__MACH__)
 #include "../esp_idf/esp_generic.inl" // ESP-IDF specific

@@ -479,6 +479,10 @@ enum {
 typedef int (BB_SET_PIXEL)(void *pBBEP, int x, int y, unsigned char color);
 // Fast pixel drawing function pointer (no boundary checking)
 typedef void (BB_SET_PIXEL_FAST)(void *pBBEP, int x, int y, unsigned char color);
+// Replacement I/O function pointers
+typedef void (BB_SET_GPIO)(uint8_t pin, uint8_t value);
+typedef uint8_t (BB_GET_GPIO)(uint8_t pin);
+typedef void (BB_SPI_WRITE)(const uint8_t *pData, int iLen);
 
 typedef struct bbepstruct
 {
@@ -503,6 +507,9 @@ const uint8_t *pInitFast; // fast update init sequence
 const uint8_t *pInitPart; // partial update init sequence
 BB_SET_PIXEL *pfnSetPixel;
 BB_SET_PIXEL_FAST *pfnSetPixelFast;
+BB_SET_GPIO *pfnSetGPIO;
+BB_GET_GPIO *pfnGetGPIO;
+BB_SPI_WRITE *pfnSPIWrite;
 } BBEPDISP;
 
 #ifdef __cplusplus
@@ -521,6 +528,7 @@ class BBEPAPER
   public:
     BBEPAPER(void) { memset(&_bbep, 0, sizeof(_bbep)); }
     BBEPAPER(int iPanel);
+    BBEPDISP _bbep;
     int createVirtual(int iWidth, int iHeight, int iFlags);
     void setAddrWindow(int x, int y, int w, int h);
     int setPanelType(int iPanel);
@@ -528,6 +536,9 @@ class BBEPAPER
     void setCS2(uint8_t cs);
     bool hasFastRefresh();
     bool hasPartialRefresh();
+    void setWriteFn(BB_SPI_WRITE *pWrite) {_bbep.pfnSPIWrite = pWrite;}
+    void setSetGPIOfn(BB_SET_GPIO *pSet) {_bbep.pfnSetGPIO = pSet;}
+    void setGetGPIOfn(BB_GET_GPIO *pGet) {_bbep.pfnGetGPIO = pGet;}
 #ifndef __LINUX__
 #ifdef ARDUINO
 #ifdef SCK
@@ -620,7 +631,6 @@ class BBEPAPER
 #endif // !ARDUINO
 
   private:
-    BBEPDISP _bbep;
     int _panel_type;
     uint32_t _tar_memaddr   = 0x001236E0;
     uint16_t _dev_memaddr_l = 0x36E0;
