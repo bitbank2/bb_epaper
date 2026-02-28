@@ -39,7 +39,7 @@
 #ifdef __LINUX__
 #include "rpi_io.inl"
 #else
-#ifdef ESPHOME_VERSION
+#ifdef ESPHOME_LOG_LEVEL
 #include "esphome_io.inl" // I/O for the ESPHome / HomeAssistant project
 #elif defined( ARDUINO )
 #include "arduino_io.inl" // I/O (non-portable) code is in here
