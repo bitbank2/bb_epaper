@@ -63,6 +63,14 @@ void bbepInitIO(BBEPDISP *pBBEP, uint8_t u8DC, uint8_t u8RST, uint8_t u8BUSY, ui
     pBBEP->iRSTPin = u8RST;
     pBBEP->iBUSYPin = u8BUSY;
 
+// If we're here it's because the begin() method is being called
+// we need to set up the I/O using the Arduino API
+
+    pinMode(u8DC, OUTPUT);
+    pinMode(u8CS, OUTPUT);
+    pinMode(u8BUSY, INPUT);
+    pinMode(u8RST, OUTPUT);
+
     if (pBBEP->iRSTPin != 0xff) {
         (*pBBEP->pfnSetGPIO)(pBBEP->iRSTPin, LOW);
         delay(100);
@@ -71,6 +79,10 @@ void bbepInitIO(BBEPDISP *pBBEP, uint8_t u8DC, uint8_t u8RST, uint8_t u8BUSY, ui
     }
     pBBEP->iSpeed = u32Speed;
     (*pBBEP->pfnSetGPIO)(pBBEP->iCSPin, HIGH); // manually control the CS pin
+    SPI.begin(u8SCK, -1, u8MOSI, -1);
+    SPI.beginTransaction(SPISettings(u32Speed, MSBFIRST, SPI_MODE0));
+    SPI.endTransaction(); // we just needed to set the speed
+
     pBBEP->is_awake = 1;
 // Before we can start sending pixels, many panels need to know the display resolution
     bbepSendCMDSequence(pBBEP, pBBEP->pInitFull);
