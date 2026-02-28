@@ -96,7 +96,10 @@ void bbepInitIO(BBEPDISP *pBBEP, uint8_t u8DC, uint8_t u8RST, uint8_t u8BUSY, ui
 #endif
         }
     }
-    pBBEP->is_awake = 1;
+    if (!pBBEP->is_awake) {
+        bbepWakeUp(pBBEP);
+        pBBEP->is_awake = 1;
+    }
 // Before we can start sending pixels, many panels need to know the display resolution
     bbepSendCMDSequence(pBBEP, pBBEP->pInitFull);
     if (pBBEP->iFlags & BBEP_7COLOR) { // need to send before you can send it data
