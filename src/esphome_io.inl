@@ -21,6 +21,7 @@
 //
 #ifndef __ESPHOME_IO__
 #define __ESPHOME_IO__
+#include <SPI.h>
 
 // foreward references
 void bbepWakeUp(BBEPDISP *pBBEP);
