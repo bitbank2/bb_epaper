@@ -98,6 +98,14 @@ int rc = BBEP_ERROR_BAD_PARAMETER;
             }
             break;
 
+        case EPD_WAVESHARE_397: // DC:9 RST:46 BUSY:3 CS:10 MOSI:12 SCK:11 
+        case EPD_WAVESHARE_397_4GRAY:
+            if (setPanelType((iProduct == EPD_WAVESHARE_397) ? EP397_800x480:EP397_800x480_4GRAY) == BBEP_SUCCESS) {
+                initIO(9, 46, 3, 10, 12, 11, 10000000); 
+                return BBEP_SUCCESS;
+            }
+            break;
+
         case EPD_WAVESHARE_154: // DC:10 RST:9 BUSY:8 CS:11 MOSI:13 SCK:12
         case EPD_WAVESHARE_154_4GRAY:
             pinMode(6, OUTPUT); // EPD power enable

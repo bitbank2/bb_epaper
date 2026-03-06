@@ -3022,6 +3022,72 @@ const uint8_t epd75_gray_init[] PROGMEM = {
     0
 }; // 2-bit grayscale mode
 
+const uint8_t epd397g_init_full[] PROGMEM = {
+    1, 0x12, // soft reset
+    BUSY_WAIT, 
+    2, 0x18, 0x80, // enable temp sensor
+    6, 0x0c, 0xae, 0xc7, 0xc3, 0xc0, 0x80,
+    4, 0x01, 0xdf, 0x01, 0x02, // driver output control (height-1)
+    2, 0x3c, 0x01, // border color
+    2, 0x11, 0x01, // data entry mode
+    5, 0x44, 0x00, 0x00, 0x1f, 0x03, // set RAM x start/end
+    5, 0x45, 0xdf, 0x01, 0x00, 0x00, // set RAM y start/end
+    3, 0x4e, 0x00, 0x00, // RAM x address
+    3, 0x4f, 0x00, 0x00, // RAM y address
+    BUSY_WAIT,
+    2, 0x1a, 0x5a, // 4-gray mode
+    0 // end
+};
+
+const uint8_t epd397_init_full[] PROGMEM = {
+    1, 0x12, // soft reset
+    BUSY_WAIT,
+    2, 0x18, 0x80, // enable temp sensor
+    6, 0x0c, 0xae, 0xc7, 0xc3, 0xc0, 0x80,
+    4, 0x01, 0xdf, 0x01, 0x02, // driver output control (height-1)
+    2, 0x3c, 0x01, // border color
+    2, 0x11, 0x01, // data entry mode
+    5, 0x44, 0x00, 0x00, 0x1f, 0x03, // set RAM x start/end
+    5, 0x45, 0xdf, 0x01, 0x00, 0x00, // set RAM y start/end
+    3, 0x4e, 0x00, 0x00, // RAM x address
+    3, 0x4f, 0x00, 0x00, // RAM y address
+    BUSY_WAIT,
+    0 // end
+};
+
+const uint8_t epd397_init_fast[] PROGMEM = {
+    1, 0x12, // soft reset
+    BUSY_WAIT,
+    6, 0x0c, 0xae, 0xc7, 0xc3, 0xc0, 0x80,
+    4, 0x01, 0xdf, 0x01, 0x02, // driver output control (height-1)
+    2, 0x3c, 0x01, // border color
+    2, 0x11, 0x01, // data entry mode
+    5, 0x44, 0x00, 0x00, 0x1f, 0x03, // set RAM x start/end
+    5, 0x45, 0xdf, 0x01, 0x00, 0x00, // set RAM y start/end
+    3, 0x4e, 0x00, 0x00, // RAM x address
+    3, 0x4f, 0x00, 0x00, // RAM y address
+    BUSY_WAIT,
+    2, 0x18, 0x80,
+    2, 0x1a, 0x6a, // fast mode (1.5s)
+    0 // end
+};
+
+const uint8_t epd397_init_part[] PROGMEM = {
+    1, 0x12, // soft reset
+    BUSY_WAIT,
+    2, 0x18, 0x80,
+    6, 0x0c, 0xae, 0xc7, 0xc3, 0xc0, 0x80,
+    4, 0x01, 0xdf, 0x01, 0x02, // driver output control (height-1)
+    2, 0x3c, 0x80, // border color
+    2, 0x11, 0x01, // data entry mode
+    5, 0x44, 0x00, 0x00, 0x1f, 0x03, // set RAM x start/end
+    5, 0x45, 0xdf, 0x01, 0x00, 0x00, // set RAM y start/end
+    3, 0x4e, 0x00, 0x00, // RAM x address
+    3, 0x4f, 0x00, 0x00, // RAM y address
+    BUSY_WAIT,
+    0 // end
+};
+
 const uint8_t epd75_init_sequence_full[] PROGMEM = {
     5, UC8151_PWR, 0x07, 0x07, 0x3f, 0x3f,
     1, UC8151_PON,
@@ -3284,6 +3350,8 @@ const EPD_PANEL panelDefs[] PROGMEM = {
     {800, 480, 0, epd75yr_init_full, NULL, NULL, BBEP_NEEDS_EXTRA_INIT | BBEP_4COLOR, BBEP_CHIP_UC81xx, u8Colors_4clr_v2}, // EP75YR_800x480
     {200, 200, 0, epd154g_init_full, epd154g_init_fast, NULL, BBEP_4GRAY, BBEP_CHIP_SSD16xx, u8Colors_4gray}, // EP154_200x200
     {400, 300, 0, epd42b_init_gray, epd42b_init_gray_fast, NULL, BBEP_4GRAY, BBEP_CHIP_SSD16xx, u8Colors_4gray}, // EP42B_400x300_4GRAY
+    {800, 480, 0, epd397_init_full, epd397_init_fast, epd397_init_part, 0, BBEP_CHIP_SSD16xx, u8Colors_2clr}, // EP397_800x480
+    {800, 480, 0, epd397g_init_full, NULL, NULL, BBEP_4GRAY, BBEP_CHIP_SSD16xx, u8Colors_4gray}, // EP397_800x480_4GRAY
 };
 //
 // Set the e-paper panel type
@@ -3473,7 +3541,7 @@ void bbepSetAddrWindow(BBEPDISP *pBBEP, int x, int y, int cx, int cy)
     int i, tx, ty;
     
 // DEBUG - for TRMNL mini 180 degree rotated display
-    if (pBBEP->type == EP426_800x480 || pBBEP->type == EP426_800x480_4GRAY) return;
+    if (pBBEP->type == EP397_800x480 || pBBEP->type == EP397_800x480_4GRAY || pBBEP->type == EP426_800x480 || pBBEP->type == EP426_800x480_4GRAY) return;
     if (!pBBEP) return;
     if (pBBEP->iFlags & (BBEP_4COLOR | BBEP_7COLOR)) return;
     
@@ -3882,7 +3950,7 @@ int bbepRefresh(BBEPDISP *pBBEP, int iMode)
         const uint8_t u8CMD[4] = {0xf7, 0xc7, 0xff, 0xc0}; // normal, fast, partial, partial2
         const uint8_t u8CMDz[4] = {0xf4, 0xc7, 0xfc, 0}; // special set for SSD1680
         const uint8_t u8CMDz2[4] = {0xf4, 0xc7, 0xdc, 0}; // special set #2 for SSD1680
- //       const uint8_t u8CMDz3[4] = {0xf7, 0xc7, 0xdc, 0}; // special set #3
+        const uint8_t u8CMDz3[4] = {0xf7, 0xd7, 0xff, 0}; // special set #3
         if (pBBEP->iFlags & (BBEP_4GRAY | BBEP_3COLOR | BBEP_4COLOR)) {
             iMode = REFRESH_FAST;
         } // 3/4-color = 0xc7
@@ -3893,6 +3961,8 @@ int bbepRefresh(BBEPDISP *pBBEP, int iMode)
             bbepCMD2(pBBEP, SSD1608_DISP_CTRL2, u8CMDz[iMode]);
         } else if (pBBEP->type == EP154Z_152x152) {
             bbepCMD2(pBBEP, SSD1608_DISP_CTRL2, u8CMDz2[iMode]);
+        } else if (pBBEP->type == EP397_800x480 || pBBEP->type == EP397_800x480_4GRAY) {
+            bbepCMD2(pBBEP, SSD1608_DISP_CTRL2, u8CMDz3[iMode]);
         } else if (pBBEP->type == EP42B_400x300_4GRAY) {
             bbepCMD2(pBBEP, SSD1608_DISP_CTRL2, 0xcf); // SSD1683 does things differently :(
         } else {
