@@ -3350,8 +3350,8 @@ const EPD_PANEL panelDefs[] PROGMEM = {
     {800, 480, 0, epd75yr_init_full, NULL, NULL, BBEP_NEEDS_EXTRA_INIT | BBEP_4COLOR, BBEP_CHIP_UC81xx, u8Colors_4clr_v2}, // EP75YR_800x480
     {200, 200, 0, epd154g_init_full, epd154g_init_fast, NULL, BBEP_4GRAY, BBEP_CHIP_SSD16xx, u8Colors_4gray}, // EP154_200x200
     {400, 300, 0, epd42b_init_gray, epd42b_init_gray_fast, NULL, BBEP_4GRAY, BBEP_CHIP_SSD16xx, u8Colors_4gray}, // EP42B_400x300_4GRAY
-    {800, 480, 0, epd397_init_full, epd397_init_fast, epd397_init_part, 0, BBEP_CHIP_SSD16xx, u8Colors_2clr}, // EP397_800x480
-    {800, 480, 0, epd397g_init_full, NULL, NULL, BBEP_4GRAY, BBEP_CHIP_SSD16xx, u8Colors_4gray}, // EP397_800x480_4GRAY
+    {800, 480, 0, epd397_init_full, epd397_init_fast, epd397_init_part, BBEP_NEEDS_EXTRA_INIT, BBEP_CHIP_SSD16xx, u8Colors_2clr}, // EP397_800x480
+    {800, 480, 0, epd397g_init_full, NULL, NULL, BBEP_4GRAY | BBEP_NEEDS_EXTRA_INIT, BBEP_CHIP_SSD16xx, u8Colors_4gray}, // EP397_800x480_4GRAY
 };
 //
 // Set the e-paper panel type
