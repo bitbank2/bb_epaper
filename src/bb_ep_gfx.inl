@@ -1234,6 +1234,8 @@ int bbepWriteStringCustom(BBEPDISP *pBBEP, void *pFont, int x, int y, char *szMs
     signed int n;
     unsigned int c, bInvert = 0;
     uint8_t *s, uc0, uc1;
+    uint32_t u32Acc, u32Frac=0;
+    int iSkew, yOffset;
     BB_FONT *pBBF;
     BB_FONT_SMALL *pBBFS;
     BB_GLYPH *pGlyph;
@@ -1280,6 +1282,10 @@ int bbepWriteStringCustom(BBEPDISP *pBBEP, void *pFont, int x, int y, char *szMs
         first = pgm_read_byte(&pBBFS->first);
         last = pgm_read_byte(&pBBFS->last);
     }
+    // Convert character skew (italicisation) to integer fraction for speed
+    if (pBBEP->italic) {
+        u32Frac = 16384; // 0.25f
+    }
     if (x == CENTER_X) { // center the string on the e-paper
         dx = i = 0;
         while (szExtMsg[i]) {
@@ -1310,7 +1316,7 @@ int bbepWriteStringCustom(BBEPDISP *pBBEP, void *pFont, int x, int y, char *szMs
     }
     i = 0;
     while (szExtMsg[i] && x < pBBEP->width && y < pBBEP->height) {
-        int16_t xOffset, yOffset;
+        int16_t xOffset;
         uint32_t u32Offset, u32Rot, xAdvance;
         c = szExtMsg[i++];
         if (c < first || c > last) // undefined character
@@ -1372,8 +1378,22 @@ int bbepWriteStringCustom(BBEPDISP *pBBEP, void *pFont, int x, int y, char *szMs
 #ifndef NO_RAM
                 tw = w;
                 if (x+tw > pBBEP->width) tw = pBBEP->width - x; // clip to right edge
+                if (yOffset < 0) {
+                    u32Acc = -yOffset * u32Frac;
+                    iSkew = (u32Acc >> 16);
+                } else {
+                    u32Acc = yOffset * u32Frac;
+                    iSkew = 0 - (u32Acc >> 16);
+                }
+                u32Acc &= 65535;
                 for (ty=dy; ty<end_y && ty < pBBEP->height; ty++) {
                     uint8_t u8, u8Count;
+                   u32Acc += u32Frac;
+                   // handle skew (italicisation)
+                   if (u32Acc >= 65536) { // crossed 1?
+                       u32Acc -= 65536;
+                       iSkew--;
+                   }
                     g5_decode_line(&g5dec, u8Cache);
                     s = u8Cache;
                     u8 = *s++;
@@ -1382,10 +1402,10 @@ int bbepWriteStringCustom(BBEPDISP *pBBEP, void *pFont, int x, int y, char *szMs
                         for (tx=dx; tx<dx+tw; tx++) {
                             if (u8 & 0x80) {
                                 if (iColor != BBEP_TRANSPARENT) {
-                                    (*pBBEP->pfnSetPixelFast)(pBBEP, tx, ty, iColor);
+                                    (*pBBEP->pfnSetPixel)(pBBEP, tx+iSkew, ty, iColor);
                                 }
                             } else if (iBG != BBEP_TRANSPARENT) {
-                                (*pBBEP->pfnSetPixelFast)(pBBEP, tx, ty, iBG);
+                                (*pBBEP->pfnSetPixel)(pBBEP, tx+iSkew, ty, iBG);
                             }
                             u8 <<= 1;
                             u8Count--;

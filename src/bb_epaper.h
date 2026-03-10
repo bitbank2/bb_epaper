@@ -490,7 +490,7 @@ typedef void (BB_SPI_WRITE)(const uint8_t *pData, int iLen);
 
 typedef struct bbepstruct
 {
-uint8_t wrap, type, chip_type, last_error;
+uint8_t wrap, type, chip_type, last_error, italic;
 uint8_t *ucScreen;
 int iCursorX, iCursorY;
 int width, height, native_width, native_height;
@@ -560,6 +560,7 @@ class BBEPAPER
     void startWrite(int iPlane);
     void writeData(uint8_t *pData, int iLen);
     void writeCmd(uint8_t u8Cmd);
+    void writeCmd2(uint8_t u8Cmd, uint8_t u8Param);
     int refresh(int iMode, bool bWait = true);
     void setPasses(int iPasses);
     void setBuffer(uint8_t *pBuffer);
@@ -583,6 +584,7 @@ class BBEPAPER
     void fillRect(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t color);
     void setTextWrap(bool bWrap);
     void setTextColor(int iFG, int iBG = BBEP_TRANSPARENT);
+    void setItalic(bool bItalic);
     void setCursor(int x, int y);
     int loadBMP(const uint8_t *pBMP, int x, int y, int iFG, int iBG);
     int loadBMP3(const uint8_t *pBMP, int x, int y);

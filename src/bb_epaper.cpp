@@ -374,6 +374,11 @@ void BBEPAPER::setTextWrap(bool bWrap)
   _bbep.wrap = (int)bWrap;
 }
 
+void BBEPAPER::setItalic(bool bItalic)
+{
+   _bbep.italic = (uint8_t)bItalic;
+} /* setItalic() */
+
 bool BBEPAPER::hasFastRefresh()
 {
     return (_bbep.pInitFast != NULL);
@@ -763,6 +768,11 @@ void BBEPAPER::writeData(uint8_t *pData, int iLen)
 {
    bbepWriteData(&_bbep, pData, iLen);
 } /* writeData() */
+
+void BBEPAPER::writeCmd2(uint8_t u8Cmd, uint8_t u8Param)
+{
+    bbepCMD2(&_bbep, u8Cmd, u8Param);
+} /* writeCmd2() */
 
 void BBEPAPER::writeCmd(uint8_t u8Cmd)
 {
