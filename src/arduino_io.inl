@@ -68,10 +68,7 @@ void bbepInitIO(BBEPDISP *pBBEP, uint8_t u8DC, uint8_t u8RST, uint8_t u8BUSY, ui
     pinMode(pBBEP->iDCPin, OUTPUT);
     if (pBBEP->iRSTPin != 0xff) {
         pinMode(pBBEP->iRSTPin, OUTPUT);
-        digitalWrite(pBBEP->iRSTPin, LOW);
-        delay(100);
         digitalWrite(pBBEP->iRSTPin, HIGH);
-        delay(100);
     }
     if (pBBEP->iBUSYPin != 0xff) {
         pinMode(pBBEP->iBUSYPin, INPUT);
@@ -96,7 +93,6 @@ void bbepInitIO(BBEPDISP *pBBEP, uint8_t u8DC, uint8_t u8RST, uint8_t u8BUSY, ui
 #endif
         }
     }
-    pBBEP->is_awake = 1;
 // Before we can start sending pixels, many panels need to know the display resolution
     bbepSendCMDSequence(pBBEP, pBBEP->pInitFull);
     if (pBBEP->iFlags & BBEP_7COLOR) { // need to send before you can send it data
