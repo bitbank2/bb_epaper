@@ -1258,9 +1258,6 @@ int bbepWriteStringCustom(BBEPDISP *pBBEP, void *pFont, int x, int y, char *szMs
         pBBF = NULL;
     }
 
-    if (iColor != BBEP_TRANSPARENT) {
-        iColor = pBBEP->pColorLookup[iColor & 0xf]; // translate the color for this display type
-    }
     if (szMsg[1] == 0 && (szMsg[0] & 0x80)) { // single byte means we're coming from the Arduino write() method with pre-converted extended ASCII
         szExtMsg[0] = szMsg[0]; szExtMsg[1] = 0;
     } else {
@@ -1268,9 +1265,6 @@ int bbepWriteStringCustom(BBEPDISP *pBBEP, void *pFont, int x, int y, char *szMs
     }
     iBG = pBBEP->iBG;
     if (iBG == -1) iBG = BBEP_TRANSPARENT; // -1 = don't care
-    if (iBG != BBEP_TRANSPARENT) {
-        iBG = pBBEP->pColorLookup[iBG & 0xf];
-    }
     if (x == -1)
         x = pBBEP->iCursorX;
     if (y == -1)

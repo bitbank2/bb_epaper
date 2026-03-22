@@ -392,7 +392,7 @@ bool BBEPAPER::hasPartialRefresh()
 void BBEPAPER::setTextColor(int iFG, int iBG)
 {
     _bbep.iFG = iFG;
-    _bbep.iBG = (iBG == -1) ? iFG : iBG;
+    _bbep.iBG = iBG;
 } /* setTextColor() */
 
 void BBEPAPER::setCursor(int x, int y)
