@@ -61,7 +61,8 @@ enum {
     BBEP_ERROR_COUNT
 };
 
-#ifndef __ONEBITDISPLAY__
+#ifndef __BB_RECT__
+#define __BB_RECT__
 typedef struct {
     int x; 
     int y;
@@ -176,6 +177,8 @@ enum {
     EPD_WAVESHARE_154_4GRAY,
     EPD_XTEINK_X4,
     EPD_XTEINK_X4_4GRAY,
+    EPD_XTEINK_X3,
+    EPD_XTEINK_X3_4GRAY,
     EPD_WAVESHARE_397,
     EPD_WAVESHARE_397_4GRAY,
     EPD_PRODUCT_COUNT
@@ -253,6 +256,8 @@ enum {
     EP42B_400x300_4GRAY, // DEPG0420BN / GDEY042T81
     EP397_800x480, // GDEM0397T81P
     EP397_800x480_4GRAY,
+    EP368_792x528,
+    EP368_792x528_4GRAY,
     EP_PANEL_COUNT
 };
 #ifdef FUTURE
