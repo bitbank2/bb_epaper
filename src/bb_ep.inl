@@ -3527,6 +3527,7 @@ const EPD_PANEL panelDefs[] PROGMEM = {
     {800, 480, 0, epd397g_init_full, NULL, NULL, BBEP_4GRAY | BBEP_NEEDS_EXTRA_INIT, BBEP_CHIP_SSD16xx, u8Colors_4gray}, // EP397_800x480_4GRAY
     {792, 528, 0, epd368_init_full, epd368_init_fast, epd368_init_part, BBEP_NEEDS_EXTRA_INIT, BBEP_CHIP_UC81xx, u8Colors_2clr}, // EP368_792x528
     {792, 528, 0, epd368g_init, NULL, NULL, BBEP_4GRAY | BBEP_NEEDS_EXTRA_INIT, BBEP_CHIP_UC81xx, u8Colors_4gray_v2}, // EP368_792x528_4GRAY
+    {122, 250, 1, epd213_122x250_init_sequence_full, NULL, epd213_122x250_init_sequence_part, 0, BBEP_CHIP_SSD16xx, u8Colors_2clr}, // EP213ZZ_122x250 LilyGo T3S3
 };
 //
 // Set the e-paper panel type
@@ -3714,9 +3715,9 @@ void bbepSetAddrWindow(BBEPDISP *pBBEP, int x, int y, int cx, int cy)
 {
     uint8_t uc[12];
     int i, tx, ty;
-    
+
 // DEBUG - for TRMNL mini 180 degree rotated display
-    if (/*pBBEP->type == EP368_792x528 ||*/ pBBEP->type == EP397_800x480 || pBBEP->type == EP397_800x480_4GRAY || pBBEP->type == EP426_800x480 || pBBEP->type == EP426_800x480_4GRAY) return;
+    if (pBBEP->type == EP397_800x480 || pBBEP->type == EP397_800x480_4GRAY || pBBEP->type == EP426_800x480 || pBBEP->type == EP426_800x480_4GRAY) return;
     if (!pBBEP) return;
     if (pBBEP->iFlags & (BBEP_4COLOR | BBEP_7COLOR)) return;
     
@@ -4685,9 +4686,10 @@ static void bbepWriteImage(BBEPDISP *pBBEP, uint8_t ucCMD, uint8_t *pBuffer, int
     int tx, ty;
     uint8_t *s, *d, ucSrcMask, ucDstMask, uc;
     uint8_t ucInvert = 0;
-    int iPitch;
+    int iPitch, iDstPitch;
     
     iPitch = (pBBEP->width + 7) >> 3;
+    iDstPitch = (pBBEP->native_width + 7) >> 3;
     if (bInvert) {
         ucInvert = 0xff; // red logic is inverted
     }
@@ -4723,7 +4725,7 @@ static void bbepWriteImage(BBEPDISP *pBBEP, uint8_t ucCMD, uint8_t *pBuffer, int
                     }
                 } // for ty
                 *d++ = (uc ^ ucInvert); // store final partial byte
-                bbepWriteData(pBBEP, u8Cache, (pBBEP->native_width+7)/8);
+                bbepWriteData(pBBEP, u8Cache, iDstPitch);
             } // for tx
             break;
         case 180:
@@ -4754,7 +4756,7 @@ static void bbepWriteImage(BBEPDISP *pBBEP, uint8_t ucCMD, uint8_t *pBuffer, int
                     }
                 } // for ty
                 *d++ = (uc ^ ucInvert); // store final partial byte
-                bbepWriteData(pBBEP, u8Cache, (pBBEP->native_width+7)/8);
+                bbepWriteData(pBBEP, u8Cache, iDstPitch);
             } // for x
             break;
     } // switch on orientation

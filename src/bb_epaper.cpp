@@ -86,6 +86,14 @@ int BBEPAPER::begin(int iProduct, bool bSharedSPI)
 int rc = BBEP_ERROR_BAD_PARAMETER;
 
     switch (iProduct) {
+        case EPD_LILYGO_T3S3: // DC:16 RST:47 BUSY:48 CS:15 MOSI:11 SCK:4
+           if (setPanelType(EP213ZZ_122x250) == BBEP_SUCCESS) {
+               initIO(16, 47, 48, 15, 11, 14, 10000000);
+               setRotation(270);
+               return BBEP_SUCCESS;
+           }
+           break;
+
         case EPD_XTEINK_X3: // DC:4 RST:5 BUSY:6 CS:21 MOSI:10 SCK:8
         case EPD_XTEINK_X3_4GRAY:
             if (setPanelType((iProduct == EPD_XTEINK_X3) ? EP368_792x528:EP368_792x528_4GRAY) == BBEP_SUCCESS) {
