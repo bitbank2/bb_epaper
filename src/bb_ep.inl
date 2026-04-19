@@ -2362,7 +2362,7 @@ const uint8_t epd368g_init[] PROGMEM =
     5, 0x06, 0x25, 0x25, 0x3c, 0x37,
     2, 0x30, 0x09, // PLL - frame rate
     2, 0xe1, 0x02,
-    
+
     43, 0x20, // VCOM LUT
           0x00, 0x10, 0x10, 0x01, 0x00, 0x01, // flip to black, then white
           0x00, 0x15, 0x04, 0x01, 0x00, 0x01,
@@ -2475,7 +2475,7 @@ const uint8_t epd368_init_full[] PROGMEM =
     3, 0x50, 0xa9, 0x07,
     BUSY_WAIT,
     1, UC8151_PON,
-    BUSY_WAIT, 
+    BUSY_WAIT,
 
     0x00 // end of table
 }; // epd368_init_full
@@ -3361,6 +3361,27 @@ const uint8_t epd73_spectra_init[] PROGMEM = {
     BUSY_WAIT,
     0
 };
+// Spectra 6 (GDEP040E01) 400x600 7-color init sequence
+// GoodDisplay reference; normal (host-managed power cycling) mode
+const uint8_t epd40_spectra_init[] PROGMEM = {
+    7, 0xaa, 0x49, 0x55, 0x20, 0x08, 0x09, 0x18, // CMDH: Spectra 6 mode handshake
+    2, UC8151_PWR, 0x3f, // PWR: internal DC-DC for VGH/VGL/VS, chip defaults for voltages
+    3, UC8151_PSR, 0x5f, 0x69, // PSR: 2-byte panel setting, scan up, shift left
+    5, 0x05, 0x40, 0x1f, 0x1f, 0x2c, // BTST1(undoc): booster phase A
+    5, 0x08, 0x6f, 0x1f, 0x1f, 0x22, // BTST3(undoc): booster phase C
+    5, 0x06, 0x6f, 0x1f, 0x17, 0x17, // BTST2: booster phase B (1st setting)
+    5, UC8151_PFS, 0x00, 0x54, 0x00, 0x44, // POFS: power off timing + EPD discharge
+    3, UC8151_TCON, 0x02, 0x00, // TCON: gate/source non-overlap timing
+    2, UC8151_PLL, 0x08, // PLL: dynamic frame rate enabled (Dyna=1)
+    2, UC8151_CDI, 0x3f, // CDI: border floating, VCOM interval 2 Hsync
+    5, UC8151_TRES, 0x01, 0x90, 0x02, 0x58, // TRES: 400x600
+    2, UC8151_PWS, 0x2f, // PWS: VCOM/source power saving widths
+    2, 0x84, 0x01, // T_VDCS(undoc): temperature-related VCOM setting
+    1, UC8151_PON, // PON: power on
+    BUSY_WAIT,
+    5, 0x06, 0x6f, 0x1f, 0x17, 0x27, // BTST2: 2nd setting (longer GDR off before DRF)
+    0
+};
 
 const uint8_t epd75r_init[] PROGMEM = {
     5, 0x01, 0x07,0x07,0x3f,0x3f, // power setting
@@ -3528,6 +3549,7 @@ const EPD_PANEL panelDefs[] PROGMEM = {
     {792, 528, 0, epd368_init_full, epd368_init_fast, epd368_init_part, BBEP_NEEDS_EXTRA_INIT, BBEP_CHIP_UC81xx, u8Colors_2clr}, // EP368_792x528
     {792, 528, 0, epd368g_init, NULL, NULL, BBEP_4GRAY | BBEP_NEEDS_EXTRA_INIT, BBEP_CHIP_UC81xx, u8Colors_4gray_v2}, // EP368_792x528_4GRAY
     {122, 250, 1, epd213_122x250_init_sequence_full, NULL, epd213_122x250_init_sequence_part, 0, BBEP_CHIP_SSD16xx, u8Colors_2clr}, // EP213ZZ_122x250 LilyGo T3S3
+    {400, 600, 0, epd40_spectra_init, NULL, NULL, BBEP_7COLOR, BBEP_CHIP_UC81xx, u8Colors_spectra}, // EP40_SPECTRA_400x600 GDEP040E01 Spectra 6 4" 400x600
 };
 //
 // Set the e-paper panel type
