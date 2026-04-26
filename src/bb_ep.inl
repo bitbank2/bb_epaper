@@ -2208,6 +2208,10 @@ const uint8_t ep7_init_partial[] PROGMEM =
 };
 
 // GDEM133T91 13.3" 960x680 SSD1677
+// 0x37 maps OTP waveform sets to Display Mode 1 (full) vs Mode 2 (partial) and
+// enables RAM ping-pong (byte F bit 6) so the partial waveform can use BW RAM
+// 0x24 as 'new' and Red RAM 0x26 as 'old'. Without this, 0x22=0xff falls back
+// to a Mode 1 LUT against BW RAM only and partial updates ghost.
 const uint8_t gdem133_init_full[] PROGMEM =
 {
     1, 0x12,                                    // SWRESET
@@ -2230,7 +2234,9 @@ const uint8_t gdem133_init_partial[] PROGMEM =
     2, 0x11, 0x03,                              // data entry mode
     5, 0x44, 0x00, 0x00, 0xbf, 0x03,           // x window (0-959)
     5, 0x45, 0x00, 0x00, 0xa7, 0x02,           // y window (0-679)
-    2, 0x3c, 0x01,                              // border waveform
+    11, 0x37, 0x00, 0x00, 0xf8, 0x3f, 0x00, 0x40, 0x00, 0x00, 0x00, 0x01, // display option: Mode 2 mapping + RAM ping-pong
+    3, 0x21, 0x00, 0x00,                        // display update control 1: Red Normal, BW Normal (Mode 2 differential)
+    2, 0x3c, 0x80,                              // border: VCOM follow (avoid border flicker on partial)
     3, 0x4e, 0x00, 0x00,                        // x ram counter
     3, 0x4f, 0x00, 0x00,                        // y ram counter
     0
@@ -4193,6 +4199,10 @@ int bbepRefresh(BBEPDISP *pBBEP, int iMode)
             bbepCMD2(pBBEP, SSD1608_DISP_CTRL2, u8CMDz3[iMode]);
         } else if (pBBEP->type == EP42B_400x300_4GRAY) {
             bbepCMD2(pBBEP, SSD1608_DISP_CTRL2, 0xcf); // SSD1683 does things differently :(
+        } else if (pBBEP->type == GDEM133T91_960x680 && iMode == REFRESH_PARTIAL) {
+            // Try the conservative SSD1677 partial-update control byte used by
+            // some GDEM133T91 drivers when fast partial update is unavailable.
+            bbepCMD2(pBBEP, SSD1608_DISP_CTRL2, 0xf4);
         } else {
             bbepCMD2(pBBEP, SSD1608_DISP_CTRL2, u8CMD[iMode]);
         }
