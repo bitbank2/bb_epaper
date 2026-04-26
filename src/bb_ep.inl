@@ -4193,6 +4193,8 @@ int bbepRefresh(BBEPDISP *pBBEP, int iMode)
             bbepCMD2(pBBEP, SSD1608_DISP_CTRL2, u8CMDz3[iMode]);
         } else if (pBBEP->type == EP42B_400x300_4GRAY) {
             bbepCMD2(pBBEP, SSD1608_DISP_CTRL2, 0xcf); // SSD1683 does things differently :(
+        } else if (pBBEP->type == GDEM133T91_960x680 && iMode == REFRESH_PARTIAL) {
+            bbepCMD2(pBBEP, SSD1608_DISP_CTRL2, 0xf4);
         } else {
             bbepCMD2(pBBEP, SSD1608_DISP_CTRL2, u8CMD[iMode]);
         }
