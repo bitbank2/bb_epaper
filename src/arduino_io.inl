@@ -147,7 +147,7 @@ void bbepWriteIT8951CmdArgs(BBEPDISP *pBBEP, uint16_t cmd, uint16_t *pArgs, int 
 //
 void bbepWriteCmd(BBEPDISP *pBBEP, uint8_t cmd)
 {
-    Serial.printf("[bbepWriteCmd] CMD: 0x%02x\n", cmd);
+//Serial.printf("CMD: 0x%02x\n", cmd);
 
     if (!pBBEP->is_awake) {
         // if it's asleep, it can't receive commands
@@ -170,16 +170,15 @@ void bbepWriteCmd(BBEPDISP *pBBEP, uint8_t cmd)
 //
 void bbepWriteData(BBEPDISP *pBBEP, uint8_t *pData, int iLen)
 {
-    if (iLen <= 16) {
-        Serial.print("[bbepWriteData] DATA: ");
-        for (int i = 0; i < iLen; i++) {
-            Serial.printf("0x%02x ", pData[i]);
-        }
-        Serial.println();
-    } else {
-        Serial.printf("[bbepWriteData] DATA: len=%d (first 4: 0x%02x 0x%02x 0x%02x 0x%02x)\n",
-                      iLen, pData[0], pData[1], pData[2], pData[3]);
-    }
+//if (iLen < 5) {
+//  Serial.print("DATA: ");
+//  for (int i=0; i<iLen; i++) {
+//     Serial.printf("0x%02x, ", pData[i]);
+//  }
+//  Serial.println(" ");
+//} else {
+//  Serial.printf("DATA: len=%d\n", iLen);
+//}
 //    digitalWrite(pBBEP->iDCPin, HIGH);
 #ifdef ARDUINO_ARCH_ESP32
     if (pBBEP->iFlags & BBEP_CS_EVERY_BYTE) {
