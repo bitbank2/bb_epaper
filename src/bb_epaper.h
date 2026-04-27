@@ -261,7 +261,7 @@ enum {
     EP368_792x528_4GRAY,
     EP213ZZ_122x250,
     EP40_SPECTRA_400x600, // GDEP040E01 Spectra 6 4" 400x600
-    GDEM133T91_960x680, // GDEM133T91 13.3" 960x680 SSD1677
+    EP133_960x680, // GDEM133T91 13.3" 960x680 SSD1677
     EP_PANEL_COUNT
 };
 #ifdef FUTURE
@@ -668,4 +668,3 @@ void bbepWriteCmd(BBEPDISP *pBBEP, uint8_t cmd);
 void bbepWriteData(BBEPDISP *pBBEP, uint8_t *pData, int iLen);
 void bbepCMD2(BBEPDISP *pBBEP, uint8_t cmd1, uint8_t cmd2);
 #endif // __BB_EPAPER__
-

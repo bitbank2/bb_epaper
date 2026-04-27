@@ -3585,7 +3585,7 @@ const EPD_PANEL panelDefs[] PROGMEM = {
     {792, 528, 0, epd368g_init, NULL, NULL, BBEP_4GRAY | BBEP_NEEDS_EXTRA_INIT, BBEP_CHIP_UC81xx, u8Colors_4gray_v2}, // EP368_792x528_4GRAY
     {122, 250, 1, epd213_122x250_init_sequence_full, NULL, epd213_122x250_init_sequence_part, 0, BBEP_CHIP_SSD16xx, u8Colors_2clr}, // EP213ZZ_122x250 LilyGo T3S3
     {400, 600, 0, epd40_spectra_init, NULL, NULL, BBEP_7COLOR, BBEP_CHIP_UC81xx, u8Colors_spectra}, // EP40_SPECTRA_400x600 GDEP040E01 Spectra 6 4" 400x600
-    {960, 680, 0, gdem133_init_full, NULL, gdem133_init_partial, 0, BBEP_CHIP_SSD16xx, u8Colors_2clr}, // GDEM133T91_960x680 13.3" SSD1677
+    {960, 680, 0, gdem133_init_full, NULL, gdem133_init_partial, 0, BBEP_CHIP_SSD16xx, u8Colors_2clr}, // EP133_960x680 13.3" SSD1677
 };
 //
 // Set the e-paper panel type
@@ -3824,8 +3824,8 @@ void bbepSetAddrWindow(BBEPDISP *pBBEP, int x, int y, int cx, int cy)
         //        bbepCMD2(pBBEP, SSD1608_DATA_MODE, 0x3);
         bbepWriteCmd(pBBEP, SSD1608_SET_RAMXPOS);
         tx += pBBEP->x_offset;
-        if (pBBEP->type == EP7_960x640 || pBBEP->type == GDEM133T91_960x680 || pBBEP->type == EP426_800x480 || pBBEP->type == EP426_800x480_4GRAY) { // pixels, not bytes version
-            if (pBBEP->type == EP7_960x640 || pBBEP->type == GDEM133T91_960x680) {
+        if (pBBEP->type == EP7_960x640 || pBBEP->type == EP133_960x680 || pBBEP->type == EP426_800x480 || pBBEP->type == EP426_800x480_4GRAY) { // pixels, not bytes version
+            if (pBBEP->type == EP7_960x640 || pBBEP->type == EP133_960x680) {
                 tx <<= 3;
             }
             uc[0] = (tx & 0xff);
@@ -4199,7 +4199,7 @@ int bbepRefresh(BBEPDISP *pBBEP, int iMode)
             bbepCMD2(pBBEP, SSD1608_DISP_CTRL2, u8CMDz3[iMode]);
         } else if (pBBEP->type == EP42B_400x300_4GRAY) {
             bbepCMD2(pBBEP, SSD1608_DISP_CTRL2, 0xcf); // SSD1683 does things differently :(
-        } else if (pBBEP->type == GDEM133T91_960x680 && iMode == REFRESH_PARTIAL) {
+        } else if (pBBEP->type == EP133_960x680 && iMode == REFRESH_PARTIAL) {
             bbepCMD2(pBBEP, SSD1608_DISP_CTRL2, 0xf4);
         } else {
             bbepCMD2(pBBEP, SSD1608_DISP_CTRL2, u8CMD[iMode]);
