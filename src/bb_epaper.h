@@ -143,6 +143,8 @@ enum {
 #define CENTER_X 9998
 #define CENTER_Y 9999
 
+typedef uint8_t (BB_FILL_PANEL)(void *pBBEP, uint8_t ucColor, int iPlane);
+
 typedef struct epd_panel {
     uint16_t width;
     uint16_t height;
@@ -150,6 +152,7 @@ typedef struct epd_panel {
     const uint8_t *pInitFull;
     const uint8_t *pInitFast;
     const uint8_t *pInitPart;
+    BB_FILL_PANEL *pFill;
     uint16_t flags;
     uint8_t chip_type;
     const uint8_t *pColorLookup; // color translation table
@@ -261,6 +264,7 @@ enum {
     EP368_792x528_4GRAY,
     EP213ZZ_122x250,
     EP40_SPECTRA_400x600, // GDEP040E01 Spectra 6 4" 400x600
+    EP133_960x680, // GDEM133T91 13.3" 960x680 SSD1677
     EP_PANEL_COUNT
 };
 #ifdef FUTURE
@@ -517,6 +521,7 @@ const uint8_t *pColorLookup; // color translation table
 const uint8_t *pInitFull; // full update init sequence
 const uint8_t *pInitFast; // fast update init sequence
 const uint8_t *pInitPart; // partial update init sequence
+BB_FILL_PANEL *pFill; // optional panel-specific direct fill quick path
 BB_SET_PIXEL *pfnSetPixel;
 BB_SET_PIXEL_FAST *pfnSetPixelFast;
 BB_SET_GPIO *pfnSetGPIO;
@@ -666,5 +671,5 @@ typedef enum
 void bbepWriteCmd(BBEPDISP *pBBEP, uint8_t cmd);
 void bbepWriteData(BBEPDISP *pBBEP, uint8_t *pData, int iLen);
 void bbepCMD2(BBEPDISP *pBBEP, uint8_t cmd1, uint8_t cmd2);
+void bbepFill(BBEPDISP *pBBEP, unsigned char ucColor, int iPlane);
 #endif // __BB_EPAPER__
-
