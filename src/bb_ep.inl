@@ -3497,6 +3497,8 @@ uint8_t u8Cache[128]; // buffer a single line of up to 1024 pixels
 #else // we need a larger cache for 4-bit panels
 uint8_t u8Cache[512];
 #endif
+
+static uint8_t gdem133_fill(void *pVoid, uint8_t ucColor, int iPlane);
 //
 // Definitions for each supported panel
 // The order tracks that of the enumerated panel types
@@ -3504,88 +3506,88 @@ uint8_t u8Cache[512];
 //
 const EPD_PANEL panelDefs[] PROGMEM = {
 // 0
-    {0,0,0,NULL,NULL,NULL,0,0,NULL}, // undefined panel
-    {400, 300, 0, epd42_init_sequence_full, epd42_init_sequence_fast, epd42_init_sequence_part, 0, BBEP_CHIP_UC81xx, u8Colors_2clr}, // EP42_400x300
-    {400, 300, 0, epd42b_init_sequence_full, epd42b_init_sequence_fast, epd42b_init_sequence_part, 0, BBEP_CHIP_SSD16xx, u8Colors_2clr}, // EP42B_400x300
-    {122, 250, 0, epd213_122x250_init_sequence_full, NULL, epd213_122x250_init_sequence_part, 0, BBEP_CHIP_SSD16xx, u8Colors_2clr}, // EP213_122x250 WaveShare
-    {122, 250, 0, epd213z_init_full, epd213z_init_fast, epd213b_init_sequence_part, 0, BBEP_CHIP_SSD16xx, u8Colors_2clr}, // EP213B_122x250, newer Inky phat 2.13" B/W
-    {128, 296, 0, epd293_init_sequence_full, epd293_init_sequence_fast, epd293_init_sequence_part, 0, BBEP_CHIP_SSD16xx, u8Colors_2clr}, // EP293_128x296
-    {128, 296, 0, epd294_init_sequence_full, NULL, NULL, 0, BBEP_CHIP_SSD16xx, u8Colors_2clr}, // EP294_128x296
-    {128, 296, 0, epd293_init_sequence_full, epd293_init_sequence_fast, epd295_init_sequence_part, 0, BBEP_CHIP_SSD16xx, u8Colors_2clr}, // EP295_128x296
-    {128, 296, 0, epd295_init_gray, NULL, NULL, BBEP_4GRAY, BBEP_CHIP_SSD16xx, u8Colors_4gray}, // EP295_128x296_4GRAY
-    {152, 296, 0, epd266_init_sequence_full, NULL, epd266_init_sequence_part, 0, BBEP_CHIP_SSD16xx, u8Colors_2clr}, // EP266_152x296
+    {0,0,0,NULL,NULL,NULL,NULL,0,0,NULL}, // undefined panel
+    {400, 300, 0, epd42_init_sequence_full, epd42_init_sequence_fast, epd42_init_sequence_part, NULL, 0, BBEP_CHIP_UC81xx, u8Colors_2clr}, // EP42_400x300
+    {400, 300, 0, epd42b_init_sequence_full, epd42b_init_sequence_fast, epd42b_init_sequence_part, NULL, 0, BBEP_CHIP_SSD16xx, u8Colors_2clr}, // EP42B_400x300
+    {122, 250, 0, epd213_122x250_init_sequence_full, NULL, epd213_122x250_init_sequence_part, NULL, 0, BBEP_CHIP_SSD16xx, u8Colors_2clr}, // EP213_122x250 WaveShare
+    {122, 250, 0, epd213z_init_full, epd213z_init_fast, epd213b_init_sequence_part, NULL, 0, BBEP_CHIP_SSD16xx, u8Colors_2clr}, // EP213B_122x250, newer Inky phat 2.13" B/W
+    {128, 296, 0, epd293_init_sequence_full, epd293_init_sequence_fast, epd293_init_sequence_part, NULL, 0, BBEP_CHIP_SSD16xx, u8Colors_2clr}, // EP293_128x296
+    {128, 296, 0, epd294_init_sequence_full, NULL, NULL, NULL, 0, BBEP_CHIP_SSD16xx, u8Colors_2clr}, // EP294_128x296
+    {128, 296, 0, epd293_init_sequence_full, epd293_init_sequence_fast, epd295_init_sequence_part, NULL, 0, BBEP_CHIP_SSD16xx, u8Colors_2clr}, // EP295_128x296
+    {128, 296, 0, epd295_init_gray, NULL, NULL, NULL, BBEP_4GRAY, BBEP_CHIP_SSD16xx, u8Colors_4gray}, // EP295_128x296_4GRAY
+    {152, 296, 0, epd266_init_sequence_full, NULL, epd266_init_sequence_part, NULL, 0, BBEP_CHIP_SSD16xx, u8Colors_2clr}, // EP266_152x296
 // 10
-    {80, 128, 0, epd102_init_sequence_full, NULL, epd102_init_sequence_part, 0, BBEP_CHIP_UC81xx, u8Colors_2clr}, // EP102_80x128
-    {176, 264, 0, epd27_init_sequence_full, NULL, epd27_init_sequence_part, 0, BBEP_CHIP_SSD16xx, u8Colors_2clr}, // EP27B_176x264
-    {128, 296, 0, epd29r_init_sequence_full, NULL, NULL, BBEP_3COLOR, BBEP_CHIP_SSD16xx, u8Colors_3clr}, // EP29R_128x296
-    {192, 176, 0, epd122_init_sequence_full, epd122_init_sequence_fast, epd122_init_sequence_part, 0, BBEP_CHIP_SSD16xx, u8Colors_2clr}, // EP122_192x176
-    {152, 152, 0, epd154r_init_sequence_full, NULL, NULL, BBEP_3COLOR, BBEP_CHIP_SSD16xx, u8Colors_3clr}, // EP154R_152x152
-    {400, 300, 0, epd42r_init_sequence_full, NULL, NULL, BBEP_3COLOR, BBEP_CHIP_SSD16xx, u8Colors_3clr}, // EP42R_400x300, Inky wHAT 4.2" 400x300 B/W/R
-    {400, 300, 0, epd42r2_init_sequence_full, epd42r2_init_sequence_fast, NULL, BBEP_RED_SWAPPED | BBEP_3COLOR, BBEP_CHIP_UC81xx, u8Colors_3clr}, // EP42R2_400x300
-    {240, 416, 0, epd37_init_sequence_full, NULL, epd37_init_sequence_part, 0, BBEP_CHIP_UC81xx, u8Colors_2clr}, // EP37_240x416
-    {240, 416, 0, epd37b_init_sequence_full, epd37b_init_sequence_fast, epd37b_init_sequence_part, 0, BBEP_CHIP_UC81xx, u8Colors_2clr}, // EP37B_240x416
-    {104, 212, 0, epd213_inky_init_sequence_full, NULL, NULL, 0, BBEP_CHIP_UC81xx, u8Colors_2clr}, // EP213_104x212, older InkyPHAT black and white
+    {80, 128, 0, epd102_init_sequence_full, NULL, epd102_init_sequence_part, NULL, 0, BBEP_CHIP_UC81xx, u8Colors_2clr}, // EP102_80x128
+    {176, 264, 0, epd27_init_sequence_full, NULL, epd27_init_sequence_part, NULL, 0, BBEP_CHIP_SSD16xx, u8Colors_2clr}, // EP27B_176x264
+    {128, 296, 0, epd29r_init_sequence_full, NULL, NULL, NULL, BBEP_3COLOR, BBEP_CHIP_SSD16xx, u8Colors_3clr}, // EP29R_128x296
+    {192, 176, 0, epd122_init_sequence_full, epd122_init_sequence_fast, epd122_init_sequence_part, NULL, 0, BBEP_CHIP_SSD16xx, u8Colors_2clr}, // EP122_192x176
+    {152, 152, 0, epd154r_init_sequence_full, NULL, NULL, NULL, BBEP_3COLOR, BBEP_CHIP_SSD16xx, u8Colors_3clr}, // EP154R_152x152
+    {400, 300, 0, epd42r_init_sequence_full, NULL, NULL, NULL, BBEP_3COLOR, BBEP_CHIP_SSD16xx, u8Colors_3clr}, // EP42R_400x300, Inky wHAT 4.2" 400x300 B/W/R
+    {400, 300, 0, epd42r2_init_sequence_full, epd42r2_init_sequence_fast, NULL, NULL, BBEP_RED_SWAPPED | BBEP_3COLOR, BBEP_CHIP_UC81xx, u8Colors_3clr}, // EP42R2_400x300
+    {240, 416, 0, epd37_init_sequence_full, NULL, epd37_init_sequence_part, NULL, 0, BBEP_CHIP_UC81xx, u8Colors_2clr}, // EP37_240x416
+    {240, 416, 0, epd37b_init_sequence_full, epd37b_init_sequence_fast, epd37b_init_sequence_part, NULL, 0, BBEP_CHIP_UC81xx, u8Colors_2clr}, // EP37B_240x416
+    {104, 212, 0, epd213_inky_init_sequence_full, NULL, NULL, NULL, 0, BBEP_CHIP_UC81xx, u8Colors_2clr}, // EP213_104x212, older InkyPHAT black and white
 // 20
-    {800, 480, 0, epd75_init_sequence_full, epd75_init_sequence_fast, epd75_init_sequence_partial, 0, BBEP_CHIP_UC81xx, u8Colors_2clr}, // EP75_800x480 (old)
-    {800, 480, 0, epd75_init_sequence_full, epd75_init_fast_gen2, epd75_init_partial_gen2, 0, BBEP_CHIP_UC81xx, u8Colors_2clr}, // EP75_800x480_GEN2 (new)
-    {800, 480, 0, epd75_old_gray_init, NULL, NULL, BBEP_4GRAY, BBEP_CHIP_UC81xx, u8Colors_4gray}, // EP75_800x480_4GRAY
-    {800, 480, 0, epd75_gray_init, NULL, NULL, BBEP_4GRAY, BBEP_CHIP_UC81xx, u8Colors_4gray}, // EP75_800x480_4GRAY_GEN2
-    {800, 480, 0, epd75_old_gray_init2, NULL, NULL, BBEP_4GRAY, BBEP_CHIP_UC81xx, u8Colors_4gray}, // EP75_800x480_4GRAY_V2 (darker)
-    {128, 296, 0, epd29_init_sequence_full, epd29_init_sequence_fast, epd29_init_sequence_part, 0, BBEP_CHIP_UC81xx, u8Colors_2clr}, // Badger 2040
-    {128, 296, 0, epd29_init_sequence_gray, NULL, NULL, BBEP_4GRAY, BBEP_CHIP_UC81xx, u8Colors_4gray}, // Badger 2040 4Gray mode
-    {122, 250, 1, epd213r_inky_init_sequence_full, NULL, NULL, BBEP_3COLOR, BBEP_CHIP_SSD16xx, u8Colors_3clr}, // EP213R_122x250 Inky phat 2.13" B/W/R
-    {200, 200, 0, epd154_init_sequence_full, epd154_init_sequence_fast, epd154_init_sequence_part, 0, BBEP_CHIP_SSD16xx, u8Colors_2clr}, // EP154_200x200
-    {200, 200, 0, epd154_init_sequence_full, epd154_init_sequence_fast, epd154b_init_sequence_part, 0, BBEP_CHIP_SSD16xx, u8Colors_2clr}, // EP154B_200x200
+    {800, 480, 0, epd75_init_sequence_full, epd75_init_sequence_fast, epd75_init_sequence_partial, NULL, 0, BBEP_CHIP_UC81xx, u8Colors_2clr}, // EP75_800x480 (old)
+    {800, 480, 0, epd75_init_sequence_full, epd75_init_fast_gen2, epd75_init_partial_gen2, NULL, 0, BBEP_CHIP_UC81xx, u8Colors_2clr}, // EP75_800x480_GEN2 (new)
+    {800, 480, 0, epd75_old_gray_init, NULL, NULL, NULL, BBEP_4GRAY, BBEP_CHIP_UC81xx, u8Colors_4gray}, // EP75_800x480_4GRAY
+    {800, 480, 0, epd75_gray_init, NULL, NULL, NULL, BBEP_4GRAY, BBEP_CHIP_UC81xx, u8Colors_4gray}, // EP75_800x480_4GRAY_GEN2
+    {800, 480, 0, epd75_old_gray_init2, NULL, NULL, NULL, BBEP_4GRAY, BBEP_CHIP_UC81xx, u8Colors_4gray}, // EP75_800x480_4GRAY_V2 (darker)
+    {128, 296, 0, epd29_init_sequence_full, epd29_init_sequence_fast, epd29_init_sequence_part, NULL, 0, BBEP_CHIP_UC81xx, u8Colors_2clr}, // Badger 2040
+    {128, 296, 0, epd29_init_sequence_gray, NULL, NULL, NULL, BBEP_4GRAY, BBEP_CHIP_UC81xx, u8Colors_4gray}, // Badger 2040 4Gray mode
+    {122, 250, 1, epd213r_inky_init_sequence_full, NULL, NULL, NULL, BBEP_3COLOR, BBEP_CHIP_SSD16xx, u8Colors_3clr}, // EP213R_122x250 Inky phat 2.13" B/W/R
+    {200, 200, 0, epd154_init_sequence_full, epd154_init_sequence_fast, epd154_init_sequence_part, NULL, 0, BBEP_CHIP_SSD16xx, u8Colors_2clr}, // EP154_200x200
+    {200, 200, 0, epd154_init_sequence_full, epd154_init_sequence_fast, epd154b_init_sequence_part, NULL, 0, BBEP_CHIP_SSD16xx, u8Colors_2clr}, // EP154B_200x200
 // 30
-    {184, 360, 0, epd266yr_init_sequence_full, NULL, NULL, BBEP_4COLOR, BBEP_CHIP_UC81xx, u8Colors_4clr_v2}, // EP266YR_184x360
-    {128, 296, 0, epd29yr_init_sequence_full, NULL, NULL, BBEP_4COLOR, BBEP_CHIP_UC81xx, u8Colors_4clr}, // EP29YR_128x296
-    {168, 384, 0, epd29yrh_init_sequence_full, NULL, NULL, BBEP_4COLOR, BBEP_CHIP_UC81xx ,u8Colors_4clr}, // EP29YR_168x384
-    {648, 480, 0, epd583_init_sequence_full, NULL, NULL, 0, BBEP_CHIP_UC81xx, u8Colors_2clr}, // EP583_648x480
-    {128, 296, 0, epd293_init_sequence_full, epd293_init_sequence_fast, epd296_init_sequence_part, BBEP_PARTIAL2, BBEP_CHIP_SSD16xx, u8Colors_2clr}, // EP296_128x296 Waveshare 2.9" V2 B/W
-    {152, 296, 0, epd26r_init_sequence_full, NULL, NULL, BBEP_3COLOR, BBEP_CHIP_SSD16xx, u8Colors_3clr}, // EP26R_152x296 Solum ESL harvested 2.6" panel B/W/R
+    {184, 360, 0, epd266yr_init_sequence_full, NULL, NULL, NULL, BBEP_4COLOR, BBEP_CHIP_UC81xx, u8Colors_4clr_v2}, // EP266YR_184x360
+    {128, 296, 0, epd29yr_init_sequence_full, NULL, NULL, NULL, BBEP_4COLOR, BBEP_CHIP_UC81xx, u8Colors_4clr}, // EP29YR_128x296
+    {168, 384, 0, epd29yrh_init_sequence_full, NULL, NULL, NULL, BBEP_4COLOR, BBEP_CHIP_UC81xx ,u8Colors_4clr}, // EP29YR_168x384
+    {648, 480, 0, epd583_init_sequence_full, NULL, NULL, NULL, 0, BBEP_CHIP_UC81xx, u8Colors_2clr}, // EP583_648x480
+    {128, 296, 0, epd293_init_sequence_full, epd293_init_sequence_fast, epd296_init_sequence_part, NULL, BBEP_PARTIAL2, BBEP_CHIP_SSD16xx, u8Colors_2clr}, // EP296_128x296 Waveshare 2.9" V2 B/W
+    {152, 296, 0, epd26r_init_sequence_full, NULL, NULL, NULL, BBEP_3COLOR, BBEP_CHIP_SSD16xx, u8Colors_3clr}, // EP26R_152x296 Solum ESL harvested 2.6" panel B/W/R
 //    {540, 960, 0, (const uint8_t *)epd47_it8951_init, NULL, NULL, 0, BBEP_CHIP_IT8951}, // EP47_540x960 = M5Paper (original)
-    {800, 480, 0, epd73_init, NULL, NULL,  BBEP_7COLOR, BBEP_CHIP_UC81xx, u8Colors_7clr}, // EP73_800x480 GEDY073D4 6 7-color 800x480
-    {800, 480, 0, epd73_spectra_init, NULL, NULL,  BBEP_7COLOR, BBEP_CHIP_UC81xx, u8Colors_spectra}, // EP73_800x480 Spectra 6 7-color 800x480
-    {640, 384, 0, epd74r_init, NULL, NULL,  BBEP_3COLOR | BBEP_4BPP_DATA, BBEP_CHIP_UC81xx, u8Colors_3clr}, // EP74R_640x384, 3-color 640x384
-    {600, 448, 0, epd583r_init, NULL, NULL,  BBEP_3COLOR | BBEP_4BPP_DATA, BBEP_CHIP_UC81xx, u8Colors_3clr}, // EP583R_600x448, 3-color 600x448
+    {800, 480, 0, epd73_init, NULL, NULL,  NULL, BBEP_7COLOR, BBEP_CHIP_UC81xx, u8Colors_7clr}, // EP73_800x480 GEDY073D4 6 7-color 800x480
+    {800, 480, 0, epd73_spectra_init, NULL, NULL,  NULL, BBEP_7COLOR, BBEP_CHIP_UC81xx, u8Colors_spectra}, // EP73_800x480 Spectra 6 7-color 800x480
+    {640, 384, 0, epd74r_init, NULL, NULL,  NULL, BBEP_3COLOR | BBEP_4BPP_DATA, BBEP_CHIP_UC81xx, u8Colors_3clr}, // EP74R_640x384, 3-color 640x384
+    {600, 448, 0, epd583r_init, NULL, NULL,  NULL, BBEP_3COLOR | BBEP_4BPP_DATA, BBEP_CHIP_UC81xx, u8Colors_3clr}, // EP583R_600x448, 3-color 600x448
 // 40
-    {800, 480, 0, epd75r_init, NULL, NULL, BBEP_3COLOR | BBEP_RED_SWAPPED, BBEP_CHIP_UC81xx, u8Colors_3clr}, // EP75R_800x480, waveshare 7.5 800x480 B/W/R
-    {800, 480, 0, epd426_init_full, epd426_init_fast, epd426_init_part, BBEP_NEEDS_EXTRA_INIT, BBEP_CHIP_SSD16xx, u8Colors_2clr}, // EP426_800x480
-    {800, 480, 0, epd426g_init, epd426g_init_fast, NULL, BBEP_4GRAY | BBEP_NEEDS_EXTRA_INIT, BBEP_CHIP_SSD16xx, u8Colors_4gray_v2}, // EP426_800x480_4GRAY
-    {128, 296, 0, epd29r2_init_sequence_full, NULL, NULL, BBEP_RED_SWAPPED | BBEP_3COLOR, BBEP_CHIP_UC81xx, u8Colors_3clr}, // EP29R2_128x296 Adafruit 2.9" 128x296 Tricolor FeatherWing
-    {640, 400, 0, epd41_init_sequence_full, NULL, NULL, BBEP_4BPP_DATA, BBEP_CHIP_UC81xx, u8Colors_2clr}, // EP41_640x400 Eink ED040TC1
-    {1024, 576, 0, epd81c_init_full, NULL, NULL, BBEP_SPLIT_BUFFER | BBEP_7COLOR, BBEP_CHIP_UC81xx, u8Colors_spectra}, // 8.1" 1024x576 dual cable Spectra 6 EP81_SPECTRA_1024x576
-    {960, 640, 0, ep7_init, NULL, ep7_init_partial, 0, BBEP_CHIP_SSD16xx, u8Colors_2clr}, // EP7_960x640 (ED070EC1)
-    {122, 250, 0, epd213r2_init_sequence_full, epd213r2_init_sequence_fast, NULL, BBEP_RED_SWAPPED | BBEP_3COLOR, BBEP_CHIP_UC81xx, u8Colors_3clr}, // EP213R2_122x250 3 color
-    {128, 296, 0, epd29z_init_full, epd29z_init_fast, epd29z_init_full, 0, BBEP_CHIP_SSD16xx, u8Colors_2clr}, // CrowPanel 2.9 (EP29Z_128x296)
-    {128, 296, 0, epd29z_init_gray, epd29z_init_gray_fast, NULL, BBEP_4GRAY, BBEP_CHIP_SSD16xx, u8Colors_4gray}, // CrowPanel 2.9 (EP29Z_128x296_4GRAY)
+    {800, 480, 0, epd75r_init, NULL, NULL, NULL, BBEP_3COLOR | BBEP_RED_SWAPPED, BBEP_CHIP_UC81xx, u8Colors_3clr}, // EP75R_800x480, waveshare 7.5 800x480 B/W/R
+    {800, 480, 0, epd426_init_full, epd426_init_fast, epd426_init_part, NULL, BBEP_NEEDS_EXTRA_INIT, BBEP_CHIP_SSD16xx, u8Colors_2clr}, // EP426_800x480
+    {800, 480, 0, epd426g_init, epd426g_init_fast, NULL, NULL, BBEP_4GRAY | BBEP_NEEDS_EXTRA_INIT, BBEP_CHIP_SSD16xx, u8Colors_4gray_v2}, // EP426_800x480_4GRAY
+    {128, 296, 0, epd29r2_init_sequence_full, NULL, NULL, NULL, BBEP_RED_SWAPPED | BBEP_3COLOR, BBEP_CHIP_UC81xx, u8Colors_3clr}, // EP29R2_128x296 Adafruit 2.9" 128x296 Tricolor FeatherWing
+    {640, 400, 0, epd41_init_sequence_full, NULL, NULL, NULL, BBEP_4BPP_DATA, BBEP_CHIP_UC81xx, u8Colors_2clr}, // EP41_640x400 Eink ED040TC1
+    {1024, 576, 0, epd81c_init_full, NULL, NULL, NULL, BBEP_SPLIT_BUFFER | BBEP_7COLOR, BBEP_CHIP_UC81xx, u8Colors_spectra}, // 8.1" 1024x576 dual cable Spectra 6 EP81_SPECTRA_1024x576
+    {960, 640, 0, ep7_init, NULL, ep7_init_partial, NULL, 0, BBEP_CHIP_SSD16xx, u8Colors_2clr}, // EP7_960x640 (ED070EC1)
+    {122, 250, 0, epd213r2_init_sequence_full, epd213r2_init_sequence_fast, NULL, NULL, BBEP_RED_SWAPPED | BBEP_3COLOR, BBEP_CHIP_UC81xx, u8Colors_3clr}, // EP213R2_122x250 3 color
+    {128, 296, 0, epd29z_init_full, epd29z_init_fast, epd29z_init_full, NULL, 0, BBEP_CHIP_SSD16xx, u8Colors_2clr}, // CrowPanel 2.9 (EP29Z_128x296)
+    {128, 296, 0, epd29z_init_gray, epd29z_init_gray_fast, NULL, NULL, BBEP_4GRAY, BBEP_CHIP_SSD16xx, u8Colors_4gray}, // CrowPanel 2.9 (EP29Z_128x296_4GRAY)
 // 50
-    {122, 250, 0, epd213z_init_full, epd213z_init_fast, epd213z_init_full, 0, BBEP_CHIP_SSD16xx, u8Colors_2clr}, // CrowPanel 2.13 (EP213Z_122x250)
-    {122, 250, 0, epd213z_init_gray, epd213z_init_gray, epd213z_init_gray, BBEP_4GRAY, BBEP_CHIP_SSD16xx, u8Colors_4gray}, // CrowPanel 2.13 (EP213Z_122x250) 4-gray mode
-    {152, 152, 0, epd154z_init_full, epd154z_init_fast, epd154z_init_part, 0, BBEP_CHIP_SSD16xx, u8Colors_2clr}, // CrowPanel 1.54" EP154Z_152x152
-    {792, 272, 0, epd579_init_full, epd579_init_fast, NULL, 0, BBEP_CHIP_SSD16xx, u8Colors_2clr}, // CrowPanel 5.79" (EP579_792x272)
-    {122, 250, 0, epd213yr_init_full, epd213yr_init_fast, NULL, BBEP_4COLOR, BBEP_CHIP_UC81xx, u8Colors_4clr_v2}, // EP213YR_122x250
-    {240, 416, 0, epd37yr_init_full, NULL, NULL, BBEP_4COLOR, BBEP_CHIP_UC81xx, u8Colors_4clr_v2}, // EP37YR_240x416
-    {184, 384, 0, epd35yr_init_full, epd35yr_init_fast, NULL, BBEP_4COLOR, BBEP_CHIP_UC81xx, u8Colors_4clr_v2}, // EP35YR_184x384
-    {800, 480, 0, epd397yr_init_full, epd397yr_init_fast, NULL, BBEP_4COLOR, BBEP_CHIP_UC81xx, u8Colors_4clr_v2}, // EP397YR_800x480
-    {200, 200, 0, epd154yr_init_full, epd154yr_init_fast, NULL, BBEP_4COLOR, BBEP_CHIP_UC81xx, u8Colors_4clr_v2}, // EP154YR_200x200
-    {184, 360, 0, epd266yr_init_full, epd266yr_init_fast, NULL, BBEP_4COLOR, BBEP_CHIP_UC81xx, u8Colors_4clr_v2}, // EP266YR2_184x360
+    {122, 250, 0, epd213z_init_full, epd213z_init_fast, epd213z_init_full, NULL, 0, BBEP_CHIP_SSD16xx, u8Colors_2clr}, // CrowPanel 2.13 (EP213Z_122x250)
+    {122, 250, 0, epd213z_init_gray, epd213z_init_gray, epd213z_init_gray, NULL, BBEP_4GRAY, BBEP_CHIP_SSD16xx, u8Colors_4gray}, // CrowPanel 2.13 (EP213Z_122x250) 4-gray mode
+    {152, 152, 0, epd154z_init_full, epd154z_init_fast, epd154z_init_part, NULL, 0, BBEP_CHIP_SSD16xx, u8Colors_2clr}, // CrowPanel 1.54" EP154Z_152x152
+    {792, 272, 0, epd579_init_full, epd579_init_fast, NULL, NULL, 0, BBEP_CHIP_SSD16xx, u8Colors_2clr}, // CrowPanel 5.79" (EP579_792x272)
+    {122, 250, 0, epd213yr_init_full, epd213yr_init_fast, NULL, NULL, BBEP_4COLOR, BBEP_CHIP_UC81xx, u8Colors_4clr_v2}, // EP213YR_122x250
+    {240, 416, 0, epd37yr_init_full, NULL, NULL, NULL, BBEP_4COLOR, BBEP_CHIP_UC81xx, u8Colors_4clr_v2}, // EP37YR_240x416
+    {184, 384, 0, epd35yr_init_full, epd35yr_init_fast, NULL, NULL, BBEP_4COLOR, BBEP_CHIP_UC81xx, u8Colors_4clr_v2}, // EP35YR_184x384
+    {800, 480, 0, epd397yr_init_full, epd397yr_init_fast, NULL, NULL, BBEP_4COLOR, BBEP_CHIP_UC81xx, u8Colors_4clr_v2}, // EP397YR_800x480
+    {200, 200, 0, epd154yr_init_full, epd154yr_init_fast, NULL, NULL, BBEP_4COLOR, BBEP_CHIP_UC81xx, u8Colors_4clr_v2}, // EP154YR_200x200
+    {184, 360, 0, epd266yr_init_full, epd266yr_init_fast, NULL, NULL, BBEP_4COLOR, BBEP_CHIP_UC81xx, u8Colors_4clr_v2}, // EP266YR2_184x360
 // 60
-    {400, 300, 0, epd42yr_init_full, epd42yr_init_fast, NULL, BBEP_4COLOR, BBEP_CHIP_UC81xx, u8Colors_4clr_v2}, // EP42YR_400x300
-//    {792, 272, 0, epd579yr_init_full, epd579yr_init_fast, NULL, BBEP_4COLOR, BBEP_CHIP_UC81xx, u8Colors_4clr_v2}, // EP579YR_792x272
-    {160, 296, 0, epd215yr_init_full, epd215yr_init_full, NULL, BBEP_4COLOR, BBEP_CHIP_UC81xx, u8Colors_4clr_v2}, // EP215YR_160x296
-    {680, 480, 0, epd1085_init_full, NULL, NULL, 0, BBEP_CHIP_UC81xx, u8Colors_2clr}, // EP1085_1360x480
-    {240, 320, 0, epd31_init_full, epd31_init_fast, epd31_init_part, 0, BBEP_CHIP_UC81xx, u8Colors_2clr}, // EP31_240x320
-    {800, 480, 0, epd75yr_init_full, NULL, NULL, BBEP_NEEDS_EXTRA_INIT | BBEP_4COLOR, BBEP_CHIP_UC81xx, u8Colors_4clr_v2}, // EP75YR_800x480
-    {200, 200, 0, epd154g_init_full, epd154g_init_fast, NULL, BBEP_4GRAY, BBEP_CHIP_SSD16xx, u8Colors_4gray}, // EP154_200x200
-    {400, 300, 0, epd42b_init_gray, epd42b_init_gray_fast, NULL, BBEP_4GRAY, BBEP_CHIP_SSD16xx, u8Colors_4gray}, // EP42B_400x300_4GRAY
-    {800, 480, 0, epd397_init_full, epd397_init_fast, epd397_init_part, BBEP_NEEDS_EXTRA_INIT, BBEP_CHIP_SSD16xx, u8Colors_2clr}, // EP397_800x480
-    {800, 480, 0, epd397g_init_full, NULL, NULL, BBEP_4GRAY | BBEP_NEEDS_EXTRA_INIT, BBEP_CHIP_SSD16xx, u8Colors_4gray}, // EP397_800x480_4GRAY
-    {792, 528, 0, epd368_init_full, epd368_init_fast, epd368_init_part, BBEP_NEEDS_EXTRA_INIT, BBEP_CHIP_UC81xx, u8Colors_2clr}, // EP368_792x528
-    {792, 528, 0, epd368g_init, NULL, NULL, BBEP_4GRAY | BBEP_NEEDS_EXTRA_INIT, BBEP_CHIP_UC81xx, u8Colors_4gray_v2}, // EP368_792x528_4GRAY
-    {122, 250, 1, epd213_122x250_init_sequence_full, NULL, epd213_122x250_init_sequence_part, 0, BBEP_CHIP_SSD16xx, u8Colors_2clr}, // EP213ZZ_122x250 LilyGo T3S3
-    {400, 600, 0, epd40_spectra_init, NULL, NULL, BBEP_7COLOR, BBEP_CHIP_UC81xx, u8Colors_spectra}, // EP40_SPECTRA_400x600 GDEP040E01 Spectra 6 4" 400x600
-    {960, 680, 0, gdem133_init_full, NULL, gdem133_init_partial, 0, BBEP_CHIP_SSD16xx, u8Colors_2clr}, // EP133_960x680 13.3" SSD1677
+    {400, 300, 0, epd42yr_init_full, epd42yr_init_fast, NULL, NULL, BBEP_4COLOR, BBEP_CHIP_UC81xx, u8Colors_4clr_v2}, // EP42YR_400x300
+//    {792, 272, 0, epd579yr_init_full, epd579yr_init_fast, NULL, NULL, BBEP_4COLOR, BBEP_CHIP_UC81xx, u8Colors_4clr_v2}, // EP579YR_792x272
+    {160, 296, 0, epd215yr_init_full, epd215yr_init_full, NULL, NULL, BBEP_4COLOR, BBEP_CHIP_UC81xx, u8Colors_4clr_v2}, // EP215YR_160x296
+    {680, 480, 0, epd1085_init_full, NULL, NULL, NULL, 0, BBEP_CHIP_UC81xx, u8Colors_2clr}, // EP1085_1360x480
+    {240, 320, 0, epd31_init_full, epd31_init_fast, epd31_init_part, NULL, 0, BBEP_CHIP_UC81xx, u8Colors_2clr}, // EP31_240x320
+    {800, 480, 0, epd75yr_init_full, NULL, NULL, NULL, BBEP_NEEDS_EXTRA_INIT | BBEP_4COLOR, BBEP_CHIP_UC81xx, u8Colors_4clr_v2}, // EP75YR_800x480
+    {200, 200, 0, epd154g_init_full, epd154g_init_fast, NULL, NULL, BBEP_4GRAY, BBEP_CHIP_SSD16xx, u8Colors_4gray}, // EP154_200x200
+    {400, 300, 0, epd42b_init_gray, epd42b_init_gray_fast, NULL, NULL, BBEP_4GRAY, BBEP_CHIP_SSD16xx, u8Colors_4gray}, // EP42B_400x300_4GRAY
+    {800, 480, 0, epd397_init_full, epd397_init_fast, epd397_init_part, NULL, BBEP_NEEDS_EXTRA_INIT, BBEP_CHIP_SSD16xx, u8Colors_2clr}, // EP397_800x480
+    {800, 480, 0, epd397g_init_full, NULL, NULL, NULL, BBEP_4GRAY | BBEP_NEEDS_EXTRA_INIT, BBEP_CHIP_SSD16xx, u8Colors_4gray}, // EP397_800x480_4GRAY
+    {792, 528, 0, epd368_init_full, epd368_init_fast, epd368_init_part, NULL, BBEP_NEEDS_EXTRA_INIT, BBEP_CHIP_UC81xx, u8Colors_2clr}, // EP368_792x528
+    {792, 528, 0, epd368g_init, NULL, NULL, NULL, BBEP_4GRAY | BBEP_NEEDS_EXTRA_INIT, BBEP_CHIP_UC81xx, u8Colors_4gray_v2}, // EP368_792x528_4GRAY
+    {122, 250, 1, epd213_122x250_init_sequence_full, NULL, epd213_122x250_init_sequence_part, NULL, 0, BBEP_CHIP_SSD16xx, u8Colors_2clr}, // EP213ZZ_122x250 LilyGo T3S3
+    {400, 600, 0, epd40_spectra_init, NULL, NULL, NULL, BBEP_7COLOR, BBEP_CHIP_UC81xx, u8Colors_spectra}, // EP40_SPECTRA_400x600 GDEP040E01 Spectra 6 4" 400x600
+    {960, 680, 0, gdem133_init_full, NULL, gdem133_init_partial, gdem133_fill, 0, BBEP_CHIP_SSD16xx, u8Colors_2clr}, // EP133_960x680 13.3" SSD1677
 };
 //
 // Set the e-paper panel type
@@ -3621,6 +3623,7 @@ int bbepSetPanelType(BBEPDISP *pBBEP, int iPanel)
     pBBEP->pInitFull = panelDefs[iPanel].pInitFull;
     pBBEP->pInitFast = panelDefs[iPanel].pInitFast;
     pBBEP->pInitPart = panelDefs[iPanel].pInitPart;
+    pBBEP->pFill = panelDefs[iPanel].pFill;
     pBBEP->pColorLookup = panelDefs[iPanel].pColorLookup;
     pBBEP->type = iPanel;
     // select the correct pixel drawing functions (2/3/4/7 color)
@@ -4016,6 +4019,35 @@ int bbepTestPanelType(BBEPDISP *pBBEP)
 // if there is no backing buffer, write directly to
 // the EPD's framebuffer
 //
+static uint8_t gdem133_fill(void *pVoid, uint8_t ucColor, int iPlane)
+{
+    BBEPDISP *pBBEP = (BBEPDISP *)pVoid;
+    if (!pBBEP) return 0;
+
+    // SSD1677 commands 0x46/0x47 auto-write alternate/BW RAM with a regular
+    // pattern. For this 960x680 panel, command data 0x77 means:
+    // D7=0 first step value (black), D6-D4=111 height 680, D3=0 reserved,
+    // D2-D0=111 width 960. 0xf7 is the same full-panel pattern with D7=1
+    // for white. Other SSD16xx controllers/panels can use different tables,
+    // so keep this quick path tied to EP133_960x680.
+    uint8_t pattern = (ucColor == BBEP_WHITE) ? 0xf7 : 0x77;
+    uint8_t wrote = 0;
+
+    if (iPlane == PLANE_1 || iPlane == PLANE_DUPLICATE || iPlane == PLANE_BOTH) {
+        bbepSetAddrWindow(pBBEP, 0, 0, pBBEP->native_width, pBBEP->native_height);
+        bbepCMD2(pBBEP, 0x46, pattern); // auto-write alternate/red RAM
+        bbepWaitBusy(pBBEP);
+        wrote = 1;
+    }
+    if (iPlane == PLANE_0 || iPlane == PLANE_DUPLICATE || iPlane == PLANE_BOTH) {
+        bbepSetAddrWindow(pBBEP, 0, 0, pBBEP->native_width, pBBEP->native_height);
+        bbepCMD2(pBBEP, 0x47, pattern); // auto-write B/W RAM
+        bbepWaitBusy(pBBEP);
+        wrote = 1;
+    }
+    return wrote;
+}
+
 void bbepFill(BBEPDISP *pBBEP, unsigned char ucColor, int iPlane)
 {
     uint8_t uc1=0, uc2=0;
@@ -4073,6 +4105,10 @@ void bbepFill(BBEPDISP *pBBEP, unsigned char ucColor, int iPlane)
             memset(&pBBEP->ucScreen[iSize], uc2, iSize);
         }
     } else { // write directly to the EPD's framebuffer
+        if (pBBEP->pFill && pBBEP->pFill(pBBEP, ucColor, iPlane)) {
+            return;
+        }
+
         if (pBBEP->iFlags & BBEP_3COLOR) {
             if (ucColor == BBEP_WHITE) {
                 uc1 = 0xff; uc2 = 0x00; // red plane has priority
