@@ -158,6 +158,16 @@ int rc = BBEP_ERROR_BAD_PARAMETER;
                 return BBEP_SUCCESS;
             }
             break;
+        case EPD_BADGER2350: // DC:20 CS:17 RST:21 BUSY: 16 MOSI: 19 SCK: 18 PWR: 27
+        case EPD_BADGER2350_4GRAY:
+            if (setPanelType((iProduct == EPD_BADGER2350) ? EP27_176x264 : EP27_176x264_4GRAY) == BBEP_SUCCESS) {
+                initIO(20, 21, 16, 17, 19, 18, 12000000);
+                setRotation(270);
+                pinMode(27, OUTPUT);
+                digitalWrite(27, HIGH); // keep power turned on
+                return BBEP_SUCCESS;
+            }
+            break;
         case EPD_BADGER2040: // DC:20 CS:17 RST:21 BUSY: 26 PWR: 10
             if (setPanelType(EP29_128x296) == BBEP_SUCCESS) {
                 initIO(20, 21, 26, 17, -1, -1, 12000000);
