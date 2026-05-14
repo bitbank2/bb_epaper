@@ -28,7 +28,7 @@
 #include <string.h>
 #include <fcntl.h>
 #else // Arduino
-
+#include <Wire.h>
 #endif // __LINUX__
 
 #include "bb_epaper.h"
@@ -81,11 +81,64 @@ void BBEPAPER::setAddrWindow(int x, int y, int w, int h)
     bbepSetAddrWindow(&_bbep, x, y, w, h);
 }
 
+#ifdef ARDUINO
+//
+// Read-modify-write an I2C register value, setting a single bit
+//
+static void setI2CBit(uint8_t u8Addr, uint8_t u8Reg, uint8_t u8Bit, uint8_t u8Value)
+{
+    Wire.beginTransmission(u8Addr);
+    Wire.write(u8Reg);
+    Wire.endTransmission();
+    Wire.requestFrom(u8Addr, 1);
+    uint8_t u8 = Wire.read(); // read the current value
+    if (u8Value) {
+        u8 |= (1 << u8Bit); // set the requested bit
+    } else {
+        u8 &= ~(1 << u8Bit); // clear the requested bit
+    }
+    Wire.beginTransmission(u8Addr);
+    Wire.write(u8Reg);
+    Wire.write(u8); // write the modified value
+    Wire.endTransmission();
+} /* setI2CBit() */
+#endif // ARDUINO
+
 int BBEPAPER::begin(int iProduct, bool bSharedSPI)
 {
 int rc = BBEP_ERROR_BAD_PARAMETER;
 
     switch (iProduct) {
+#ifdef ARDUINO
+        case EPD_M5_PAPER_COLOR: // DC:43 RST:12 BUSY:11 CS:44 MOSI:13 SCK:15
+           if (setPanelType(EP40_SPECTRA_400x600) == BBEP_SUCCESS) {
+              // We need to enable the power management chip (PY32) to power the EPD
+               Wire.end();
+               Wire.begin(3,2);
+               //Wire.beginTransmission(0x6e);
+               //Wire.write(0x00); // read ID
+               //Wire.endTransmission();
+               //Wire.requestFrom(0x6e, 1);
+               //if (Wire.read() == 0x50) { // it's the Paper Color
+               //   Serial.println("Paper color found!");
+               //}
+               Wire.beginTransmission(0x6e);
+               Wire.write(0x0a); // disable watchdog
+               Wire.write(0);
+               Wire.endTransmission();
+               setI2CBit(0x6e, 0x16, 0, 0); // set gpio0 as gpio (off)
+               setI2CBit(0x6e, 0x10, 0, 1); // set gpio0 as output (on)
+               setI2CBit(0x6e, 0x13, 0, 0); // set gpio0 as push-pull mode (off)
+               setI2CBit(0x6e, 0x11, 0, 1); // set gpio0 output high (on)
+               Wire.beginTransmission(0x6e);
+               Wire.write(0x09); // disable i2c idle sleep mode
+               Wire.write(0x00);
+               Wire.endTransmission();
+               initIO(43, 12, 11, 44, 13, 15, 10000000);
+               return BBEP_SUCCESS;
+           }
+           break;
+#endif // ARDUINO
         case EPD_LILYGO_T3S3: // DC:16 RST:47 BUSY:48 CS:15 MOSI:11 SCK:4
            if (setPanelType(EP213ZZ_122x250) == BBEP_SUCCESS) {
                initIO(16, 47, 48, 15, 11, 14, 10000000);
