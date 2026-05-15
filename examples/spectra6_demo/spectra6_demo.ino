@@ -4,7 +4,7 @@
 //
 #include <bb_epaper.h>
 // Use one of the built-in fonts
-#include "../../Fonts/Roboto_Black_24.h"
+#include "Fonts/Roboto_Black_24.h"
 BBEPAPER bbep;
 
 void setup(void)

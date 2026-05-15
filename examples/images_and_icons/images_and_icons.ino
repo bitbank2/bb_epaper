@@ -10,7 +10,7 @@ BBEPAPER bbep;
 
 void setup()
 {
-  bbep.begin(EPD_XTEINK_X4);
+  bbep.begin(EPD_BADGER2350); //EPD_XTEINK_X4);
   bbep.allocBuffer();
   // Do everything with no local buffer
   bbep.fillScreen(BBEP_WHITE);
@@ -45,6 +45,10 @@ void setup()
   }
   bbep.writePlane();
   bbep.refresh(REFRESH_FAST);
+  delay(3000);
+  bbep.fillScreen(BBEP_WHITE);
+  bbep.writePlane();
+  bbep.refresh(REFRESH_FULL);
   bbep.sleep(DEEP_SLEEP);
 }
 

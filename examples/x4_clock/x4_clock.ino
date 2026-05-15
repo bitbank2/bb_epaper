@@ -21,10 +21,10 @@ HTTPClient http;
 //
 // Change for your local WiFi settings and time zone
 //
-const char *ssid = "BELL452";
-const char *password = "1F6D44DF953E";
+const char *ssid = "your_ssid";
+const char *password = "your_password";
 // Define your timezone offset in seconds from GMT - e.g. GMT-5 = (-5 * 3600)
-#define TIME_OFFSET -(3600 * 4)
+#define TIME_OFFSET 3600
 
 // BQ27220 registers (X3 only)
 #define BQ_ADDR 0x55

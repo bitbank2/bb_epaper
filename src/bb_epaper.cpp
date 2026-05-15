@@ -81,7 +81,7 @@ void BBEPAPER::setAddrWindow(int x, int y, int w, int h)
     bbepSetAddrWindow(&_bbep, x, y, w, h);
 }
 
-#ifdef ARDUINO
+#ifdef ARDUINO_ARCH_ESP32
 //
 // Read-modify-write an I2C register value, setting a single bit
 //
@@ -102,14 +102,14 @@ static void setI2CBit(uint8_t u8Addr, uint8_t u8Reg, uint8_t u8Bit, uint8_t u8Va
     Wire.write(u8); // write the modified value
     Wire.endTransmission();
 } /* setI2CBit() */
-#endif // ARDUINO
+#endif // ARDUINO_ARCH_ESP32
 
 int BBEPAPER::begin(int iProduct, bool bSharedSPI)
 {
 int rc = BBEP_ERROR_BAD_PARAMETER;
 
     switch (iProduct) {
-#ifdef ARDUINO
+#ifdef ARDUINO_ARCH_ESP32
         case EPD_M5_PAPER_COLOR: // DC:43 RST:12 BUSY:11 CS:44 MOSI:13 SCK:15
            if (setPanelType(EP40_SPECTRA_400x600) == BBEP_SUCCESS) {
               // We need to enable the power management chip (PY32) to power the EPD
@@ -138,7 +138,7 @@ int rc = BBEP_ERROR_BAD_PARAMETER;
                return BBEP_SUCCESS;
            }
            break;
-#endif // ARDUINO
+#endif // ARDUINO_ARCH_ESP32S3
         case EPD_LILYGO_T3S3: // DC:16 RST:47 BUSY:48 CS:15 MOSI:11 SCK:4
            if (setPanelType(EP213ZZ_122x250) == BBEP_SUCCESS) {
                initIO(16, 47, 48, 15, 11, 14, 10000000);

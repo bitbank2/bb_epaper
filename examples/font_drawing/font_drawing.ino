@@ -5,7 +5,7 @@
 // This sketch demonstrates how to work with BBF (BitBank Font) files
 //
 #include <bb_epaper.h>
-#include "../Fonts/Roboto_Black_24.h" // use one of the provided TTF->BBF fonts
+#include "Fonts/Roboto_Black_24.h" // use one of the provided TTF->BBF fonts
 
 BBEPAPER bbep; // class instance of bb_epaper display library
 
