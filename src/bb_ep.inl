@@ -78,6 +78,11 @@ const uint8_t u8Colors_7clr[16] = {  // ACeP 7-color
     BBEP_BLACK, BBEP_BLACK, BBEP_BLACK, BBEP_BLACK, BBEP_BLACK, BBEP_BLACK, BBEP_BLACK, BBEP_BLACK
 };
 
+const uint8_t u8Colors_7clr_v2[16] = {  // Alternative ACeP 7-color, black white green blue red yellow orange
+    BBEP_BLACK, BBEP_WHITE, 0x05, 0x04, 0x03, 0x02, BBEP_ORANGE, BBEP_BLACK,
+    BBEP_BLACK, BBEP_BLACK, BBEP_BLACK, BBEP_BLACK, BBEP_BLACK, BBEP_BLACK, BBEP_BLACK, BBEP_BLACK
+};
+
 const uint8_t u8Colors_spectra[16] = {  // Spectra 6
     BBEP_BLACK, BBEP_WHITE, BBEP_YELLOW, BBEP_RED, 0x05, 0x06, BBEP_BLACK, BBEP_BLACK,
     BBEP_BLACK, BBEP_BLACK, BBEP_BLACK, BBEP_BLACK, BBEP_BLACK, BBEP_BLACK, BBEP_BLACK, BBEP_BLACK
@@ -3626,6 +3631,23 @@ const uint8_t epd73_spectra_init[] PROGMEM = {
     BUSY_WAIT,
     0
 };
+// AC057TC1 5.7" 600x448 7-color ACeP init sequence
+const uint8_t epd57_acep_init[] PROGMEM = {
+    3, UC8151_PSR, 0xef, 0x08, // panel setting
+    5, UC8151_PWR, 0x37, 0x00, 0x05, 0x05, // power setting
+    2, UC8151_PFS, 0x00, // power off sequence
+    4, UC8151_BTST, 0xc7, 0xc7, 0x1d, // booster soft start
+    2, UC8151_TSE, 0x00, // temperature sensor enable
+    2, UC8151_CDI, 0x37, // VCOM and data interval
+    2, UC8151_TCON, 0x20, // TCON
+    5, UC8151_TRES, 0x02, 0x58, 0x01, 0xc0, // resolution 600x448
+    2, UC8151_PWS, 0xaa,
+    2, UC8151_CDI, 0x37, // VCOM and data interval
+    1, UC8151_PON, // power on
+    BUSY_WAIT,
+    0
+};
+
 // Spectra 6 (GDEP040E01) 400x600 7-color init sequence
 // GoodDisplay reference; normal (host-managed power cycling) mode
 const uint8_t epd40_spectra_init[] PROGMEM = {
@@ -3817,6 +3839,7 @@ const EPD_PANEL panelDefs[] PROGMEM = {
     {400, 600, 0, epd40_spectra_init, NULL, NULL, BBEP_7COLOR, BBEP_CHIP_UC81xx, u8Colors_spectra}, // EP40_SPECTRA_400x600 GDEP040E01 Spectra 6 4" 400x600
     {176, 264, 0, badger2350_init_full, badger2350_init_fast, badger2350_init_part, BBEP_NEEDS_EXTRA_INIT, BBEP_CHIP_SSD16xx, u8Colors_2clr}, // EP27_176x264
     {176, 264, 0, badger2350g_init_full, badger2350g_init_fast, NULL, BBEP_NEEDS_EXTRA_INIT | BBEP_4GRAY, BBEP_CHIP_SSD16xx, u8Colors_4gray},// EP27_176x264_4GRAY
+    {600, 448, 0, epd57_acep_init, NULL, NULL, BBEP_NEEDS_EXTRA_INIT | BBEP_7COLOR, BBEP_CHIP_UC81xx, u8Colors_7clr_v2}, // EP57_ACEP_600x448 AC057TC1
 };
 //
 // Set the e-paper panel type
