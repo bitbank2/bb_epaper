@@ -110,6 +110,16 @@ int rc = BBEP_ERROR_BAD_PARAMETER;
 
     switch (iProduct) {
 #ifdef ARDUINO_ARCH_ESP32
+        case EPD_SEEED_STICKY: // DC:16 RST:17 BUSY:18 CS:15 MOSI:14 SCK:13 PWR:47
+        case EPD_SEEED_STICKY_4GRAY:
+            pinMode(47, OUTPUT);
+            digitalWrite(47, 1); // enable EPD power
+            if (setPanelType((iProduct == EPD_SEEED_STICKY) ? EP397_800x480:EP397_800x480_4GRAY) == BBEP_SUCCESS) {
+                initIO(16, 17, 18, 15, 14, 13, 10000000);
+                return BBEP_SUCCESS;
+            }
+           break;
+
         case EPD_M5_PAPER_COLOR: // DC:43 RST:12 BUSY:11 CS:44 MOSI:13 SCK:15
            if (setPanelType(EP40_SPECTRA_400x600) == BBEP_SUCCESS) {
               // We need to enable the power management chip (PY32) to power the EPD
