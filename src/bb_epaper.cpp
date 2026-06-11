@@ -230,6 +230,14 @@ int rc = BBEP_ERROR_BAD_PARAMETER;
                 return BBEP_SUCCESS;
             }
             break;
+        case EPD_INKPLATE6COLOR: // DC:33 RST:19 BUSY:32 CS:27 MOSI:23 SCK:18
+            if (setPanelType(EP57_ACEP_600x448) == BBEP_SUCCESS) {
+                initIO(33, 19, 32, 27, 23, 18, 2000000);
+                setRotation(180);
+                return BBEP_SUCCESS;
+            }
+            break;
+
         case EPD_TRMNL_OG: // DC:5 CS:6 RST:10 BUSY:4 MOSI:8 SCK:7
             if (setPanelType(EP75_800x480) == BBEP_SUCCESS) {
                 initIO(5, 10, 4, 6, 8, 7, 10000000);
