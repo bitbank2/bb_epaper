@@ -28,6 +28,7 @@
 #include <string.h>
 #include <fcntl.h>
 #else // Arduino
+#include <Arduino.h>
 #include <Wire.h>
 #endif // __LINUX__
 
