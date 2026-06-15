@@ -1,4 +1,4 @@
-//
+ //
 // bb_epaper
 // Written by Larry Bank (bitbank@pobox.com)
 // Project started 9/11/2024
@@ -3489,6 +3489,7 @@ const uint8_t epd397_init_full[] PROGMEM = {
     5, 0x45, 0xdf, 0x01, 0x00, 0x00, // set RAM y start/end
     3, 0x4e, 0x00, 0x00, // RAM x address
     3, 0x4f, 0x00, 0x00, // RAM y address
+    3, 0x21, 0x40, 0x00, // display update control
     BUSY_WAIT,
     0 // end
 };
@@ -3504,6 +3505,7 @@ const uint8_t epd397_init_fast[] PROGMEM = {
     5, 0x45, 0xdf, 0x01, 0x00, 0x00, // set RAM y start/end
     3, 0x4e, 0x00, 0x00, // RAM x address
     3, 0x4f, 0x00, 0x00, // RAM y address
+    3, 0x21, 0x40, 0x00, // display udpate control
     BUSY_WAIT,
     2, 0x18, 0x80,
     2, 0x1a, 0x6a, // fast mode (1.5s)
@@ -3522,6 +3524,7 @@ const uint8_t epd397_init_part[] PROGMEM = {
     5, 0x45, 0xdf, 0x01, 0x00, 0x00, // set RAM y start/end
     3, 0x4e, 0x00, 0x00, // RAM x address
     3, 0x4f, 0x00, 0x00, // RAM y address
+    3, 0x21, 0, 0, // display update control
     BUSY_WAIT,
     0 // end
 };
@@ -4456,7 +4459,7 @@ int bbepRefresh(BBEPDISP *pBBEP, int iMode)
         const uint8_t u8CMD[4] = {0xf7, 0xc7, 0xff, 0xc0}; // normal, fast, partial, partial2
         const uint8_t u8CMDz[4] = {0xf4, 0xc7, 0xfc, 0}; // special set for SSD1680
         const uint8_t u8CMDz2[4] = {0xf4, 0xc7, 0xdc, 0}; // special set #2 for SSD1680
-        const uint8_t u8CMDz3[4] = {0xf7, 0xd7, 0xff, 0}; // special set #3
+        const uint8_t u8CMDz3[4] = {0xf7, 0xd7, 0xfc, 0}; // special set #3
         if (pBBEP->iFlags & (BBEP_4GRAY | BBEP_3COLOR | BBEP_4COLOR)) {
             iMode = REFRESH_FAST;
         } // 3/4-color = 0xc7
