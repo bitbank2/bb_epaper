@@ -3721,7 +3721,34 @@ const uint8_t epd81c_init_full[] PROGMEM = {
     2, 0xe0, 0x01,
     5, UC8151_BTST, 0x6f, 0x1f, 0x16, 0x25,
     1, UC8151_PON,
-    BUSY_WAIT, 
+    BUSY_WAIT,
+    0x00
+};
+
+// T133A01 13.3" Spectra6 dual-chip init (Seeed reTerminal E1004).
+// Translated from the vendor EPD_INIT sequence. Power-on (PON) is NOT here;
+// this panel powers on per refresh (PON/DRF/POF), handled in bbepRefresh().
+// The same sequence is sent to both controllers (CS1 then CS2) by the
+// BBEP_SPLIT_BUFFER plumbing. TRES is the vendor's value (0x04B0 x 0x0320).
+const uint8_t epd133a_init_full[] PROGMEM = {
+    EPD_RESET, // hardware reset pulse (RST low/high) then wait — matches vendor
+    BUSY_WAIT,
+    10, 0x74, 0x00, 0x0c, 0x0c, 0xd9, 0xdd, 0xdd, 0x15, 0x15, 0x55,
+    7,  0xf0, 0x49, 0x55, 0x13, 0x5d, 0x05, 0x10,
+    3,  0x00, 0xdf, 0x69,            // PSR
+    4,  0xa5, 0x44, 0x54, 0x00,      // DCDC
+    2,  0x50, 0x37,                  // CDI
+    3,  0x60, 0x03, 0x03,
+    2,  0x86, 0x10,
+    2,  0xe3, 0x22,                  // PWS
+    5,  0x61, 0x04, 0xb0, 0x03, 0x20, // TRES (vendor value)
+    7,  0x01, 0x0f, 0x00, 0x28, 0x2c, 0x28, 0x38, // PWR
+    2,  0xb6, 0x07,
+    3,  0x06, 0xe0, 0x20,            // BTST_P
+    2,  0xb7, 0x01,
+    3,  0x05, 0xe0, 0x20,            // BTST_N
+    2,  0xb0, 0x01,
+    2,  0xb1, 0x02,
     0x00
 };
 
@@ -3820,6 +3847,7 @@ const EPD_PANEL panelDefs[] PROGMEM = {
     {400, 600, 0, epd40_spectra_init, NULL, NULL, BBEP_7COLOR, BBEP_CHIP_UC81xx, u8Colors_spectra}, // EP40_SPECTRA_400x600 GDEP040E01 Spectra 6 4" 400x600
     {176, 264, 0, badger2350_init_full, badger2350_init_fast, badger2350_init_part, BBEP_NEEDS_EXTRA_INIT, BBEP_CHIP_SSD16xx, u8Colors_2clr}, // EP27_176x264
     {176, 264, 0, badger2350g_init_full, badger2350g_init_fast, NULL, BBEP_NEEDS_EXTRA_INIT | BBEP_4GRAY, BBEP_CHIP_SSD16xx, u8Colors_4gray},// EP27_176x264_4GRAY
+    {1200, 1600, 0, epd133a_init_full, NULL, NULL, BBEP_SPLIT_BUFFER | BBEP_7COLOR | BBEP_T133A01, BBEP_CHIP_UC81xx, u8Colors_spectra}, // EP133A_SPECTRA_1200x1600 T133A01 dual-chip (Seeed reTerminal E1004)
 };
 //
 // Set the e-paper panel type
@@ -4117,6 +4145,13 @@ void bbepSleep(BBEPDISP *pBBEP, int bDeep)
                bbepCMD2(pBBEP, UC8151_POFF, 0x00); // second controller
                pBBEP->iCSPin = pBBEP->iCS1Pin;
             }
+            if ((pBBEP->iFlags & BBEP_T133A01) && bDeep) {
+                // T133A01 deep sleep (0x07, 0xA5) on both controllers
+                bbepWaitBusy(pBBEP);
+                pBBEP->iCSPin = pBBEP->iCS1Pin; bbepCMD2(pBBEP, 0x07, 0xa5);
+                pBBEP->iCSPin = pBBEP->iCS2Pin; bbepCMD2(pBBEP, 0x07, 0xa5);
+                pBBEP->iCSPin = pBBEP->iCS1Pin;
+            }
         } else if (pBBEP->iFlags & BBEP_4COLOR) {
             bbepCMD2(pBBEP, 0x02, 0x00); // power off
             bbepWaitBusy(pBBEP);
@@ -4402,7 +4437,19 @@ int bbepRefresh(BBEPDISP *pBBEP, int iMode)
             return BBEP_ERROR_BAD_PARAMETER;
     } // switch on mode
     if (pBBEP->chip_type == BBEP_CHIP_UC81xx) {
-        if (pBBEP->iFlags & (BBEP_4GRAY | BBEP_4COLOR | BBEP_7COLOR)) {
+        if (pBBEP->iFlags & BBEP_T133A01) {
+            // T133A01 dual-chip Spectra6: power on, refresh (DRF=0x01), power off,
+            // on BOTH controllers, waiting for BUSY after each phase.
+            pBBEP->iCSPin = pBBEP->iCS1Pin; bbepWriteCmd(pBBEP, UC8151_PON);
+            pBBEP->iCSPin = pBBEP->iCS2Pin; bbepWriteCmd(pBBEP, UC8151_PON);
+            pBBEP->iCSPin = pBBEP->iCS1Pin; bbepWaitBusy(pBBEP);
+            pBBEP->iCSPin = pBBEP->iCS1Pin; bbepCMD2(pBBEP, UC8151_DRF, 0x01);
+            pBBEP->iCSPin = pBBEP->iCS2Pin; bbepCMD2(pBBEP, UC8151_DRF, 0x01);
+            pBBEP->iCSPin = pBBEP->iCS1Pin; bbepWaitBusy(pBBEP);
+            pBBEP->iCSPin = pBBEP->iCS1Pin; bbepCMD2(pBBEP, UC8151_POFF, 0x00);
+            pBBEP->iCSPin = pBBEP->iCS2Pin; bbepCMD2(pBBEP, UC8151_POFF, 0x00);
+            pBBEP->iCSPin = pBBEP->iCS1Pin; bbepWaitBusy(pBBEP);
+        } else if (pBBEP->iFlags & (BBEP_4GRAY | BBEP_4COLOR | BBEP_7COLOR)) {
             bbepCMD2(pBBEP, UC8151_DRF, 0x00);
             if (pBBEP->iFlags & BBEP_SPLIT_BUFFER) {
                // Send the same sequence to the second controller
@@ -4585,7 +4632,17 @@ void bbepWriteImage4bppDual(BBEPDISP *pBBEP, uint8_t ucCMD)
 {
     int tx, ty, iPitch;
     uint8_t uc, *s, *d;
-        
+
+    if (pBBEP->iFlags & BBEP_T133A01) {
+        // T133A01 needs a "current frame" CCSET (0xE0, 0x01) sent to both
+        // controllers before each pixel-data transfer.
+        pBBEP->iCSPin = pBBEP->iCS1Pin;
+        bbepCMD2(pBBEP, 0xe0, 0x01);
+        pBBEP->iCSPin = pBBEP->iCS2Pin;
+        bbepCMD2(pBBEP, 0xe0, 0x01);
+        pBBEP->iCSPin = pBBEP->iCS1Pin;
+        bbepWaitBusy(pBBEP);
+    }
     if (ucCMD) {
         pBBEP->iCSPin = pBBEP->iCS1Pin;
         bbepWriteCmd(pBBEP, ucCMD); // start write

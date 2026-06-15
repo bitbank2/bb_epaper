@@ -268,6 +268,7 @@ enum {
     EP40_SPECTRA_400x600, // GDEP040E01 Spectra 6 4" 400x600
     EP27_176x264, // Badger2350
     EP27_176x264_4GRAY, // Badger2350
+    EP133A_SPECTRA_1200x1600, // T133A01 13.3" Spectra 6, dual-chip (Seeed reTerminal E1004)
     EP_PANEL_COUNT
 };
 #ifdef FUTURE
@@ -309,6 +310,7 @@ enum {
 #define BBEP_SPLIT_BUFFER 0x0400
 #define BBEP_HAS_SECOND_PLANE 0x0800
 #define BBEP_NEEDS_EXTRA_INIT 0x1000
+#define BBEP_T133A01 0x2000 // T133A01 Spectra6 quirks: CCSET before data, PON/DRF/POF refresh
 
 #define BBEP_BLACK 0
 #define BBEP_WHITE 1

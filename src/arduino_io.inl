@@ -60,6 +60,7 @@ void bbepInitIO(BBEPDISP *pBBEP, uint8_t u8DC, uint8_t u8RST, uint8_t u8BUSY, ui
 {
     pBBEP->iDCPin = u8DC;
     pBBEP->iCSPin = u8CS;
+    pBBEP->iCS1Pin = u8CS; // primary CS is always controller #1 (keeps dual-CS logic correct regardless of setCS2() order)
     pBBEP->iMOSIPin = u8MOSI;
     pBBEP->iCLKPin = u8SCK;
     pBBEP->iRSTPin = u8RST;
