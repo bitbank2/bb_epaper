@@ -155,7 +155,7 @@ void bbepWriteCmd(BBEPDISP *pBBEP, uint8_t cmd)
         pBBEP->is_awake = 1;
     }
     digitalWrite(pBBEP->iDCPin, LOW);
-    delay(1);
+    delayMicroseconds(1);
     digitalWrite(pBBEP->iCSPin, LOW);
     if (pBBEP->iSpeed == 0) { // bit bang
         SPI_Write(pBBEP, &cmd, 1);

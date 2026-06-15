@@ -185,6 +185,7 @@ enum {
     EPD_WAVESHARE_397_4GRAY,
     EPD_LILYGO_T3S3,
     EPD_M5_PAPER_COLOR, // 4" 600x400 Spectra6
+    EPD_INKPLATE13SPECTRA, // Soldered Inkplate 13 SPECTRA (ESP32-S3, 13.3" 1200x1600 Spectra 6)
     EPD_PRODUCT_COUNT
 };
 
@@ -266,6 +267,7 @@ enum {
     EP40_SPECTRA_400x600, // GDEP040E01 Spectra 6 4" 400x600
     EP27_176x264, // Badger2350
     EP27_176x264_4GRAY, // Badger2350
+    EP133_SPECTRA_1200x1600, // EL133UF1 (Soldered Inkplate 13 SPECTRA) Spectra 6, dual controller
     EP_PANEL_COUNT
 };
 #ifdef FUTURE
