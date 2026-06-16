@@ -3725,6 +3725,46 @@ const uint8_t epd81c_init_full[] PROGMEM = {
     0x00
 };
 
+const uint8_t epd133_spectra_init[] PROGMEM = {
+    BUSY_WAIT,
+    10, 0x74, 0xc0, 0x1c, 0x1c, 0xcc, 0xcc, 0xcc, 0x15, 0x15, 0x55, // AN_TM (master only)
+    7, 0xf0, 0x49, 0x55, 0x13, 0x5d, 0x05, 0x10, // CMD66
+    3, UC8151_PSR, 0xdf, 0x6b, // panel setting
+    2, UC8151_PLL, 0x08, // PLL
+    2, UC8151_CDI, 0xf7, // VCOM and data interval
+    3, UC8151_TCON, 0x03, 0x03, // TCON
+    2, 0x86, 0x10, // AGID
+    2, UC8151_PWS, 0x22, // PWS
+    2, 0xe0, 0x01, // CCSET
+    5, UC8151_TRES, 0x04, 0xb0, 0x03, 0x20, // resolution
+    7, UC8151_PWR, 0x0f, 0x00, 0x28, 0x2c, 0x28, 0x38, // power (master only)
+    2, 0xb6, 0x07, // EN_BUF (master only)
+    3, UC8151_BTST, 0xd8, 0x18, // BTST_P (master only)
+    2, 0xb7, 0x01, // BOOST_VDDP_EN (master only)
+    3, 0x05, 0xd8, 0x18, // BTST_N (master only)
+    2, 0xb0, 0x01, // BUCK_BOOST_VDDN (master only)
+    2, 0xb1, 0x02, // TFT_VCOM_POWER (master only)
+    1, UC8151_PON, // power on
+    BUSY_WAIT,
+    0x00
+};
+// Slave (CS2) init: only the registers both controllers need; no power-stage regs.
+const uint8_t epd133_spectra_init_slave[] PROGMEM = {
+    BUSY_WAIT,
+    7, 0xf0, 0x49, 0x55, 0x13, 0x5d, 0x05, 0x10, // CMD66
+    3, UC8151_PSR, 0xdf, 0x6b,
+    2, UC8151_PLL, 0x08,
+    2, UC8151_CDI, 0xf7,
+    3, UC8151_TCON, 0x03, 0x03,
+    2, 0x86, 0x10, // AGID
+    2, UC8151_PWS, 0x22,
+    2, 0xe0, 0x01, // CCSET
+    5, UC8151_TRES, 0x04, 0xb0, 0x03, 0x20,
+    1, UC8151_PON,
+    BUSY_WAIT,
+    0x00
+};
+
 #ifdef NO_RAM
 uint8_t u8Cache[128]; // buffer a single line of up to 1024 pixels
 #else // we need a larger cache for 4-bit panels
@@ -3820,6 +3860,7 @@ const EPD_PANEL panelDefs[] PROGMEM = {
     {400, 600, 0, epd40_spectra_init, NULL, NULL, BBEP_7COLOR, BBEP_CHIP_UC81xx, u8Colors_spectra}, // EP40_SPECTRA_400x600 GDEP040E01 Spectra 6 4" 400x600
     {176, 264, 0, badger2350_init_full, badger2350_init_fast, badger2350_init_part, BBEP_NEEDS_EXTRA_INIT, BBEP_CHIP_SSD16xx, u8Colors_2clr}, // EP27_176x264
     {176, 264, 0, badger2350g_init_full, badger2350g_init_fast, NULL, BBEP_NEEDS_EXTRA_INIT | BBEP_4GRAY, BBEP_CHIP_SSD16xx, u8Colors_4gray},// EP27_176x264_4GRAY
+    {1200, 1600, 0, epd133_spectra_init, NULL, epd133_spectra_init_slave, BBEP_NEEDS_EXTRA_INIT | BBEP_SPLIT_BUFFER | BBEP_7COLOR, BBEP_CHIP_UC81xx, u8Colors_spectra}, // EP133_SPECTRA_1200x1600 EL133UF1 (Soldered Inkplate 13 SPECTRA)
 };
 //
 // Set the e-paper panel type

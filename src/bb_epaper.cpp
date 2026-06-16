@@ -241,6 +241,34 @@ int rc = BBEP_ERROR_BAD_PARAMETER;
                 return BBEP_SUCCESS;
             }
             break;
+        case EPD_INKPLATE13SPECTRA: // DC:14 RST:4 BUSY:7 CS_M:42 CS_S:39 MOSI:40 SCK:38
+            if (setPanelType(EP133_SPECTRA_1200x1600) == BBEP_SUCCESS) {
+                // Drain the panel's capacitors by holding all of its pins low,
+                // otherwise it sometimes refuses to refresh
+                {
+                    const uint8_t u8Pins[8] = {14, 42, 39, 4, 7, 21, 6, 5};
+                    for (int i = 0; i < 8; i++) {
+                        pinMode(u8Pins[i], OUTPUT);
+                        digitalWrite(u8Pins[i], LOW);
+                    }
+                }
+                delay(50);
+                digitalWrite(6, HIGH);  // BS0 high
+                digitalWrite(14, HIGH); // D/C starts high; library will toggle it per command
+                digitalWrite(21, HIGH); // EPD power enable
+                delay(100); // give the panel power time to stabilize
+                // Both CS pins must be set before initIO() because it sends the init
+                // sequence to both controllers of this dual-controller panel
+                _bbep.iCS1Pin = 42;
+                _bbep.iCS2Pin = 39;
+                digitalWrite(39, HIGH); // de-select the second controller
+                initIO(14, 4, 7, 42, 40, 38, 10000000);
+                pinMode(7, INPUT_PULLUP); // BUSYN was driven low during the drain step
+                setRotation(270);
+                return BBEP_SUCCESS;
+            }
+            break;
+
         case EPD_TRMNL_OG: // DC:5 CS:6 RST:10 BUSY:4 MOSI:8 SCK:7
             if (setPanelType(EP75_800x480) == BBEP_SUCCESS) {
                 initIO(5, 10, 4, 6, 8, 7, 10000000);
