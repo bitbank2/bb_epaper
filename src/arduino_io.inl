@@ -27,6 +27,7 @@
 // foreward references
 void bbepWakeUp(BBEPDISP *pBBEP);
 void bbepSendCMDSequence(BBEPDISP *pBBEP, const uint8_t *pSeq);
+void bbepWaitBusy(BBEPDISP *pBBEP);
 //
 // Set the second CS pin for dual-controller displays
 //
@@ -53,6 +54,101 @@ uint8_t uc;
         }
     }
 } /* SPI_Write() */
+
+static void bbepT133A01WriteCommandData(BBEPDISP *pBBEP, uint8_t cmd, const uint8_t *pData, int iLen, uint8_t bBoth)
+{
+    if (pBBEP->iSpeed != 0) {
+        SPI.beginTransaction(SPISettings(pBBEP->iSpeed, MSBFIRST, SPI_MODE0));
+    }
+    if (bBoth) {
+        digitalWrite(pBBEP->iCS2Pin, LOW);
+    }
+    digitalWrite(pBBEP->iCS1Pin, LOW);
+    digitalWrite(pBBEP->iDCPin, LOW);
+    if (pBBEP->iSpeed == 0) {
+        SPI_Write(pBBEP, &cmd, 1);
+    } else {
+        SPI.transfer(cmd);
+    }
+    digitalWrite(pBBEP->iDCPin, HIGH);
+    for (int i = 0; i < iLen; i++) {
+        uint8_t data = pData[i];
+        if (pBBEP->iSpeed == 0) {
+            SPI_Write(pBBEP, &data, 1);
+        } else {
+            SPI.transfer(data);
+        }
+    }
+    digitalWrite(pBBEP->iCS1Pin, HIGH);
+    if (pBBEP->iSpeed != 0) {
+        SPI.endTransaction();
+    }
+    if (bBoth) {
+        digitalWrite(pBBEP->iCS2Pin, HIGH);
+    }
+} /* bbepT133A01WriteCommandData() */
+
+static void bbepT133A01InitIO(BBEPDISP *pBBEP)
+{
+    static const uint8_t r74DataBuf[9] = {0x00, 0x0c, 0x0c, 0xd9, 0xdd, 0xdd, 0x15, 0x15, 0x55};
+    static const uint8_t rf0DataBuf[6] = {0x49, 0x55, 0x13, 0x5d, 0x05, 0x10};
+    static const uint8_t psrDataBuf[2] = {0xdf, 0x69};
+    static const uint8_t dcdcDataBuf[3] = {0x44, 0x54, 0x00};
+    static const uint8_t cdiDataBuf[1] = {0x37};
+    static const uint8_t r60DataBuf[2] = {0x03, 0x03};
+    static const uint8_t r86DataBuf[1] = {0x10};
+    static const uint8_t pwsDataBuf[1] = {0x22};
+    static const uint8_t tresDataBuf[4] = {0x04, 0xb0, 0x03, 0x20};
+    static const uint8_t pwrDataBuf[6] = {0x0f, 0x00, 0x28, 0x2c, 0x28, 0x38};
+    static const uint8_t rb6DataBuf[1] = {0x07};
+    static const uint8_t btstPDataBuf[2] = {0xe0, 0x20};
+    static const uint8_t rb7DataBuf[1] = {0x01};
+    static const uint8_t btstNDataBuf[2] = {0xe0, 0x20};
+    static const uint8_t rb0DataBuf[1] = {0x01};
+    static const uint8_t rb1DataBuf[1] = {0x02};
+
+    digitalWrite(pBBEP->iRSTPin, LOW);
+    delay(20);
+    digitalWrite(pBBEP->iRSTPin, HIGH);
+    delay(20);
+    bbepWaitBusy(pBBEP);
+
+    // Command groups match the vendor T133A01 init sequence.
+    // 命令分组对应官方 T133A01 初始化序列。
+    bbepT133A01WriteCommandData(pBBEP, 0x74, r74DataBuf, sizeof(r74DataBuf), 0);
+    delay(10);
+    bbepT133A01WriteCommandData(pBBEP, 0xf0, rf0DataBuf, sizeof(rf0DataBuf), 1);
+    delay(10);
+    bbepT133A01WriteCommandData(pBBEP, 0x00, psrDataBuf, sizeof(psrDataBuf), 1);
+    delay(10);
+    bbepT133A01WriteCommandData(pBBEP, 0xa5, dcdcDataBuf, sizeof(dcdcDataBuf), 0);
+    delay(10);
+    bbepT133A01WriteCommandData(pBBEP, 0x50, cdiDataBuf, sizeof(cdiDataBuf), 1);
+    delay(10);
+    bbepT133A01WriteCommandData(pBBEP, 0x60, r60DataBuf, sizeof(r60DataBuf), 1);
+    delay(10);
+    bbepT133A01WriteCommandData(pBBEP, 0x86, r86DataBuf, sizeof(r86DataBuf), 1);
+    delay(10);
+    bbepT133A01WriteCommandData(pBBEP, 0xe3, pwsDataBuf, sizeof(pwsDataBuf), 1);
+    delay(10);
+    bbepT133A01WriteCommandData(pBBEP, 0x61, tresDataBuf, sizeof(tresDataBuf), 1);
+    delay(10);
+    bbepT133A01WriteCommandData(pBBEP, 0x01, pwrDataBuf, sizeof(pwrDataBuf), 0);
+    delay(10);
+    bbepT133A01WriteCommandData(pBBEP, 0xb6, rb6DataBuf, sizeof(rb6DataBuf), 0);
+    delay(10);
+    bbepT133A01WriteCommandData(pBBEP, 0x06, btstPDataBuf, sizeof(btstPDataBuf), 0);
+    delay(10);
+    bbepT133A01WriteCommandData(pBBEP, 0xb7, rb7DataBuf, sizeof(rb7DataBuf), 0);
+    delay(10);
+    bbepT133A01WriteCommandData(pBBEP, 0x05, btstNDataBuf, sizeof(btstNDataBuf), 0);
+    delay(10);
+    bbepT133A01WriteCommandData(pBBEP, 0xb0, rb0DataBuf, sizeof(rb0DataBuf), 0);
+    delay(10);
+    bbepT133A01WriteCommandData(pBBEP, 0xb1, rb1DataBuf, sizeof(rb1DataBuf), 0);
+    delay(10);
+    pBBEP->iCSPin = pBBEP->iCS1Pin;
+} /* bbepT133A01InitIO() */
 //
 // Initialize the GPIO pins and SPI for use by bb_eink
 //
@@ -95,13 +191,17 @@ void bbepInitIO(BBEPDISP *pBBEP, uint8_t u8DC, uint8_t u8RST, uint8_t u8BUSY, ui
         }
     }
 // Before we can start sending pixels, many panels need to know the display resolution
-    bbepSendCMDSequence(pBBEP, pBBEP->pInitFull);
-    if (pBBEP->iFlags & BBEP_7COLOR) { // need to send before you can send it data
-        if (pBBEP->iFlags & BBEP_SPLIT_BUFFER) {    
-           // Send the same sequence to the second controller
-           pBBEP->iCSPin = pBBEP->iCS2Pin;
-           bbepSendCMDSequence(pBBEP, pBBEP->pInitFull);
-           pBBEP->iCSPin = pBBEP->iCS1Pin;
+    if (pBBEP->iFlags & BBEP_T133A01) {
+        bbepT133A01InitIO(pBBEP);
+    } else {
+        bbepSendCMDSequence(pBBEP, pBBEP->pInitFull);
+        if (pBBEP->iFlags & BBEP_7COLOR) { // need to send before you can send it data
+            if (pBBEP->iFlags & BBEP_SPLIT_BUFFER) {
+               // Send the same sequence to the second controller
+               pBBEP->iCSPin = pBBEP->iCS2Pin;
+               bbepSendCMDSequence(pBBEP, pBBEP->pInitFull);
+               pBBEP->iCSPin = pBBEP->iCS1Pin;
+            }
         }
     }
 } /* bbepInitIO() */

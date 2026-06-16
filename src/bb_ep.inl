@@ -3728,8 +3728,7 @@ const uint8_t epd81c_init_full[] PROGMEM = {
 // T133A01 13.3" Spectra6 dual-chip init (Seeed reTerminal E1004).
 // Translated from the vendor EPD_INIT sequence. Power-on (PON) is NOT here;
 // this panel powers on per refresh (PON/DRF/POF), handled in bbepRefresh().
-// The same sequence is sent to both controllers (CS1 then CS2) by the
-// BBEP_SPLIT_BUFFER plumbing. TRES is the vendor's value (0x04B0 x 0x0320).
+// TRES is the vendor's value (0x04B0 x 0x0320).
 const uint8_t epd133a_init_full[] PROGMEM = {
     EPD_RESET, // hardware reset pulse (RST low/high) then wait — matches vendor
     BUSY_WAIT,
@@ -3993,7 +3992,7 @@ void bbepWaitBusy(BBEPDISP *pBBEP)
     uint8_t busy_idle =  (pBBEP->chip_type == BBEP_CHIP_UC81xx) ? HIGH : LOW;
     delay(1); // some panels need a short delay before testing the BUSY line
     if (pBBEP->iFlags & (BBEP_3COLOR | BBEP_4COLOR | BBEP_7COLOR)) {
-        iMaxTime = 30000; // multi-color panels can take a long time
+        iMaxTime = 60000; // multi-color panels can take a long time (13.3" Spectra6 ~40s)
     }
     while (iTimeout < iMaxTime) {
         if (digitalRead(pBBEP->iBUSYPin) == busy_idle) break;
@@ -4397,6 +4396,109 @@ void bbepFill(BBEPDISP *pBBEP, unsigned char ucColor, int iPlane)
     }
 } /* bbepFill() */
 
+static void t133a01_cmd_primary(BBEPDISP *pBBEP, uint8_t cmd, int hasData, uint8_t data)
+{
+    if (pBBEP->iSpeed != 0) {
+        SPI.beginTransaction(SPISettings(pBBEP->iSpeed, MSBFIRST, SPI_MODE0));
+    }
+    digitalWrite(pBBEP->iCS1Pin, LOW);
+    digitalWrite(pBBEP->iDCPin, LOW);
+    if (pBBEP->iSpeed == 0) {
+        SPI_Write(pBBEP, &cmd, 1);
+    } else {
+        SPI.transfer(cmd);
+    }
+    if (hasData) {
+        digitalWrite(pBBEP->iDCPin, HIGH);
+        if (pBBEP->iSpeed == 0) {
+            SPI_Write(pBBEP, &data, 1);
+        } else {
+            SPI.transfer(data);
+        }
+    }
+    digitalWrite(pBBEP->iCS1Pin, HIGH);
+    digitalWrite(pBBEP->iDCPin, HIGH);
+    if (pBBEP->iSpeed != 0) {
+        SPI.endTransaction();
+    }
+} /* t133a01_cmd_primary() */
+
+static void t133a01_cmd_both(BBEPDISP *pBBEP, uint8_t cmd, int hasData, uint8_t data)
+{
+    digitalWrite(pBBEP->iCS2Pin, LOW);
+    t133a01_cmd_primary(pBBEP, cmd, hasData, data);
+    digitalWrite(pBBEP->iCS2Pin, HIGH);
+} /* t133a01_cmd_both() */
+
+static void t133a01_update_phase(BBEPDISP *pBBEP, uint8_t cmd, int hasData, uint8_t data)
+{
+    digitalWrite(pBBEP->iCS2Pin, LOW);
+    t133a01_cmd_primary(pBBEP, cmd, hasData, data);
+    bbepWaitBusy(pBBEP);
+    digitalWrite(pBBEP->iCS2Pin, HIGH);
+    delay(30);
+} /* t133a01_update_phase() */
+
+static uint8_t t133a01_panel_color(uint8_t color)
+{
+    switch (color & 0x0f) {
+    case 0x00:
+    case 0x01:
+    case 0x02:
+    case 0x03:
+    case 0x05:
+    case 0x06:
+        return color & 0x0f;
+    default:
+        return 0x00;
+    }
+} /* t133a01_panel_color() */
+
+static uint8_t t133a01_panel_byte(uint8_t packed)
+{
+    return (t133a01_panel_color(packed >> 4) << 4) |
+           t133a01_panel_color(packed);
+} /* t133a01_panel_byte() */
+
+static void t133a01_write_half(BBEPDISP *pBBEP, uint8_t cmd, uint8_t csPin, int offset)
+{
+    int y, x;
+    const int pitch = pBBEP->native_width / 2;
+    const int halfPitch = pBBEP->native_width / 4;
+    uint8_t *row = pBBEP->ucScreen + offset;
+
+    // Send one DTM command followed by a continuous converted pixel stream.
+    // 发送一个 DTM 命令,随后连续发送已转换的像素数据。
+    pBBEP->iCSPin = csPin;
+    digitalWrite(pBBEP->iCSPin, LOW);
+    if (pBBEP->iSpeed != 0) {
+        SPI.beginTransaction(SPISettings(pBBEP->iSpeed, MSBFIRST, SPI_MODE0));
+    }
+    digitalWrite(pBBEP->iDCPin, LOW);
+    delay(1);
+    if (pBBEP->iSpeed == 0) {
+        SPI_Write(pBBEP, &cmd, 1);
+    } else {
+        SPI.transfer(cmd);
+    }
+    digitalWrite(pBBEP->iDCPin, HIGH);
+    for (y = 0; y < pBBEP->native_height; y++) {
+        for (x = 0; x < halfPitch; x++) {
+            uint8_t pixelByte = t133a01_panel_byte(row[x]);
+            if (pBBEP->iSpeed == 0) {
+                SPI_Write(pBBEP, &pixelByte, 1);
+            } else {
+                SPI.transfer(pixelByte);
+            }
+        }
+        row += pitch;
+    }
+    if (pBBEP->iSpeed != 0) {
+        SPI.endTransaction();
+    }
+    digitalWrite(pBBEP->iCSPin, HIGH);
+} /* t133a01_write_half() */
+
 int bbepRefresh(BBEPDISP *pBBEP, int iMode)
 {
 
@@ -4405,10 +4507,14 @@ int bbepRefresh(BBEPDISP *pBBEP, int iMode)
     
     switch (iMode) {
         case REFRESH_FULL:
-            if (!(pBBEP->iFlags & BBEP_NEEDS_EXTRA_INIT)) { // already sent?
+            // T133A01 must NOT be re-initialised here: its init sequence starts
+            // with a hardware reset that would wipe the frame just written by
+            // writePlane(). It is initialised once in initIO(); refresh only
+            // powers on, refreshes and powers off (handled below).
+            if (!(pBBEP->iFlags & (BBEP_NEEDS_EXTRA_INIT | BBEP_T133A01))) { // already sent?
                 bbepSendCMDSequence(pBBEP, pBBEP->pInitFull);
             }
-            if (pBBEP->iFlags & BBEP_SPLIT_BUFFER) {
+            if ((pBBEP->iFlags & BBEP_SPLIT_BUFFER) && !(pBBEP->iFlags & BBEP_T133A01)) {
                // Send the same sequence to the second controller
                pBBEP->iCSPin = pBBEP->iCS2Pin;
                bbepSendCMDSequence(pBBEP, pBBEP->pInitFull);
@@ -4439,16 +4545,11 @@ int bbepRefresh(BBEPDISP *pBBEP, int iMode)
     if (pBBEP->chip_type == BBEP_CHIP_UC81xx) {
         if (pBBEP->iFlags & BBEP_T133A01) {
             // T133A01 dual-chip Spectra6: power on, refresh (DRF=0x01), power off,
-            // on BOTH controllers, waiting for BUSY after each phase.
-            pBBEP->iCSPin = pBBEP->iCS1Pin; bbepWriteCmd(pBBEP, UC8151_PON);
-            pBBEP->iCSPin = pBBEP->iCS2Pin; bbepWriteCmd(pBBEP, UC8151_PON);
-            pBBEP->iCSPin = pBBEP->iCS1Pin; bbepWaitBusy(pBBEP);
-            pBBEP->iCSPin = pBBEP->iCS1Pin; bbepCMD2(pBBEP, UC8151_DRF, 0x01);
-            pBBEP->iCSPin = pBBEP->iCS2Pin; bbepCMD2(pBBEP, UC8151_DRF, 0x01);
-            pBBEP->iCSPin = pBBEP->iCS1Pin; bbepWaitBusy(pBBEP);
-            pBBEP->iCSPin = pBBEP->iCS1Pin; bbepCMD2(pBBEP, UC8151_POFF, 0x00);
-            pBBEP->iCSPin = pBBEP->iCS2Pin; bbepCMD2(pBBEP, UC8151_POFF, 0x00);
-            pBBEP->iCSPin = pBBEP->iCS1Pin; bbepWaitBusy(pBBEP);
+            // on BOTH controllers at the same time, matching the vendor driver.
+            t133a01_update_phase(pBBEP, UC8151_PON, 0, 0x00);
+            t133a01_update_phase(pBBEP, UC8151_DRF, 1, 0x01);
+            t133a01_update_phase(pBBEP, UC8151_POFF, 1, 0x00);
+            pBBEP->iCSPin = pBBEP->iCS1Pin;
         } else if (pBBEP->iFlags & (BBEP_4GRAY | BBEP_4COLOR | BBEP_7COLOR)) {
             bbepCMD2(pBBEP, UC8151_DRF, 0x00);
             if (pBBEP->iFlags & BBEP_SPLIT_BUFFER) {
@@ -4636,12 +4737,18 @@ void bbepWriteImage4bppDual(BBEPDISP *pBBEP, uint8_t ucCMD)
     if (pBBEP->iFlags & BBEP_T133A01) {
         // T133A01 needs a "current frame" CCSET (0xE0, 0x01) sent to both
         // controllers before each pixel-data transfer.
-        pBBEP->iCSPin = pBBEP->iCS1Pin;
-        bbepCMD2(pBBEP, 0xe0, 0x01);
-        pBBEP->iCSPin = pBBEP->iCS2Pin;
-        bbepCMD2(pBBEP, 0xe0, 0x01);
+        t133a01_cmd_both(pBBEP, 0xe0, 1, 0x01);
         pBBEP->iCSPin = pBBEP->iCS1Pin;
         bbepWaitBusy(pBBEP);
+        delay(10);
+    }
+    if ((pBBEP->iFlags & BBEP_T133A01) && pBBEP->iOrientation == 0) {
+        int iHalfPitch = pBBEP->native_width / 4;
+
+        t133a01_write_half(pBBEP, ucCMD, pBBEP->iCS1Pin, 0);
+        t133a01_write_half(pBBEP, ucCMD, pBBEP->iCS2Pin, iHalfPitch);
+        pBBEP->iCSPin = pBBEP->iCS1Pin;
+        return;
     }
     if (ucCMD) {
         pBBEP->iCSPin = pBBEP->iCS1Pin;

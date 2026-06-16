@@ -717,8 +717,8 @@ static uint8_t u8Unicode0, u8Unicode1;
               h = pgm_read_word(&pGlyph->height);
           } else { // small font
               pSmallGlyph = &pBBFS->glyphs[c - first];
-              w = pgm_read_word(&pSmallGlyph->width);
-              h = pgm_read_word(&pSmallGlyph->height);
+              w = pgm_read_byte(&pSmallGlyph->width);
+              h = pgm_read_byte(&pSmallGlyph->height);
           }
       if (w > 0 && h > 0) { // Is there an associated bitmap?
           if (pBBF) {
