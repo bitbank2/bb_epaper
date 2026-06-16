@@ -23,24 +23,46 @@
 
 BBEPAPER bbep;
 
+static void drawColorTile(int x, int y, int w, int h, uint16_t color, const char *label)
+{
+    bbep.fillRect(x, y, w, h, color);
+    bbep.drawRect(x, y, w, h, BBEP_BLACK);
+
+    const int labelW = 180;
+    const int labelH = 44;
+    const int labelX = x + 24;
+    const int labelY = y + 24;
+    bbep.fillRect(labelX, labelY, labelW, labelH, BBEP_WHITE);
+    bbep.drawRect(labelX, labelY, labelW, labelH, BBEP_BLACK);
+    bbep.setTextColor(BBEP_BLACK, BBEP_WHITE);
+    bbep.setFont(FONT_16x16);
+    bbep.setCursor(labelX + 14, labelY + 14);
+    bbep.println(label);
+}
+
 static void drawPattern()
 {
     bbep.fillScreen(BBEP_WHITE);
-    const int patternTop = 220;
-    const int bandH = (bbep.height() - patternTop) / 7;
-    for (int i = 0; i < 7; i += 2) {
-        bbep.fillRect(0, patternTop + i * bandH, bbep.width(), bandH, BBEP_BLACK);
-    }
-    bbep.fillRect(bbep.width() / 2 - 180, 680, 360, 260, BBEP_BLACK);
-    bbep.fillRect(bbep.width() / 2 - 160, 700, 320, 220, BBEP_WHITE);
-    bbep.fillRect(bbep.width() / 2 - 4, patternTop, 8, bbep.height() - patternTop, BBEP_BLACK);
     bbep.setFont(Roboto_Black_24);
     bbep.setTextColor(BBEP_BLACK, BBEP_WHITE);
     bbep.setCursor(40, 70);
-    bbep.println("CUSTOM: E1004 T133A01");
+    bbep.println("E1004 T133A01 SPECTRA6 COLOR");
     bbep.setFont(FONT_16x16);
     bbep.setCursor(40, 125);
-    bbep.println("BUILTIN: E1004 T133A01");
+    bbep.println("BLACK WHITE RED YELLOW BLUE GREEN");
+
+    const int marginX = 40;
+    const int gap = 24;
+    const int top = 210;
+    const int tileW = (bbep.width() - marginX * 2 - gap) / 2;
+    const int tileH = (bbep.height() - top - marginX - gap * 2) / 3;
+
+    drawColorTile(marginX, top, tileW, tileH, BBEP_BLACK, "BLACK");
+    drawColorTile(marginX + tileW + gap, top, tileW, tileH, BBEP_WHITE, "WHITE");
+    drawColorTile(marginX, top + tileH + gap, tileW, tileH, BBEP_RED, "RED");
+    drawColorTile(marginX + tileW + gap, top + tileH + gap, tileW, tileH, BBEP_YELLOW, "YELLOW");
+    drawColorTile(marginX, top + (tileH + gap) * 2, tileW, tileH, BBEP_BLUE, "BLUE");
+    drawColorTile(marginX + tileW + gap, top + (tileH + gap) * 2, tileW, tileH, BBEP_GREEN, "GREEN");
 }
 
 void setup(void)
