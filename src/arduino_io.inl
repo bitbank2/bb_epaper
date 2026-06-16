@@ -114,7 +114,6 @@ static void bbepT133A01InitIO(BBEPDISP *pBBEP)
     bbepWaitBusy(pBBEP);
 
     // Command groups match the vendor T133A01 init sequence.
-    // 命令分组对应官方 T133A01 初始化序列。
     bbepT133A01WriteCommandData(pBBEP, 0x74, r74DataBuf, sizeof(r74DataBuf), 0);
     delay(10);
     bbepT133A01WriteCommandData(pBBEP, 0xf0, rf0DataBuf, sizeof(rf0DataBuf), 1);
@@ -148,6 +147,7 @@ static void bbepT133A01InitIO(BBEPDISP *pBBEP)
     bbepT133A01WriteCommandData(pBBEP, 0xb1, rb1DataBuf, sizeof(rb1DataBuf), 0);
     delay(10);
     pBBEP->iCSPin = pBBEP->iCS1Pin;
+    pBBEP->is_awake = 1;
 } /* bbepT133A01InitIO() */
 //
 // Initialize the GPIO pins and SPI for use by bb_eink
@@ -325,6 +325,68 @@ void bbepWriteData(BBEPDISP *pBBEP, uint8_t *pData, int iLen)
     }
 #endif
 } /* bbepWriteData() */
+
+void bbepWriteCmdData(BBEPDISP *pBBEP, uint8_t cmd, const uint8_t *pData, int iLen)
+{
+    if (pBBEP->iSpeed != 0) {
+        SPI.beginTransaction(SPISettings(pBBEP->iSpeed, MSBFIRST, SPI_MODE0));
+    }
+    digitalWrite(pBBEP->iCSPin, LOW);
+    digitalWrite(pBBEP->iDCPin, LOW);
+    if (pBBEP->iSpeed == 0) {
+        SPI_Write(pBBEP, &cmd, 1);
+    } else {
+        SPI.transfer(cmd);
+    }
+    digitalWrite(pBBEP->iDCPin, HIGH);
+    for (int i = 0; i < iLen; i++) {
+        uint8_t data = pData[i];
+        if (pBBEP->iSpeed == 0) {
+            SPI_Write(pBBEP, &data, 1);
+        } else {
+            SPI.transfer(data);
+        }
+    }
+    digitalWrite(pBBEP->iCSPin, HIGH);
+    digitalWrite(pBBEP->iDCPin, HIGH);
+    if (pBBEP->iSpeed != 0) {
+        SPI.endTransaction();
+    }
+} /* bbepWriteCmdData() */
+
+void bbepStartDataStream(BBEPDISP *pBBEP, uint8_t cmd)
+{
+    digitalWrite(pBBEP->iCSPin, LOW);
+    if (pBBEP->iSpeed != 0) {
+        SPI.beginTransaction(SPISettings(pBBEP->iSpeed, MSBFIRST, SPI_MODE0));
+    }
+    digitalWrite(pBBEP->iDCPin, LOW);
+    delay(1);
+    if (pBBEP->iSpeed == 0) {
+        SPI_Write(pBBEP, &cmd, 1);
+    } else {
+        SPI.transfer(cmd);
+    }
+    digitalWrite(pBBEP->iDCPin, HIGH);
+} /* bbepStartDataStream() */
+
+void bbepWriteDataStreamByte(BBEPDISP *pBBEP, uint8_t data)
+{
+    if (pBBEP->iSpeed == 0) {
+        SPI_Write(pBBEP, &data, 1);
+    } else {
+        SPI.transfer(data);
+    }
+} /* bbepWriteDataStreamByte() */
+
+void bbepEndDataStream(BBEPDISP *pBBEP)
+{
+    if (pBBEP->iSpeed != 0) {
+        SPI.endTransaction();
+    }
+    digitalWrite(pBBEP->iCSPin, HIGH);
+    digitalWrite(pBBEP->iDCPin, HIGH);
+} /* bbepEndDataStream() */
 
 //
 // Convenience function to write a command byte along with a data

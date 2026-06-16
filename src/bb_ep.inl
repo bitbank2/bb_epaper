@@ -3991,8 +3991,10 @@ void bbepWaitBusy(BBEPDISP *pBBEP)
     delay(10); // give time for the busy status to be valid
     uint8_t busy_idle =  (pBBEP->chip_type == BBEP_CHIP_UC81xx) ? HIGH : LOW;
     delay(1); // some panels need a short delay before testing the BUSY line
-    if (pBBEP->iFlags & (BBEP_3COLOR | BBEP_4COLOR | BBEP_7COLOR)) {
-        iMaxTime = 60000; // multi-color panels can take a long time (13.3" Spectra6 ~40s)
+    if (pBBEP->iFlags & BBEP_T133A01) {
+        iMaxTime = 60000; // 13.3" Spectra6 panels can take a long time
+    } else if (pBBEP->iFlags & (BBEP_3COLOR | BBEP_4COLOR | BBEP_7COLOR)) {
+        iMaxTime = 30000; // multi-color panels can take a long time
     }
     while (iTimeout < iMaxTime) {
         if (digitalRead(pBBEP->iBUSYPin) == busy_idle) break;
@@ -4398,29 +4400,8 @@ void bbepFill(BBEPDISP *pBBEP, unsigned char ucColor, int iPlane)
 
 static void t133a01_cmd_primary(BBEPDISP *pBBEP, uint8_t cmd, int hasData, uint8_t data)
 {
-    if (pBBEP->iSpeed != 0) {
-        SPI.beginTransaction(SPISettings(pBBEP->iSpeed, MSBFIRST, SPI_MODE0));
-    }
-    digitalWrite(pBBEP->iCS1Pin, LOW);
-    digitalWrite(pBBEP->iDCPin, LOW);
-    if (pBBEP->iSpeed == 0) {
-        SPI_Write(pBBEP, &cmd, 1);
-    } else {
-        SPI.transfer(cmd);
-    }
-    if (hasData) {
-        digitalWrite(pBBEP->iDCPin, HIGH);
-        if (pBBEP->iSpeed == 0) {
-            SPI_Write(pBBEP, &data, 1);
-        } else {
-            SPI.transfer(data);
-        }
-    }
-    digitalWrite(pBBEP->iCS1Pin, HIGH);
-    digitalWrite(pBBEP->iDCPin, HIGH);
-    if (pBBEP->iSpeed != 0) {
-        SPI.endTransaction();
-    }
+    pBBEP->iCSPin = pBBEP->iCS1Pin;
+    bbepWriteCmdData(pBBEP, cmd, &data, hasData ? 1 : 0);
 } /* t133a01_cmd_primary() */
 
 static void t133a01_cmd_both(BBEPDISP *pBBEP, uint8_t cmd, int hasData, uint8_t data)
@@ -4468,35 +4449,16 @@ static void t133a01_write_half(BBEPDISP *pBBEP, uint8_t cmd, uint8_t csPin, int 
     uint8_t *row = pBBEP->ucScreen + offset;
 
     // Send one DTM command followed by a continuous converted pixel stream.
-    // 发送一个 DTM 命令,随后连续发送已转换的像素数据。
     pBBEP->iCSPin = csPin;
-    digitalWrite(pBBEP->iCSPin, LOW);
-    if (pBBEP->iSpeed != 0) {
-        SPI.beginTransaction(SPISettings(pBBEP->iSpeed, MSBFIRST, SPI_MODE0));
-    }
-    digitalWrite(pBBEP->iDCPin, LOW);
-    delay(1);
-    if (pBBEP->iSpeed == 0) {
-        SPI_Write(pBBEP, &cmd, 1);
-    } else {
-        SPI.transfer(cmd);
-    }
-    digitalWrite(pBBEP->iDCPin, HIGH);
+    bbepStartDataStream(pBBEP, cmd);
     for (y = 0; y < pBBEP->native_height; y++) {
         for (x = 0; x < halfPitch; x++) {
             uint8_t pixelByte = t133a01_panel_byte(row[x]);
-            if (pBBEP->iSpeed == 0) {
-                SPI_Write(pBBEP, &pixelByte, 1);
-            } else {
-                SPI.transfer(pixelByte);
-            }
+            bbepWriteDataStreamByte(pBBEP, pixelByte);
         }
         row += pitch;
     }
-    if (pBBEP->iSpeed != 0) {
-        SPI.endTransaction();
-    }
-    digitalWrite(pBBEP->iCSPin, HIGH);
+    bbepEndDataStream(pBBEP);
 } /* t133a01_write_half() */
 
 int bbepRefresh(BBEPDISP *pBBEP, int iMode)

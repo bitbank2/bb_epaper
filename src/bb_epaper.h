@@ -674,6 +674,9 @@ typedef enum
 // Forward references to core C functions
 void bbepWriteCmd(BBEPDISP *pBBEP, uint8_t cmd);
 void bbepWriteData(BBEPDISP *pBBEP, uint8_t *pData, int iLen);
+void bbepWriteCmdData(BBEPDISP *pBBEP, uint8_t cmd, const uint8_t *pData, int iLen);
+void bbepStartDataStream(BBEPDISP *pBBEP, uint8_t cmd);
+void bbepWriteDataStreamByte(BBEPDISP *pBBEP, uint8_t data);
+void bbepEndDataStream(BBEPDISP *pBBEP);
 void bbepCMD2(BBEPDISP *pBBEP, uint8_t cmd1, uint8_t cmd2);
 #endif // __BB_EPAPER__
-
