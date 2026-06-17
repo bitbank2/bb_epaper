@@ -83,6 +83,21 @@ const uint8_t u8Colors_spectra[16] = {  // Spectra 6
     BBEP_BLACK, BBEP_BLACK, BBEP_BLACK, BBEP_BLACK, BBEP_BLACK, BBEP_BLACK, BBEP_BLACK, BBEP_BLACK
 };
 
+// Inkplate 6COLOR (ACeP/UC8159) uses a different native nibble order than EP73.
+// Panel nibble codes (from Inkplate6COLOR pins.h):
+//   black=0 white=1 green=2 blue=3 red=4 yellow=5 orange=6
+// This table maps a bb_epaper logical color (the index, BBEP_*) to that nibble (the value).
+const uint8_t u8Colors_6color[16] = {  // Inkplate 6COLOR ACeP 7-color
+    0, // [BBEP_BLACK]  -> 0 black
+    1, // [BBEP_WHITE]  -> 1 white
+    5, // [BBEP_YELLOW] -> 5 yellow
+    4, // [BBEP_RED]    -> 4 red
+    3, // [BBEP_BLUE]   -> 3 blue
+    2, // [BBEP_GREEN]  -> 2 green
+    6, // [BBEP_ORANGE] -> 6 orange
+    0, 0, 0, 0, 0, 0, 0, 0, 0
+};
+
 
 const uint8_t ucMirror[256] PROGMEM =
 {0, 128, 64, 192, 32, 160, 96, 224, 16, 144, 80, 208, 48, 176, 112, 240,
@@ -3603,6 +3618,27 @@ const uint8_t epd73_init[] PROGMEM = {
     BUSY_WAIT,
     0
 };
+
+// Inkplate 6COLOR (ACeP 7-color, UC8159) full init.
+// Transcribed from SolderedElectronics Inkplate-Arduino-library
+// (Inkplate6COLORDriver.cpp setPanelDeepSleep(false)). bb_epaper resets the
+// panel in bbepWakeUp() before this runs; bbepRefresh() issues DRF afterward.
+const uint8_t epd6color_init[] PROGMEM = {
+    BUSY_WAIT,                              // wait for panel ready (BUSY high) after reset
+    3, 0x00, 0xEF, 0x08,                    // PANEL_SET
+    5, 0x01, 0x37, 0x00, 0x05, 0x05,        // POWER_SET
+    2, 0x03, 0x00,                          // POWER_OFF_SEQ_SET
+    4, 0x06, 0xC7, 0xC7, 0x1D,              // BOOSTER_SOFTSTART
+    2, 0x41, 0x00,                          // TEMP_SENSOR_EN
+    2, 0x50, 0x37,                          // VCOM_DATA_INTERVAL
+    2, 0x60, 0x20,                          // TCON
+    5, 0x61, 0x02, 0x58, 0x01, 0xC0,        // RESOLUTION 600x448
+    2, 0xE3, 0xAA,                          // PWS (power saving)
+    2, 0x50, 0x37,                          // VCOM_DATA_INTERVAL (re-sent per Inkplate)
+    1, UC8151_PON,                          // power on
+    BUSY_WAIT,
+    0
+};
 // Spectra 6 (GDEP073E01) 800x480 7-color init sequence
 const uint8_t epd73_spectra_init[] PROGMEM = {
     7, 0xaa, 0x49, 0x55, 0x20, 0x08, 0x09, 0x18, // CMD H
@@ -3820,6 +3856,7 @@ const EPD_PANEL panelDefs[] PROGMEM = {
     {400, 600, 0, epd40_spectra_init, NULL, NULL, BBEP_7COLOR, BBEP_CHIP_UC81xx, u8Colors_spectra}, // EP40_SPECTRA_400x600 GDEP040E01 Spectra 6 4" 400x600
     {176, 264, 0, badger2350_init_full, badger2350_init_fast, badger2350_init_part, BBEP_NEEDS_EXTRA_INIT, BBEP_CHIP_SSD16xx, u8Colors_2clr}, // EP27_176x264
     {176, 264, 0, badger2350g_init_full, badger2350g_init_fast, NULL, BBEP_NEEDS_EXTRA_INIT | BBEP_4GRAY, BBEP_CHIP_SSD16xx, u8Colors_4gray},// EP27_176x264_4GRAY
+    {600, 448, 0, epd6color_init, NULL, NULL, BBEP_7COLOR, BBEP_CHIP_UC81xx, u8Colors_6color}, // EP585C_600x448 Inkplate 6COLOR ACeP 7-color
 };
 //
 // Set the e-paper panel type
