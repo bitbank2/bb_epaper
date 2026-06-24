@@ -301,4 +301,36 @@ void bbepWriteData(BBEPDISP *pBBEP, uint8_t *pData, int iLen)
     digitalWrite(pBBEP->iCSPin, HIGH);
 } /* bbepWriteData() */
 
+void bbepWriteCmdData(BBEPDISP *pBBEP, uint8_t cmd, const uint8_t *pData, int iLen)
+{
+    digitalWrite(pBBEP->iDCPin, LOW);
+    digitalWrite(pBBEP->iCSPin, LOW);
+    SPI_transfer(pBBEP, &cmd, 1);
+    if (iLen > 0) {
+        digitalWrite(pBBEP->iDCPin, HIGH);
+        SPI_transfer(pBBEP, (uint8_t *)pData, iLen);
+    }
+    digitalWrite(pBBEP->iCSPin, HIGH);
+    digitalWrite(pBBEP->iDCPin, HIGH);
+} /* bbepWriteCmdData() */
+
+void bbepStartDataStream(BBEPDISP *pBBEP, uint8_t cmd)
+{
+    digitalWrite(pBBEP->iDCPin, LOW);
+    digitalWrite(pBBEP->iCSPin, LOW);
+    SPI_transfer(pBBEP, &cmd, 1);
+    digitalWrite(pBBEP->iDCPin, HIGH);
+} /* bbepStartDataStream() */
+
+void bbepWriteDataStreamByte(BBEPDISP *pBBEP, uint8_t data)
+{
+    SPI_transfer(pBBEP, &data, 1);
+} /* bbepWriteDataStreamByte() */
+
+void bbepEndDataStream(BBEPDISP *pBBEP)
+{
+    digitalWrite(pBBEP->iCSPin, HIGH);
+    digitalWrite(pBBEP->iDCPin, HIGH);
+} /* bbepEndDataStream() */
+
 #endif // __BB_RPI_IO__

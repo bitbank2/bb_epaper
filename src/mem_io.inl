@@ -119,4 +119,29 @@ void bbepWriteData(BBEPDISP *pBBEP, uint8_t *pData, int iLen)
     (void)iLen;
 } /* bbepWriteData() */
 
+void bbepWriteCmdData(BBEPDISP *pBBEP, uint8_t cmd, const uint8_t *pData, int iLen)
+{
+    (void)pBBEP;
+    (void)cmd;
+    (void)pData;
+    (void)iLen;
+} /* bbepWriteCmdData() */
+
+void bbepStartDataStream(BBEPDISP *pBBEP, uint8_t cmd)
+{
+    (void)pBBEP;
+    (void)cmd;
+} /* bbepStartDataStream() */
+
+void bbepWriteDataStreamByte(BBEPDISP *pBBEP, uint8_t data)
+{
+    (void)pBBEP;
+    (void)data;
+} /* bbepWriteDataStreamByte() */
+
+void bbepEndDataStream(BBEPDISP *pBBEP)
+{
+    (void)pBBEP;
+} /* bbepEndDataStream() */
+
 #endif // __BB_EP_IO__

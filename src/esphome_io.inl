@@ -145,6 +145,56 @@ void bbepWriteData(BBEPDISP *pBBEP, uint8_t *pData, int iLen)
     }
 } /* bbepWriteData() */
 
+void bbepWriteCmdData(BBEPDISP *pBBEP, uint8_t cmd, const uint8_t *pData, int iLen)
+{
+    (*pBBEP->pfnSetGPIO)(pBBEP->iDCPin, LOW);
+    delay(1);
+    (*pBBEP->pfnSetGPIO)(pBBEP->iCSPin, LOW);
+    if (pBBEP->iSpeed == 0) {
+        SPI_Write(pBBEP, &cmd, 1);
+    } else {
+        (*pBBEP->pfnWrite)(&cmd, 1);
+    }
+    if (iLen > 0) {
+        (*pBBEP->pfnSetGPIO)(pBBEP->iDCPin, HIGH);
+        if (pBBEP->iSpeed == 0) {
+            SPI_Write(pBBEP, (uint8_t *)pData, iLen);
+        } else {
+            (*pBBEP->pfnWrite)((uint8_t *)pData, iLen);
+        }
+    }
+    (*pBBEP->pfnSetGPIO)(pBBEP->iCSPin, HIGH);
+    (*pBBEP->pfnSetGPIO)(pBBEP->iDCPin, HIGH);
+} /* bbepWriteCmdData() */
+
+void bbepStartDataStream(BBEPDISP *pBBEP, uint8_t cmd)
+{
+    (*pBBEP->pfnSetGPIO)(pBBEP->iDCPin, LOW);
+    delay(1);
+    (*pBBEP->pfnSetGPIO)(pBBEP->iCSPin, LOW);
+    if (pBBEP->iSpeed == 0) {
+        SPI_Write(pBBEP, &cmd, 1);
+    } else {
+        (*pBBEP->pfnWrite)(&cmd, 1);
+    }
+    (*pBBEP->pfnSetGPIO)(pBBEP->iDCPin, HIGH);
+} /* bbepStartDataStream() */
+
+void bbepWriteDataStreamByte(BBEPDISP *pBBEP, uint8_t data)
+{
+    if (pBBEP->iSpeed == 0) {
+        SPI_Write(pBBEP, &data, 1);
+    } else {
+        (*pBBEP->pfnWrite)(&data, 1);
+    }
+} /* bbepWriteDataStreamByte() */
+
+void bbepEndDataStream(BBEPDISP *pBBEP)
+{
+    (*pBBEP->pfnSetGPIO)(pBBEP->iCSPin, HIGH);
+    (*pBBEP->pfnSetGPIO)(pBBEP->iDCPin, HIGH);
+} /* bbepEndDataStream() */
+
 //
 // Convenience function to write a command byte along with a data
 // byte (it's single parameter)
