@@ -103,6 +103,66 @@ static void setI2CBit(uint8_t u8Addr, uint8_t u8Reg, uint8_t u8Bit, uint8_t u8Va
     Wire.write(u8); // write the modified value
     Wire.endTransmission();
 } /* setI2CBit() */
+
+uint16_t M5ReadReg16(uint8_t u8Addr, uint8_t u8Reg)
+{
+uint8_t u8Temp[4];
+uint16_t *p16 = (uint16_t *)&u8Temp[0];
+    Wire.beginTransmission(u8Addr);
+    Wire.write(u8Reg);
+    Wire.endTransmission();
+    Wire.requestFrom(u8Addr, 2); // read current state of GPIO drive setting
+    u8Temp[0] = Wire.read();
+    u8Temp[1] = Wire.read();
+    return *p16;
+} /* M5ReadReg16() */
+
+void M5WriteReg16(uint8_t u8Addr, uint8_t u8Reg, uint16_t u16Val)
+{
+    Wire.beginTransmission(u8Addr);
+    Wire.write(u8Reg);
+    Wire.write((uint8_t)u16Val);
+    Wire.write((uint8_t)(u16Val >> 8));
+    Wire.endTransmission();
+} /* M5WriteReg16() */
+
+//
+// Set the state of a GPIO output on
+// The M5Stack IO Expander chip (M5IOE1)
+//
+void M5IOE1_SetGPIO(uint8_t u8Addr, int iGPIO, int iState)
+{
+uint16_t u16;
+
+    iGPIO--; // pin numbers are 0-based
+// Set the pin to output push-pull mode
+    u16 = M5ReadReg16(u8Addr, 0x13); // M5IOE1_REG_GPIO_DRV_L
+    u16 &= ~(1<<iGPIO); // set push-pull mode
+//Serial.printf("gpio drive setting = 0x%04x\n", u16);
+    M5WriteReg16(u8Addr, 0x13, u16);
+// Disable pull up and pull down
+    u16 = M5ReadReg16(u8Addr, 0x9); // M5IOE1_REG_GPIO_PU_L
+    u16 &= ~(1<<iGPIO); // disable
+    M5WriteReg16(u8Addr, 0x9, u16);
+    u16 = M5ReadReg16(u8Addr, 0xb); // M5IOE1_REG_GPIO_PD_L
+    u16 &= ~(1<<iGPIO); // disable
+    M5WriteReg16(u8Addr, 0xb, u16);
+// Set the pin to OUTPUT (not input)
+    u16 = M5ReadReg16(u8Addr, 0x03); // M5IOE1_REG_GPIO_MODE_L
+    u16 |= (1 << iGPIO); // output = 1
+//Serial.printf("gpio mode setting = 0x%04x\n", u16);
+    M5WriteReg16(u8Addr, 0x03, u16);
+// Set the pin state
+    u16 = M5ReadReg16(u8Addr, 0x05); // M5IOE1_REG_GPIO_OUT_L
+    if (iState) {
+       u16 |= (1 << iGPIO);
+    } else {
+       u16 &= ~(1 << iGPIO);
+    }
+    M5WriteReg16(u8Addr, 0x05, u16);
+//Serial.printf("gpio state setting = 0x%04x\n", u16);
+} /* M5IOE1_SetGPIO() */
+
 #endif // ARDUINO_ARCH_ESP32
 
 int BBEPAPER::begin(int iProduct, bool bSharedSPI)
@@ -111,6 +171,26 @@ int rc = BBEP_ERROR_BAD_PARAMETER;
 
     switch (iProduct) {
 #ifdef ARDUINO_ARCH_ESP32
+        case EPD_M5_PAPER_MONO: // DC:17 RST:-1 BUSY:18 CS:16 MOSI:14 SCK:15
+        case EPD_M5_PAPER_MONO_4GRAY:
+            Wire.end();
+            Wire.begin(47, 48); // SDA=47, SCL=48
+            M5IOE1_SetGPIO(0x4f, 3, 1); // turn on EPD 3.3V LDO
+          //  M5IOE1_SetGPIO(0x4f, 13, 1); // touch controller enable
+          //  M5IOE1_SetGPIO(0x4f, 14, 1); // uSD card enable
+            delay(50);
+            M5IOE1_SetGPIO(0x4f, 5, 0); // Toggle the EPD reset (M5Stack IO Expander chip)
+            //M5IOE1_SetGPIO(0x4f, 6, 0); // toggle touch reset
+            delay(20);
+            M5IOE1_SetGPIO(0x4f, 5, 1);
+           // M5IOE1_SetGPIO(0x4f, 6, 1);
+            delay(20);
+            if (setPanelType((iProduct == EPD_M5_PAPER_MONO) ? EP426_800x480:EP426_800x480_4GRAY) == BBEP_SUCCESS) {
+                initIO(17, -1, 18, 16, 14, 15, 1000000);
+                return BBEP_SUCCESS;
+            }
+            break;
+
         case EPD_SEEED_STICKY: // DC:16 RST:17 BUSY:18 CS:15 MOSI:14 SCK:13 PWR:47
         case EPD_SEEED_STICKY_4GRAY:
             pinMode(47, OUTPUT);
