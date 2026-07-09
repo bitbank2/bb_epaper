@@ -1335,7 +1335,7 @@ int bbepWriteStringCustom(BBEPDISP *pBBEP, void *pFont, int x, int y, char *szMs
             xOffset = (int8_t)pgm_read_byte(&pSmallGlyph->xOffset);
             yOffset = (int8_t)pgm_read_byte(&pSmallGlyph->yOffset);
         }
-        if (w > 1) { // skip this if drawing a space
+        if (w > 0) { // skip this if drawing a space
             s = pBits + u32Offset; // start of compressed bitmap data
             if (u32Rot == 0 || u32Rot == 180) {
                 dx = x + xOffset; // offset from character UL to start drawing
