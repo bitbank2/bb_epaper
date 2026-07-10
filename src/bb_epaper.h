@@ -270,6 +270,7 @@ enum {
     EP40_SPECTRA_400x600, // GDEP040E01 Spectra 6 4" 400x600
     EP27_176x264, // Badger2350
     EP27_176x264_4GRAY, // Badger2350
+    EP133A_SPECTRA_1200x1600, // T133A01 13.3" Spectra 6, dual-chip (Seeed reTerminal E1004)
     EP_PANEL_COUNT
 };
 #ifdef FUTURE
@@ -311,6 +312,7 @@ enum {
 #define BBEP_SPLIT_BUFFER 0x0400
 #define BBEP_HAS_SECOND_PLANE 0x0800
 #define BBEP_NEEDS_EXTRA_INIT 0x1000
+#define BBEP_T133A01 0x2000 // T133A01 Spectra6 quirks: CCSET before data, PON/DRF/POF refresh
 
 #define BBEP_BLACK 0
 #define BBEP_WHITE 1
@@ -674,6 +676,9 @@ typedef enum
 // Forward references to core C functions
 void bbepWriteCmd(BBEPDISP *pBBEP, uint8_t cmd);
 void bbepWriteData(BBEPDISP *pBBEP, uint8_t *pData, int iLen);
+void bbepWriteCmdData(BBEPDISP *pBBEP, uint8_t cmd, const uint8_t *pData, int iLen);
+void bbepStartDataStream(BBEPDISP *pBBEP, uint8_t cmd);
+void bbepWriteDataStreamByte(BBEPDISP *pBBEP, uint8_t data);
+void bbepEndDataStream(BBEPDISP *pBBEP);
 void bbepCMD2(BBEPDISP *pBBEP, uint8_t cmd1, uint8_t cmd2);
 #endif // __BB_EPAPER__
-
