@@ -270,6 +270,7 @@ enum {
     EP40_SPECTRA_400x600, // GDEP040E01 Spectra 6 4" 400x600
     EP27_176x264, // Badger2350
     EP27_176x264_4GRAY, // Badger2350
+    EP426B_800x480, // TopWin 4.26" B/W 800x480
     EP_PANEL_COUNT
 };
 #ifdef FUTURE
