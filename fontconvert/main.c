@@ -100,7 +100,7 @@ void StartHexFile(FILE *f, int iLen, const char *fname, int size, int first, int
     fprintf(f, "// compressed font data size = %d bytes\n//\n", iLen);
     fprintf(f, "// for non-Arduino builds...\n#ifndef PROGMEM\n#define PROGMEM\n#endif\n");
 
-    strcpy(szTemp, fname);
+    snprintf(szTemp, sizeof(szTemp), "%s", fname);
     i = strlen(szTemp);
     if (szTemp[i-2] == '.') szTemp[i-2] = 0; // get the leaf name for the data
     j = i;
@@ -200,13 +200,13 @@ int main(int argc, char *argv[])
         return 1;
     }
     if (bSmallFont) {
-        pSmallGlyphs = (BB_GLYPH_SMALL *)malloc((last - first + 1) * sizeof(BB_GLYPH_SMALL));
+        pSmallGlyphs = (BB_GLYPH_SMALL *)calloc(last - first + 1, sizeof(BB_GLYPH_SMALL));
         if (!pSmallGlyphs) {
             printf("Error allocating memory for glyph data\n");
             return 1;
         }
     } else {
-        pGlyphs = (BB_GLYPH *)malloc((last - first + 1) * sizeof(BB_GLYPH));
+        pGlyphs = (BB_GLYPH *)calloc(last - first + 1, sizeof(BB_GLYPH));
         if (!pGlyphs) {
             printf("Error allocating memory for glyph data\n");
             return 1;
@@ -225,7 +225,7 @@ int main(int argc, char *argv[])
         return err;
     }
     // Print parameters
-    printf("fontconvert %s to %s, size: %dpt, first: %d, last: %d, rotation: %d\n", argv[1], argv[2], size, first, last, iRotation);
+    fprintf(stdout, "fontconvert %s to %s, size: %dpt, first: %d, last: %d, rotation: %d\n", argv[1], argv[2], size, first, last, iRotation);
     
     // Use TrueType engine version 35, without subpixel rendering.
     // This improves clarity of fonts since this library does not
@@ -314,7 +314,7 @@ int main(int argc, char *argv[])
     // Try to create the output file
     fOut = fopen(argv[2], "w+b");
     if (!fOut) {
-        printf("Error creating output file: %s\n", argv[2]);
+        fprintf(stderr, "Error creating output file: %s\n", argv[2]);
         return 1;
     }
     // Write the file header
