@@ -496,6 +496,7 @@ enum {
 #define BUSY_WAIT 0xff
 #define EPD_RESET 0xfe
 #define MAKE_LUTS 0xfd
+#define SET_ORIENTATION 0xfc
 
 // Normal pixel drawing function pointer
 typedef int (BB_SET_PIXEL)(void *pBBEP, int x, int y, unsigned char color);
@@ -508,7 +509,7 @@ typedef void (BB_SPI_WRITE)(const uint8_t *pData, int iLen);
 
 typedef struct bbepstruct
 {
-uint8_t wrap, type, chip_type, last_error, italic;
+uint8_t wrap, type, chip_type, last_error, italic, flip180;
 uint8_t *ucScreen;
 int iCursorX, iCursorY;
 int width, height, native_width, native_height;
@@ -558,6 +559,7 @@ class BBEPAPER
     void setCS2(uint8_t cs);
     bool hasFastRefresh();
     bool hasPartialRefresh();
+    void setFlip180(bool bFlip);
     void setWritefn(BB_SPI_WRITE *pWrite) {_bbep.pfnWrite = pWrite;}
     void setSetGPIOfn(BB_SET_GPIO *pSet) {_bbep.pfnSetGPIO = pSet;}
     void setGetGPIOfn(BB_GET_GPIO *pGet) {_bbep.pfnGetGPIO = pGet;}

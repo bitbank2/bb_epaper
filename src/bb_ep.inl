@@ -1480,14 +1480,15 @@ const uint8_t epd154_init_sequence_full[] PROGMEM =
     0x01, 0x12, // sw reset
     BUSY_WAIT,
     0x04, 0x01, 199, 0x00, 0x00, // driver output control
-    0x02, 0x11, 0x03, // data entry mode
-    0x03, 0x44, 0x00, 0x18,
-    0x05, 0x45, 0x00, 0x00, 0xc7, 0x00,
+    SET_ORIENTATION,
+//    0x02, 0x11, 0x03, // data entry mode
+//    0x03, 0x44, 0x00, 0x18,
+//    0x05, 0x45, 0x00, 0x00, 0xc7, 0x00,
     0x02, 0x3c, 0x05, // border waveform
     0x02, 0x18, 0x80, // read temp sensor
     //    0x03, 0x21, 0x00, 0x80, // display update control
-    0x02, 0x4e, 0x00,
-    0x03, 0x4f, 0x00, 0x00,
+//    0x02, 0x4e, 0x00,
+//    0x03, 0x4f, 0x00, 0x00,
     BUSY_WAIT,
     0x00 // end of table
 };
@@ -1644,7 +1645,8 @@ const uint8_t epd154z_init_full[] PROGMEM =
 {
    0x01, 0x12, // soft reset
    BUSY_WAIT,
-   0x02, 0x11, 0x03,
+    SET_ORIENTATION,
+//   0x02, 0x11, 0x03,
    0x02, 0x3c, 0x01,
    0x00
 };
@@ -1688,14 +1690,15 @@ const uint8_t epd213z_init_full[] PROGMEM =
    0x01, 0x12, // soft reset
    BUSY_WAIT,
    0x04, 0x01, 0xf9, 0x00, 0x00,
-   0x02, 0x11, 0x03,
-   0x03, 0x44, 0x00, 0x0f,
-   0x05, 0x45, 0x00, 0x00, 0xf9, 0x00,
+    SET_ORIENTATION,
+//   0x02, 0x11, 0x03,
+//   0x03, 0x44, 0x00, 0x0f,
+//   0x05, 0x45, 0x00, 0x00, 0xf9, 0x00,
    0x02, 0x3c, 0x01,
    BUSY_WAIT,
    0x02, 0x18, 0x80,
-   0x02, 0x4e, 0x00,
-   0x03, 0x4f, 0x00, 0x00,
+//   0x02, 0x4e, 0x00,
+//   0x03, 0x4f, 0x00, 0x00,
    BUSY_WAIT,
    0 // end
 }; /* epd213z_init_full */
@@ -1761,13 +1764,14 @@ const uint8_t epd29z_init_full[] PROGMEM =
 {
     BUSY_WAIT,
     0x04, 0x01,0x27,0x01,0x00,
-    0x02, 0x11, 0x03,
-    0x03, 0x44, 0x00, 0x0f,
-    0x05, 0x45, 0x00, 0x00, 0x27, 0x01,
+    SET_ORIENTATION,
+//    0x02, 0x11, 0x03,
+//    0x03, 0x44, 0x00, 0x0f,
+//    0x05, 0x45, 0x00, 0x00, 0x27, 0x01,
+//    0x02, 0x4e, 0x00,
+//    0x03, 0x4f, 0x00, 0x00,
     0x02, 0x3c, 0x01,
     0x02, 0x18, 0x80,
-    0x02, 0x4e, 0x00,
-    0x03, 0x4f, 0x00, 0x00,
     BUSY_WAIT,
     0, // end
 }; /* epd29z_init_full */
@@ -2899,12 +2903,13 @@ const uint8_t epd426_init_full[] PROGMEM =
     0x04, 0x01, 0xdf, 0x01, 0x02, // driver output control
 //    0x03, 0x21, 0x40, 0x00, // display update control
     0x02, 0x3c, 0x01, // border waveform
-    0x02, 0x11, 0x02, // data entry mode
-    0x05, 0x44, 0x1f, 0x03, 0x00, 0x00, // ram start/end
-    0x05, 0x45, 0x00, 0x00, 0xdf, 0x01,
-    0x03, 0x4e, 0x1f, 0x03,
-    0x03, 0x4f, 0x00, 0x00,
-    BUSY_WAIT, 
+    SET_ORIENTATION,
+//    0x02, 0x11, 0x02, // data entry mode
+//    0x05, 0x44, 0x1f, 0x03, 0x00, 0x00, // ram start/end
+//    0x05, 0x45, 0x00, 0x00, 0xdf, 0x01,
+//    0x03, 0x4e, 0x1f, 0x03,
+//    0x03, 0x4f, 0x00, 0x00,
+    BUSY_WAIT,
     0x00 // end of table
 };
 
@@ -3067,14 +3072,15 @@ const uint8_t epd42b_init_sequence_full[] PROGMEM =
     
     0x04, 0x01, 0x2b, 0x01, 0x00, // driver output control
     0x03, 0x21, 0x40, 0x00, // display update control
-    0x02, 0x11, 0x03, // data entry mode
-    0x03, 0x44, 0x00, 0x31, // ram start/end
-    0x05, 0x45, 0x00, 0x00, 0x2b, 0x01,
+    SET_ORIENTATION,
+//    0x02, 0x11, 0x03, // data entry mode
+//    0x03, 0x44, 0x00, 0x31, // ram start/end
+//    0x05, 0x45, 0x00, 0x00, 0x2b, 0x01,
     0x02, 0x3c, 0x05, // border waveform
     0x02, 0x18, 0x80, // read built-in temp sensor
     
-    0x02, 0x4e, 0x00,
-    0x03, 0x4f, 0x00, 0x00,
+//    0x02, 0x4e, 0x00,
+//    0x03, 0x4f, 0x00, 0x00,
     BUSY_WAIT,
     0x00 // end of table
 };
@@ -3571,11 +3577,12 @@ const uint8_t epd397_init_full[] PROGMEM = {
     6, 0x0c, 0xae, 0xc7, 0xc3, 0xc0, 0x80,
     4, 0x01, 0xdf, 0x01, 0x02, // driver output control (height-1)
     2, 0x3c, 0x01, // border color
-    2, 0x11, 0x01, // data entry mode
-    5, 0x44, 0x00, 0x00, 0x1f, 0x03, // set RAM x start/end
-    5, 0x45, 0xdf, 0x01, 0x00, 0x00, // set RAM y start/end
-    3, 0x4e, 0x00, 0x00, // RAM x address
-    3, 0x4f, 0x00, 0x00, // RAM y address
+    SET_ORIENTATION,
+//    2, 0x11, 0x01, // data entry mode
+//    5, 0x44, 0x00, 0x00, 0x1f, 0x03, // set RAM x start/end
+//    5, 0x45, 0xdf, 0x01, 0x00, 0x00, // set RAM y start/end
+//    3, 0x4e, 0x00, 0x00, // RAM x address
+//    3, 0x4f, 0x00, 0x00, // RAM y address
     3, 0x21, 0x40, 0x00, // display update control
     BUSY_WAIT,
     0 // end
@@ -4096,11 +4103,17 @@ void bbepSetAddrWindow(BBEPDISP *pBBEP, int x, int y, int cx, int cy)
     uint8_t uc[12];
     int i, tx, ty;
 
-// DEBUG - for TRMNL mini 180 degree rotated display
-    if (pBBEP->type == EP397_800x480 || pBBEP->type == EP397_800x480_4GRAY || pBBEP->type == EP426_800x480 || pBBEP->type == EP426_800x480_4GRAY) return;
     if (!pBBEP) return;
     if (pBBEP->iFlags & (BBEP_4COLOR | BBEP_7COLOR)) return;
+
+    if (x == 0 && y == 0 && cx == pBBEP->native_width && cy == pBBEP->native_height) {
+//        Serial.println("Skipping bbepSetAddrWindow");
+        return; // no need to set the address window
+    }
     
+    // DEBUG - for TRMNL mini 180 degree rotated display
+//        if (pBBEP->type == EP397_800x480 || pBBEP->type == EP397_800x480_4GRAY || pBBEP->type == EP426_800x480 || pBBEP->type == EP426_800x480_4GRAY) return;
+
 #ifdef FUTURE
     if (pBBEP->chip_type == BBEP_CHIP_IT8951) {
         uint16_t u16Temp[6];
@@ -4284,6 +4297,107 @@ void bbepMakeLUTs(BBEPDISP *pBBEP)
     } else { // SSD16xx
     }
 } /* bbepMakeLUTs() */
+
+//
+// Set the orienation/size of the panel
+// so that we can support optional 180 degree rotation
+// without hacking the init sequences of all panels
+//
+void bbepSetFlip180(BBEPDISP *pBBEP)
+{
+    uint8_t u8[4];
+    
+    if (pBBEP->chip_type == BBEP_CHIP_UC81xx) {
+    } else {
+        // SSD16xx
+        if (pBBEP->flip180) {
+            if (pBBEP->native_width == 800) { // non-shifted x values
+                bbepCMD2(pBBEP, 0x11, 0x1);
+                bbepWriteData(pBBEP, u8, 1);
+                bbepWriteCmd(pBBEP, 0x44); // x RAM start/end
+                u8[0] = u8[1] = 0;
+                u8[2] = (uint8_t)(pBBEP->native_width-1);
+                u8[3] = (uint8_t)((pBBEP->native_width-1)>>8);
+                bbepWriteData(pBBEP, u8, 4);
+                
+                bbepWriteCmd(pBBEP, 0x4e); // x RAM counter
+                u8[0] = u8[1] = 0;
+                bbepWriteData(pBBEP, u8, 2);
+                bbepWriteCmd(pBBEP, 0x45); // y RAM start/end
+                u8[0] = (uint8_t)(pBBEP->native_height-1);
+                u8[1] = (uint8_t)((pBBEP->native_height-1)>>8);
+                u8[2] = u8[3] = 0;
+                bbepWriteData(pBBEP, u8, 4);
+
+                bbepWriteCmd(pBBEP, 0x4f); // y RAM counter
+                u8[0] = (uint8_t)(pBBEP->native_height-1);
+                u8[1] = (uint8_t)((pBBEP->native_height-1)>>8);
+                bbepWriteData(pBBEP, u8, 2);
+           } else {
+                bbepCMD2(pBBEP, 0x11, 0x0);
+                bbepWriteCmd(pBBEP, 0x44); // x RAM start/end
+                u8[0] = (pBBEP->native_width-1)/8;
+                u8[1] = 0;
+                bbepWriteData(pBBEP, u8, 2);
+                
+                bbepWriteCmd(pBBEP, 0x4e); // x RAM counter
+                u8[0] = (pBBEP->native_width-1)/8;
+                bbepWriteData(pBBEP, u8, 1);
+               bbepWriteCmd(pBBEP, 0x45); // y RAM start/end
+               u8[0] = (uint8_t)(pBBEP->native_height-1);
+               u8[1] = (uint8_t)((pBBEP->native_height-1)>>8);
+               u8[2] = u8[3] = 0;
+               bbepWriteData(pBBEP, u8, 4);
+
+               bbepWriteCmd(pBBEP, 0x4f); // y RAM counter
+               u8[0] = (uint8_t)(pBBEP->native_height-1);
+               u8[1] = (uint8_t)((pBBEP->native_height-1)>>8);
+               bbepWriteData(pBBEP, u8, 2);
+            }
+        } else { // orientation 0
+            if (pBBEP->native_width == 800) { // non-shifted version
+                bbepCMD2(pBBEP, 0x11, 0x2);
+                bbepWriteCmd(pBBEP, 0x44); // x RAM start/end
+                u8[0] = (uint8_t)(pBBEP->native_width-1);
+                u8[1] = (uint8_t)((pBBEP->native_width-1)>>8);
+                u8[2] = u8[3] = 0;
+                bbepWriteData(pBBEP, u8, 4);
+                
+                bbepWriteCmd(pBBEP, 0x4e); // x RAM counter
+                u8[0] = (uint8_t)(pBBEP->native_width-1);
+                u8[1] = (uint8_t)((pBBEP->native_width-1)>>8);
+                bbepWriteData(pBBEP, u8, 2);
+                bbepWriteCmd(pBBEP, 0x45); // y RAM start/end
+                u8[0] = u8[1] = 0;
+                u8[2] = (uint8_t)(pBBEP->native_height-1);
+                u8[3] = (uint8_t)((pBBEP->native_height-1)>>8);
+                bbepWriteData(pBBEP, u8, 4);
+
+                bbepWriteCmd(pBBEP, 0x4f); // y RAM counter
+                u8[0] = u8[1] = 0;
+                bbepWriteData(pBBEP, u8, 2);
+            } else {
+                bbepCMD2(pBBEP, 0x11, 0x3);
+                bbepWriteCmd(pBBEP, 0x44); // x RAM start/end
+                u8[0] = 0; u8[1] = (pBBEP->native_width-1)/8;
+                bbepWriteData(pBBEP, u8, 2);
+                
+                bbepWriteCmd(pBBEP, 0x4e); // x RAM counter
+                u8[0] = 0;
+                bbepWriteData(pBBEP, u8, 1);
+                bbepWriteCmd(pBBEP, 0x45); // y RAM start/end
+                u8[0] = u8[1] = 0;
+                u8[2] = (uint8_t)(pBBEP->native_height-1);
+                u8[3] = (uint8_t)((pBBEP->native_height-1)>>8);
+                bbepWriteData(pBBEP, u8, 4);
+
+                bbepWriteCmd(pBBEP, 0x4f); // y RAM counter
+                u8[0] = u8[1] = 0;
+                bbepWriteData(pBBEP, u8, 2);
+            }
+        }
+    } // SSD16xx
+} /* bbepSetFlip180() */
 //
 // More efficient means of sending commands, data and busy-pauses
 //
@@ -4303,6 +4417,8 @@ void bbepSendCMDSequence(BBEPDISP *pBBEP, const uint8_t *pSeq)
             bbepWaitBusy(pBBEP);
         } else if (iLen == EPD_RESET) {
             bbepWakeUp(pBBEP);
+        } else if (iLen == SET_ORIENTATION) {
+            bbepSetFlip180(pBBEP);
         } else {
             bbepWriteCmd(pBBEP, s[0]);
             s++;

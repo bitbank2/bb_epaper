@@ -82,6 +82,11 @@ void BBEPAPER::setAddrWindow(int x, int y, int w, int h)
     bbepSetAddrWindow(&_bbep, x, y, w, h);
 }
 
+void BBEPAPER::setFlip180(bool bFlip)
+{
+    _bbep.flip180 = bFlip;
+} /* setFlip180() */
+
 #ifdef ARDUINO_ARCH_ESP32
 //
 // Read-modify-write an I2C register value, setting a single bit
