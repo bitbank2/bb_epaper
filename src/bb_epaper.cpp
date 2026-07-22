@@ -456,6 +456,16 @@ int BBEPAPER::refresh(int iMode, bool bWait)
     rc = bbepRefresh(&_bbep, iMode);
     if (rc == BBEP_SUCCESS && bWait) {
         bbepWaitBusy(&_bbep);
+        // UC81xx-based multi-color panels (e.g. Spectra 6 / ACeP 7-color) need a
+        // power-off (POF) after each display refresh (DRF) to properly end the
+        // frame. Without it the panel's DC/DC and source/gate drivers stay
+        // powered, and the next frame in the same power cycle misbehaves: color
+        // codes lose a bit (e.g. blue renders as white, green as yellow). Only
+        // the first frame after power-on looks correct otherwise.
+        if ((_bbep.iFlags & BBEP_7COLOR) && _bbep.chip_type == BBEP_CHIP_UC81xx) {
+            bbepWriteCmd(&_bbep, UC8151_POFF);
+            bbepWaitBusy(&_bbep);
+        }
     }
     _bbep.iOpTime = (int)(millis() - l);
     return rc;
