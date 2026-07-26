@@ -271,6 +271,7 @@ enum {
     EP27_176x264, // Badger2350
     EP27_176x264_4GRAY, // Badger2350
     EP426B_800x480, // TopWin 4.26" B/W 800x480
+    EP583_648x480_4GRAY, // DEPG0583BN
     EP_PANEL_COUNT
 };
 #ifdef FUTURE
