@@ -632,6 +632,22 @@ const uint8_t epd29r_init_sequence_full[] PROGMEM = {
     0x00
 };
 
+// For 2.9" 128x296 B/W/R panels (GDEM029C90), init per GxEPD2_290_C90c
+const uint8_t epd29rv2_init_sequence_full[] PROGMEM = {
+    0x01, 0x12, // soft reset
+    BUSY_WAIT,
+    0x04, 0x01, 0x27, 0x01, 0x00, // driver output control (MUX = 296)
+    0x02, 0x11, 0x03, // data entry mode
+    0x02, 0x3c, 0x05, // border waveform (0x05 per GxEPD2_290_C90c)
+    0x02, 0x18, 0x80, // temp sensor = internal
+    0x03, 0x21, 0x00, 0x80, // display update ctrl 1 (2 bytes per GxEPD2_290_C90c!)
+    0x03, 0x44, 0x00, 0x0f, // RAM X start/end (128px)
+    0x05, 0x45, 0x00, 0x00, 0x27, 0x01, // RAM Y start/end (0..295)
+    0x02, 0x4e, 0x00, // RAM X counter
+    0x03, 0x4f, 0x00, 0x00, // RAM Y counter (start at 0)
+    0x00
+};
+
 const uint8_t epd26r_init_sequence_full[] PROGMEM = {
     0x01, 0x12, // soft reset
     BUSY_WAIT,
@@ -4155,6 +4171,7 @@ const EPD_PANEL panelDefs[] PROGMEM = {
     {800, 480, 0, epd426b_init_full, epd426b_init_full, epd426b_init_part, BBEP_NEEDS_EXTRA_INIT, BBEP_CHIP_SSD16xx, u8Colors_2clr}, // EP426B_800x480
     {648, 480, 0, epd583g_init_full, NULL, NULL, BBEP_4GRAY | BBEP_NEEDS_EXTRA_INIT, BBEP_CHIP_UC81xx, u8Colors_4gray}, // EP583_648x480_4GRAY
     {1200, 1600, 0, epd133_spectra_init, NULL, NULL, BBEP_7COLOR | BBEP_SPLIT_BUFFER, BBEP_CHIP_UC81xx, u8Colors_spectra}, // EP133_SPECTRA_1200x1600 Spectra6 13.3" 1200x1600
+    {128, 296, 0, epd29rv2_init_sequence_full, NULL, NULL, BBEP_3COLOR, BBEP_CHIP_SSD16xx, u8Colors_3clr}, // EP29Rv2_128x296 GDEM029C90 2.9" 128x296 B/W/R (SSD1680)
  };
 //
 // Set the e-paper panel type
@@ -4870,6 +4887,8 @@ int bbepRefresh(BBEPDISP *pBBEP, int iMode)
         }
         if (pBBEP->type == EP29Z_128x296 || pBBEP->type == EP213Z_122x250) {
             bbepCMD2(pBBEP, SSD1608_DISP_CTRL2, u8CMDz[iMode]);
+        } else if (pBBEP->type == EP29Rv2_128x296) {
+            bbepCMD2(pBBEP, SSD1608_DISP_CTRL2, 0xf7); // GDEM029C90: full LUT refresh (per GxEPD2_290_C90c)
         } else if (pBBEP->type == EP154Z_152x152) {
             bbepCMD2(pBBEP, SSD1608_DISP_CTRL2, u8CMDz2[iMode]);
         } else if (pBBEP->type == EP397_800x480 || pBBEP->type == EP397_800x480_4GRAY) {
