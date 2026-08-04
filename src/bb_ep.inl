@@ -3821,7 +3821,7 @@ const uint8_t epd75_init_sequence_full[] PROGMEM = {
     2, UC8151_PSR, 0x1f,
     5, UC8151_TRES, 0x03, 0x20, 0x01, 0xe0,
     2, 0x15, 0x00, 
-    3, UC8151_CDI, 0x21, 0x07,
+    3, UC8151_CDI, 0x29, 0x07,
     2, UC8151_TCON, 0x22,
     0
 };
@@ -3886,6 +3886,53 @@ const uint8_t epd73_init[] PROGMEM = {
     2, 0xe6, 0x00, // TSSET
     1, UC8151_PON, // power on
     BUSY_WAIT,
+    0
+};
+// Spectra 6 13.3" 1200x1600 6-color init sequence
+const uint8_t epd133_spectra_init[] PROGMEM = {
+    CMD_CS1, // main controller only
+    10, 0x74, 0x00, 0x0C, 0x0C, 0xD9, 0xDD, 0xDD, 0x15, 0x15, 0x55, // undocumented cmd
+    EPD_DELAY, 10, // 10ms delay
+    CMD_CS1_CS2, // send the following commands to both controllers
+    7, 0xf0, 0x49, 0x55, 0x13, 0x5D, 0x05, 0x10, // undocumented cmd
+    EPD_DELAY, 10, // 10ms delay
+    3, 0x00, 0xDF, 0x69, // PSR_V
+    EPD_DELAY, 10, // 10ms delay
+    CMD_CS1, // main only
+    4, 0xa5, 0x44, 0x54, 0x00, // DCDC
+    EPD_DELAY, 10, // 10ms delay
+    CMD_CS1_CS2, // both
+    2, 0x50, 0x37, // CDI
+    EPD_DELAY, 10, // 10ms delay
+    3, 0x60, 0x03, 0x03, // R60?
+    EPD_DELAY, 10, // 10ms delay
+    2, 0x86, 0x10, // r86?
+    EPD_DELAY, 10, // 10ms delay
+    2, 0xe3, 0x22, // PWS (power saving)
+    EPD_DELAY, 10, // 10ms delay
+    5, 0x61, 0x04, 0xB0, 0x03, 0x20, // TRES
+    EPD_DELAY, 10, // 10ms delay
+    CMD_CS1, // main only
+    7, 0x01, 0x0F, 0x00, 0x28, 0x2C, 0x28, 0x38, // PWR
+    EPD_DELAY, 10,
+    2, 0xb6, 0x07, // RB6?
+    EPD_DELAY, 10,
+    3, 0x06, 0xE0, 0x20, // BTST_P_V
+    EPD_DELAY, 10,
+    2, 0xb7, 0x01, // RB7?
+    EPD_DELAY, 10,
+    3, 0x05, 0xE0, 0x20, // BTST_N_V
+    EPD_DELAY, 10,
+    2, 0xb0, 0x01, // RB0?
+    EPD_DELAY, 10,
+    2, 0xb1, 0x02, // RB1?
+    EPD_DELAY, 10,
+    CMD_CS1_CS2, // both
+    1, 0x04, // Power On
+    BUSY_WAIT,
+    2, 0xe0, 0x01, // CCSET
+    BUSY_WAIT,
+    CMD_CS1,
     0
 };
 // Spectra 6 (GDEP073E01) 800x480 7-color init sequence
@@ -4107,7 +4154,8 @@ const EPD_PANEL panelDefs[] PROGMEM = {
     {176, 264, 0, badger2350g_init_full, badger2350g_init_fast, NULL, BBEP_NEEDS_EXTRA_INIT | BBEP_4GRAY, BBEP_CHIP_SSD16xx, u8Colors_4gray},// EP27_176x264_4GRAY
     {800, 480, 0, epd426b_init_full, epd426b_init_full, epd426b_init_part, BBEP_NEEDS_EXTRA_INIT, BBEP_CHIP_SSD16xx, u8Colors_2clr}, // EP426B_800x480
     {648, 480, 0, epd583g_init_full, NULL, NULL, BBEP_4GRAY | BBEP_NEEDS_EXTRA_INIT, BBEP_CHIP_UC81xx, u8Colors_4gray}, // EP583_648x480_4GRAY
-};
+    {1200, 1600, 0, epd133_spectra_init, NULL, NULL, BBEP_7COLOR | BBEP_SPLIT_BUFFER, BBEP_CHIP_UC81xx, u8Colors_spectra}, // EP133_SPECTRA_1200x1600 Spectra6 13.3" 1200x1600
+ };
 //
 // Set the e-paper panel type
 // This must be called before any other bb_epaper functions
@@ -4130,6 +4178,7 @@ int bbepSetPanelType(BBEPDISP *pBBEP, int iPanel)
             break;
     }
 
+    pBBEP->cs_mode = CMD_CS1;
     pBBEP->x_offset = panelDefs[iPanel].x_offset;
     pBBEP->chip_type = panelDefs[iPanel].chip_type;
     pBBEP->iFlags = panelDefs[iPanel].flags;
@@ -4245,6 +4294,7 @@ void bbepWaitBusy(BBEPDISP *pBBEP)
 {
     int iTimeout = 0;
     int iMaxTime = 5000; // for B/W panels
+    //long l = millis();
 
     if (!pBBEP) return;
     if (pBBEP->iBUSYPin == 0xff) return;
@@ -4252,7 +4302,7 @@ void bbepWaitBusy(BBEPDISP *pBBEP)
     uint8_t busy_idle =  (pBBEP->chip_type == BBEP_CHIP_UC81xx) ? HIGH : LOW;
     delay(1); // some panels need a short delay before testing the BUSY line
     if (pBBEP->iFlags & (BBEP_3COLOR | BBEP_4COLOR | BBEP_7COLOR)) {
-        iMaxTime = 30000; // multi-color panels can take a long time
+        iMaxTime = 35000; // multi-color panels can take a long time
     }
     while (iTimeout < iMaxTime) {
         if (digitalRead(pBBEP->iBUSYPin) == busy_idle) break;
@@ -4260,6 +4310,7 @@ void bbepWaitBusy(BBEPDISP *pBBEP)
         bbepLightSleep(20, pBBEP->bLightSleep); // save battery power by checking every 20ms
         iTimeout += 20;
     }
+    //Serial0.printf("total wait time = %dms\n", (int)(millis() - l));
 } /* bbepWaitBusy() */
 //
 // Return if panel is busy
@@ -4282,7 +4333,7 @@ void bbepWakeUp(BBEPDISP *pBBEP)
     if (pBBEP->iRSTPin == 0xff) return;
 
     digitalWrite(pBBEP->iRSTPin, LOW);
-    delay(10);
+    delay(20);
     digitalWrite(pBBEP->iRSTPin, HIGH);
     delay(20);
     bbepWaitBusy(pBBEP);
@@ -4404,12 +4455,10 @@ void bbepSleep(BBEPDISP *pBBEP, int bDeep)
     if (!pBBEP) return;
     if (pBBEP->chip_type == BBEP_CHIP_UC81xx) {
         if (pBBEP->iFlags & BBEP_7COLOR) {
-            bbepCMD2(pBBEP, UC8151_POFF, 0x00); // power off
-            if (pBBEP->iFlags & BBEP_SPLIT_BUFFER) { // dual cable EPD
-               pBBEP->iCSPin = pBBEP->iCS2Pin;
-               bbepCMD2(pBBEP, UC8151_POFF, 0x00); // second controller
-               pBBEP->iCSPin = pBBEP->iCS1Pin;
+            if (pBBEP->iFlags & BBEP_SPLIT_BUFFER) {
+                pBBEP->cs_mode = CMD_CS1_CS2;
             }
+            bbepCMD2(pBBEP, UC8151_POFF, 0x00); // power off
         } else if (pBBEP->iFlags & BBEP_4COLOR) {
             bbepCMD2(pBBEP, 0x02, 0x00); // power off
             bbepWaitBusy(pBBEP);
@@ -4607,17 +4656,21 @@ void bbepSendCMDSequence(BBEPDISP *pBBEP, const uint8_t *pSeq)
             bbepMakeLUTs(pBBEP);
         } else if (iLen == BUSY_WAIT) {
             bbepWaitBusy(pBBEP);
+        } else if (iLen == EPD_DELAY) {
+            delay(*s++);
         } else if (iLen == EPD_RESET) {
             bbepWakeUp(pBBEP);
         } else if (iLen == SET_ORIENTATION) {
             bbepSetFlip180(pBBEP);
+        } else if (iLen == CMD_CS1 || iLen == CMD_CS2 || iLen == CMD_CS1_CS2) {
+            pBBEP->cs_mode = iLen; // set cs mode 
         } else {
-            bbepWriteCmd(pBBEP, s[0]);
-            s++;
             if (iLen > 1) {
-                bbepWriteData(pBBEP, s, iLen-1);
-                s += (iLen-1);
+               bbepWriteCmdData(pBBEP, s[0], &s[1], iLen-1);
+            } else {
+               bbepWriteCmd(pBBEP, s[0]);
             }
+            s += iLen;
         }
     } // while more commands to send
 } /* bbepSendCMDSequence() */
@@ -4769,12 +4822,6 @@ int bbepRefresh(BBEPDISP *pBBEP, int iMode)
             if (!(pBBEP->iFlags & BBEP_NEEDS_EXTRA_INIT)) { // already sent?
                 bbepSendCMDSequence(pBBEP, pBBEP->pInitFull);
             }
-            if (pBBEP->iFlags & BBEP_SPLIT_BUFFER) {
-               // Send the same sequence to the second controller
-               pBBEP->iCSPin = pBBEP->iCS2Pin;
-               bbepSendCMDSequence(pBBEP, pBBEP->pInitFull);
-               pBBEP->iCSPin = pBBEP->iCS1Pin;
-            }
             break;
         case REFRESH_FAST:
             if (!pBBEP->pInitFast) { // fall back to full
@@ -4799,13 +4846,13 @@ int bbepRefresh(BBEPDISP *pBBEP, int iMode)
     } // switch on mode
     if (pBBEP->chip_type == BBEP_CHIP_UC81xx) {
         if (pBBEP->iFlags & (BBEP_4GRAY | BBEP_4COLOR | BBEP_7COLOR)) {
-            bbepCMD2(pBBEP, UC8151_DRF, 0x00);
             if (pBBEP->iFlags & BBEP_SPLIT_BUFFER) {
-               // Send the same sequence to the second controller
-               pBBEP->iCSPin = pBBEP->iCS2Pin;
-               bbepCMD2(pBBEP, UC8151_DRF, 0);
-               pBBEP->iCSPin = pBBEP->iCS1Pin;
+                pBBEP->cs_mode = CMD_CS1_CS2;
+            } else {
+                pBBEP->cs_mode = CMD_CS1;
             }
+            uint8_t u8Temp = (pBBEP->type == EP133_SPECTRA_1200x1600) ? 0x01 : 0x0;
+            bbepWriteCmdData(pBBEP, UC8151_DRF, &u8Temp, 1);
         } else {
             bbepWriteCmd(pBBEP, UC8151_PTOU); // partial out (update the entire panel, not just the last memory window)
             bbepWriteCmd(pBBEP, UC8151_DRF);
@@ -4977,60 +5024,58 @@ void bbepWriteImage4bppSpecial(BBEPDISP *pBBEP, uint8_t ucCMD)
 } /* bbepWriteImage4bppSpecial() */
 
 // special case for panels with 2 controllers
-void bbepWriteImage4bppDual(BBEPDISP *pBBEP, uint8_t ucCMD)
+void bbepWriteImage4bppDual(BBEPDISP *pBBEP)
 {
-    int tx, ty, iPitch;
+    int iPass, tx, ty, iPitch;
     uint8_t uc, *s, *d;
-        
-    if (ucCMD) {
-        pBBEP->iCSPin = pBBEP->iCS1Pin;
-        bbepWriteCmd(pBBEP, ucCMD); // start write
-        pBBEP->iCSPin = pBBEP->iCS2Pin;
-        bbepWriteCmd(pBBEP, ucCMD);
-    }
+
+    pBBEP->cs_mode = CMD_CS_NONE; // manual control
+    for (iPass = 0; iPass < 2; iPass++) {
+        if (iPass == 0) {
+            digitalWrite(pBBEP->iCSPin, LOW); // activate primary
+            digitalWrite(pBBEP->iCS2Pin, HIGH);
+        } else {
+            digitalWrite(pBBEP->iCSPin, HIGH); // activate secondary
+            digitalWrite(pBBEP->iCS2Pin, LOW);
+        }
+        bbepWriteCmd(pBBEP, 0x10); // DTM - write data to RAM
+
     if (pBBEP->iOrientation == 0) {
         iPitch = pBBEP->native_width / 2;
-        s = pBBEP->ucScreen;
+        s = pBBEP->ucScreen; // left half
+        if (iPass == 1) s += iPitch/2; // right half
         for (ty=0; ty<pBBEP->height; ty++) {
-            pBBEP->iCSPin = pBBEP->iCS1Pin;
             bbepWriteData(pBBEP, s, iPitch/2);
-            pBBEP->iCSPin = pBBEP->iCS2Pin;
-            bbepWriteData(pBBEP, &s[iPitch/2], iPitch/2);
-            s += iPitch; // 2 pixels per byte
+            s += iPitch;
         } // for ty
     } else if (pBBEP->iOrientation == 180) {
         iPitch = pBBEP->native_width / 2;
         for (ty=pBBEP->height-1; ty>=0; ty--) {
             s = &pBBEP->ucScreen[(ty * iPitch) + iPitch - 1];
+            if (iPass == 1) s -= (iPitch/2);
             // reverse the pixel direction
-            for (tx=0; tx<pBBEP->native_width; tx+=2) {
+            for (tx=0; tx<pBBEP->native_width/2; tx+=2) {
                 uc = *s--;
                 uc = (uc >> 4) | (uc << 4); // swap nibbles
                 u8Cache[tx/2] = uc;
             }
-            pBBEP->iCSPin = pBBEP->iCS1Pin;
             bbepWriteData(pBBEP, u8Cache, iPitch/2);
-            pBBEP->iCSPin = pBBEP->iCS2Pin;
-            bbepWriteData(pBBEP, &u8Cache[iPitch/2], iPitch/2);
         } // for ty
     } else if (pBBEP->iOrientation == 90) {
         iPitch = pBBEP->native_height / 2;
         for (tx=0; tx<pBBEP->width; tx++) {
             d = u8Cache;
-            for (ty=pBBEP->height-1; ty > 0; ty-=2) {
+            for (ty=(pBBEP->height/2)-1; ty > 0; ty-=2) {
                 s = &pBBEP->ucScreen[(tx>>1) + (ty * iPitch)];
+                if (iPass == 1) s += (pBBEP->height/2) * iPitch;
                 if (tx & 1) {
                     uc = (s[0] << 4) | (s[-iPitch] & 0x0f);
                 } else {
                     uc = (s[0] & 0xf0) | (s[-iPitch] >> 4);
                 }
-                s -= iPitch*2;
-                *d++ = uc; // store 4 pixels
+                *d++ = uc; // store 2 pixels
             } // for ty
-            pBBEP->iCSPin = pBBEP->iCS1Pin;
             bbepWriteData(pBBEP, u8Cache, pBBEP->height/4);
-            pBBEP->iCSPin = pBBEP->iCS2Pin;
-            bbepWriteData(pBBEP, &u8Cache[pBBEP->height/4], pBBEP->height/4);
         } // for tx
     } else if (pBBEP->iOrientation == 270) {
         iPitch = pBBEP->native_height / 2;
@@ -5038,21 +5083,21 @@ void bbepWriteImage4bppDual(BBEPDISP *pBBEP, uint8_t ucCMD)
             d = u8Cache;
             for (ty=0; ty < pBBEP->height; ty+=2) {
                 s = &pBBEP->ucScreen[(tx>>1) + (ty * iPitch)];
+                if (iPass == 1) s += (pBBEP->height/2) * iPitch;
                 if (tx & 1) {
                     uc = (s[0] << 4) | (s[iPitch] & 0x0f);
                 } else {
                     uc = (s[0] & 0xf0) | (s[iPitch] >> 4);
                 }
-                s += iPitch*2;
                 *d++ = uc; // store 4 pixels
             } // for ty
-            pBBEP->iCSPin = pBBEP->iCS1Pin;
             bbepWriteData(pBBEP, u8Cache, pBBEP->height/4);
-            pBBEP->iCSPin = pBBEP->iCS2Pin;
-            bbepWriteData(pBBEP, &u8Cache[pBBEP->height/4], pBBEP->height/4);     
         } // for tx
     }
-    pBBEP->iCSPin = pBBEP->iCS1Pin; // reset CS to #1
+    } // for each pass
+    digitalWrite(pBBEP->iCSPin, HIGH);
+    digitalWrite(pBBEP->iCS2Pin, HIGH);
+    pBBEP->cs_mode = CMD_CS1;
 } /* bbepWriteImage4bppDual() */
 
 void bbepWriteImage4bpp(BBEPDISP *pBBEP, uint8_t ucCMD)
@@ -5502,8 +5547,8 @@ int bbepWritePlane(BBEPDISP *pBBEP, int iPlane, int bInvert)
         return BBEP_SUCCESS;
     }
     if (pBBEP->iFlags & BBEP_7COLOR) {
-        if (pBBEP->iFlags & BBEP_SPLIT_BUFFER) { // dual cable EPD
-           bbepWriteImage4bppDual(pBBEP, 0x10);
+        if (pBBEP->iFlags & BBEP_SPLIT_BUFFER) { // dual controller EPD
+           bbepWriteImage4bppDual(pBBEP);
         } else {
            bbepWriteImage4bpp(pBBEP, 0x10);
         }

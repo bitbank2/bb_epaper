@@ -189,6 +189,7 @@ enum {
     EPD_SEEED_STICKY_4GRAY,
     EPD_M5_PAPER_MONO, // 3.97" 800x480 B/W
     EPD_M5_PAPER_MONO_4GRAY,
+    EPD_SEEED_E1004,
     EPD_PRODUCT_COUNT
 };
 
@@ -272,6 +273,7 @@ enum {
     EP27_176x264_4GRAY, // Badger2350
     EP426B_800x480, // TopWin 4.26" B/W 800x480
     EP583_648x480_4GRAY, // DEPG0583BN
+    EP133_SPECTRA_1200x1600, // 13.3" Spectra6
     EP_PANEL_COUNT
 };
 #ifdef FUTURE
@@ -498,6 +500,13 @@ enum {
 #define EPD_RESET 0xfe
 #define MAKE_LUTS 0xfd
 #define SET_ORIENTATION 0xfc
+// Spectra6 (or other multi-controller display) flags
+// Stays in effect until the next CS specifier command
+#define CMD_CS1 0xfb
+#define CMD_CS2 0xfa
+#define CMD_CS1_CS2 0xf9
+#define CMD_CS_NONE 0xf8
+#define EPD_DELAY 0xf7
 
 // Normal pixel drawing function pointer
 typedef int (BB_SET_PIXEL)(void *pBBEP, int x, int y, unsigned char color);
@@ -511,6 +520,7 @@ typedef void (BB_SPI_WRITE)(const uint8_t *pData, int iLen);
 typedef struct bbepstruct
 {
 uint8_t wrap, type, chip_type, last_error, italic, flip180;
+uint8_t cs_mode;
 uint8_t *ucScreen;
 int iCursorX, iCursorY;
 int width, height, native_width, native_height;
@@ -521,8 +531,8 @@ void *pFont;
 int iDataTime, iOpTime; // time in milliseconds for data transmission and operation
 uint32_t iSpeed;
 uint32_t iTimeout; // for e-paper panels
-uint8_t iDCPin, iMOSIPin, iCLKPin, iCSPin, iRSTPin, iBUSYPin;
-uint8_t iCS1Pin, iCS2Pin;
+uint8_t iDCPin, iMOSIPin, iCLKPin, iRSTPin, iBUSYPin;
+uint8_t iCSPin, iCS2Pin;
 uint8_t x_offset, y_offset; // memory offsets
 uint8_t is_awake, iPlane, iDither, bLightSleep;
 const uint8_t *pColorLookup; // color translation table
@@ -550,7 +560,7 @@ class BBEPAPER
 #endif // __LINUX__
 {
   public:
-    BBEPAPER(void) { memset(&_bbep, 0, sizeof(_bbep)); }
+    BBEPAPER(void) { memset(&_bbep, 0, sizeof(_bbep)); _bbep.cs_mode = CMD_CS1; }
     BBEPAPER(int iPanel);
     BBEPDISP _bbep;
     int createVirtual(int iWidth, int iHeight, int iFlags);

@@ -32,7 +32,6 @@ void bbepSendCMDSequence(BBEPDISP *pBBEP, const uint8_t *pSeq);
 //
 void bbepSetCS2(BBEPDISP *pBBEP, uint8_t cs)
 {
-    pBBEP->iCS1Pin = pBBEP->iCSPin;
     pBBEP->iCS2Pin = cs;
     pinMode(cs, OUTPUT);
     digitalWrite(cs, HIGH); // disable second CS for now
@@ -95,14 +94,14 @@ void bbepInitIO(BBEPDISP *pBBEP, uint8_t u8DC, uint8_t u8RST, uint8_t u8BUSY, ui
     }
 // Before we can start sending pixels, many panels need to know the display resolution
     bbepSendCMDSequence(pBBEP, pBBEP->pInitFull);
-    if (pBBEP->iFlags & BBEP_7COLOR) { // need to send before you can send it data
-        if (pBBEP->iFlags & BBEP_SPLIT_BUFFER) {    
+//    if (pBBEP->iFlags & BBEP_7COLOR) { // need to send before you can send it data
+//        if (pBBEP->iFlags & BBEP_SPLIT_BUFFER) {    
            // Send the same sequence to the second controller
-           pBBEP->iCSPin = pBBEP->iCS2Pin;
-           bbepSendCMDSequence(pBBEP, pBBEP->pInitFull);
-           pBBEP->iCSPin = pBBEP->iCS1Pin;
-        }
-    }
+//           pBBEP->iCSPin = pBBEP->iCS2Pin;
+//           bbepSendCMDSequence(pBBEP, pBBEP->pInitFull);
+//           pBBEP->iCSPin = pBBEP->iCS1Pin;
+//        }
+//    }
 } /* bbepInitIO() */
 
 void bbepWriteIT8951Cmd(BBEPDISP *pBBEP, uint16_t cmd)
@@ -156,15 +155,63 @@ void bbepWriteCmd(BBEPDISP *pBBEP, uint8_t cmd)
     }
     digitalWrite(pBBEP->iDCPin, LOW);
     delay(1);
-    digitalWrite(pBBEP->iCSPin, LOW);
+    if (pBBEP->cs_mode == CMD_CS1 || pBBEP->cs_mode == CMD_CS1_CS2) {
+        digitalWrite(pBBEP->iCSPin, LOW);
+    }
+    if (pBBEP->cs_mode == CMD_CS2 || pBBEP->cs_mode == CMD_CS1_CS2) {
+        digitalWrite(pBBEP->iCS2Pin, LOW);
+    }
     if (pBBEP->iSpeed == 0) { // bit bang
         SPI_Write(pBBEP, &cmd, 1);
     } else {
         SPI.transfer(cmd);
     }
-    digitalWrite(pBBEP->iCSPin, HIGH);
+    if (pBBEP->cs_mode == CMD_CS1 || pBBEP->cs_mode == CMD_CS1_CS2) {
+        digitalWrite(pBBEP->iCSPin, HIGH);
+    }
+    if (pBBEP->cs_mode == CMD_CS2 || pBBEP->cs_mode == CMD_CS1_CS2) {
+        digitalWrite(pBBEP->iCS2Pin, HIGH);
+    }
     digitalWrite(pBBEP->iDCPin, HIGH); // leave data mode as the default
 } /* bbepWriteCmd() */
+
+void bbepWriteCmdData(BBEPDISP *pBBEP, uint8_t cmd, uint8_t *pData, int iLen)
+{
+    if (!pBBEP->is_awake) {
+        // if it's asleep, it can't receive commands
+        bbepWakeUp(pBBEP);
+        pBBEP->is_awake = 1;
+    }
+    digitalWrite(pBBEP->iDCPin, LOW);
+    delay(1);
+    if (pBBEP->cs_mode == CMD_CS1 || pBBEP->cs_mode == CMD_CS1_CS2) {
+        digitalWrite(pBBEP->iCSPin, LOW);
+    }
+    if (pBBEP->cs_mode == CMD_CS2 || pBBEP->cs_mode == CMD_CS1_CS2) {
+        digitalWrite(pBBEP->iCS2Pin, LOW);
+    }        
+    if (pBBEP->iSpeed == 0) { // bit bang
+        SPI_Write(pBBEP, &cmd, 1);
+    } else {
+        SPI.transfer(cmd);
+    }
+    digitalWrite(pBBEP->iDCPin, HIGH); // set data mode
+    delay(1);
+    for (int i=0; i<iLen; i++) { // Arduino clobbers the data (duplex)
+        if (pBBEP->iSpeed == 0) { // bit bang
+            SPI_Write(pBBEP, &pData[i], 1);
+        } else {
+            SPI.transfer(pData[i]);
+        }
+    }
+    if (pBBEP->cs_mode == CMD_CS1 || pBBEP->cs_mode == CMD_CS1_CS2) {
+        digitalWrite(pBBEP->iCSPin, HIGH);
+    }
+    if (pBBEP->cs_mode == CMD_CS2 || pBBEP->cs_mode == CMD_CS1_CS2) {
+        digitalWrite(pBBEP->iCS2Pin, HIGH);
+    }
+} /* bbepWriteCmdData() */
+
 //
 // Write 1 or more bytes as DATA (D/C set high)
 //
@@ -192,13 +239,23 @@ void bbepWriteData(BBEPDISP *pBBEP, uint8_t *pData, int iLen)
             digitalWrite(pBBEP->iCSPin, HIGH);
         }
     } else {
-        digitalWrite(pBBEP->iCSPin, LOW);
+        if (pBBEP->cs_mode == CMD_CS1 || pBBEP->cs_mode == CMD_CS1_CS2) {
+            digitalWrite(pBBEP->iCSPin, LOW);
+        }
+        if (pBBEP->cs_mode == CMD_CS2 || pBBEP->cs_mode == CMD_CS1_CS2) {
+            digitalWrite(pBBEP->iCS2Pin, LOW);
+        }
         if (pBBEP->iSpeed == 0) { // bit bang
             SPI_Write(pBBEP, pData, iLen);
         } else {
             SPI.transferBytes(pData, NULL, iLen);
         }
-        digitalWrite(pBBEP->iCSPin, HIGH);
+        if (pBBEP->cs_mode == CMD_CS1 || pBBEP->cs_mode == CMD_CS1_CS2) {
+            digitalWrite(pBBEP->iCSPin, HIGH);
+        }
+        if (pBBEP->cs_mode == CMD_CS2 || pBBEP->cs_mode == CMD_CS1_CS2) {
+            digitalWrite(pBBEP->iCS2Pin, HIGH);
+        }
     }
 #else
     if (pBBEP->iFlags & BBEP_CS_EVERY_BYTE) {
@@ -212,7 +269,12 @@ void bbepWriteData(BBEPDISP *pBBEP, uint8_t *pData, int iLen)
             digitalWrite(pBBEP->iCSPin, HIGH);
         }
     } else {
-        digitalWrite(pBBEP->iCSPin, LOW);
+        if (pBBEP->cs_mode == CMD_CS1 || pBBEP->cs_mode == CMD_CS1_CS2) {
+            digitalWrite(pBBEP->iCSPin, LOW);
+        }
+        if (pBBEP->cs_mode == CMD_CS2 || pBBEP->cs_mode == CMD_CS1_CS2) {
+            digitalWrite(pBBEP->iCS2Pin, LOW);
+        }
         for (int i=0; i<iLen; i++) { // Arduino clobbers the data (duplex)
             if (pBBEP->iSpeed == 0) { // bit bang
                 SPI_Write(pBBEP, &pData[i], 1);
@@ -220,7 +282,12 @@ void bbepWriteData(BBEPDISP *pBBEP, uint8_t *pData, int iLen)
                 SPI.transfer(pData[i]);
             }
         }
-        digitalWrite(pBBEP->iCSPin, HIGH);
+        if (pBBEP->cs_mode == CMD_CS1 || pBBEP->cs_mode == CMD_CS1_CS2) {
+            digitalWrite(pBBEP->iCSPin, HIGH);
+        }
+        if (pBBEP->cs_mode == CMD_CS2 || pBBEP->cs_mode == CMD_CS1_CS2) {
+            digitalWrite(pBBEP->iCS2Pin, HIGH);
+        }   
     }
 #endif
 } /* bbepWriteData() */
@@ -231,8 +298,7 @@ void bbepWriteData(BBEPDISP *pBBEP, uint8_t *pData, int iLen)
 //
 void bbepCMD2(BBEPDISP *pBBEP, uint8_t cmd1, uint8_t cmd2)
 {
-    bbepWriteCmd(pBBEP, cmd1);
-    bbepWriteData(pBBEP, &cmd2, 1);
+    bbepWriteCmdData(pBBEP, cmd1, &cmd2, 1);
 } /* bbepCMD2() */
 
 #endif // __ARDUINO_IO__

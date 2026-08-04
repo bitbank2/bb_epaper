@@ -64,6 +64,7 @@ BBEPAPER::BBEPAPER(int iPanel)
 {
     memset(&_bbep, 0, sizeof(_bbep));
     _bbep.iFG = BBEP_BLACK;
+    _bbep.cs_mode = CMD_CS1;
     bbepSetPanelType(&_bbep, iPanel);
 }
 
@@ -196,10 +197,26 @@ int rc = BBEP_ERROR_BAD_PARAMETER;
             }
             break;
 
+        case EPD_SEEED_E1004: // 13.3" Spectra6 1200x1600
+// DC:11 RST:38 BUSY:13 CS:10 MOSI:9 SCK:7 PWR:12, CS2:2
+           pinMode(12, OUTPUT);
+           digitalWrite(12, 1); // enable power
+           setCS2(2);
+           if (setPanelType(EP133_SPECTRA_1200x1600) == BBEP_SUCCESS) {
+               initIO(11, 38, 13, 10, 9, 7, 10000000);
+               return BBEP_SUCCESS;
+           }
+           break;
+
         case EPD_SEEED_STICKY: // DC:16 RST:17 BUSY:18 CS:15 MOSI:14 SCK:13 PWR:47
         case EPD_SEEED_STICKY_4GRAY:
             pinMode(47, OUTPUT);
             digitalWrite(47, 1); // enable EPD power
+            pinMode(10, OUTPUT); // SD card enable
+            digitalWrite(10, 1);
+            pinMode(8, OUTPUT); // SD card CS (shared SPI with EPD)
+            digitalWrite(8, 1); // disable SD card
+            pinMode(11, INPUT_PULLUP); // SD card detect
             if (setPanelType((iProduct == EPD_SEEED_STICKY) ? EP397_800x480:EP397_800x480_4GRAY) == BBEP_SUCCESS) {
                 initIO(16, 17, 18, 15, 14, 13, 10000000);
                 return BBEP_SUCCESS;
@@ -456,6 +473,11 @@ int BBEPAPER::refresh(int iMode, bool bWait)
     rc = bbepRefresh(&_bbep, iMode);
     if (rc == BBEP_SUCCESS && bWait) {
         bbepWaitBusy(&_bbep);
+        if (_bbep.chip_type == BBEP_CHIP_UC81xx) {
+            // Send a POFF (power off) command after each update
+            // This is needed by Spectra6 and some other panels
+            bbepWriteCmd(&_bbep, UC8151_POFF); 
+        }
     }
     _bbep.iOpTime = (int)(millis() - l);
     return rc;
@@ -889,13 +911,7 @@ void BBEPAPER::wake(void)
     bbepWakeUp(&_bbep);
     if (_bbep.iFlags & (BBEP_7COLOR | BBEP_4COLOR)) { // need to send before you can send it data
         bbepSendCMDSequence(&_bbep, _bbep.pInitFull);
-        if (_bbep.iFlags & BBEP_SPLIT_BUFFER) { // dual cable EPD
-            _bbep.iCSPin = _bbep.iCS2Pin;
-            bbepSendCMDSequence(&_bbep, _bbep.pInitFull); // second controller 
-            _bbep.iCSPin = _bbep.iCS1Pin;
-        }
     }
-
 }
 
 void BBEPAPER::sleep(int bDeep)
