@@ -269,7 +269,6 @@ void bbepCMD2(BBEPDISP *pBBEP, uint8_t cmd1, uint8_t cmd2)
 //
 void bbepSetCS2(BBEPDISP *pBBEP, uint8_t cs)
 {
-    pBBEP->iCS1Pin = pBBEP->iCSPin;
     pBBEP->iCS2Pin = cs;
     pinMode(cs, OUTPUT);
     digitalWrite(cs, HIGH); // disable second CS for now
@@ -286,9 +285,20 @@ void bbepWriteCmd(BBEPDISP *pBBEP, uint8_t cmd)
         pBBEP->is_awake = 1;
     }
     digitalWrite(pBBEP->iDCPin, LOW);
-    digitalWrite(pBBEP->iCSPin, LOW);
+    delay(1);
+    if (pBBEP->cs_mode == CMD_CS1 || pBBEP->cs_mode == CMD_CS1_CS2) {
+        digitalWrite(pBBEP->iCSPin, LOW);
+    }
+    if (pBBEP->cs_mode == CMD_CS2 || pBBEP->cs_mode == CMD_CS1_CS2) {
+        digitalWrite(pBBEP->iCS2Pin, LOW);
+    }
     SPI_transfer(pBBEP, &cmd, 1);
-    digitalWrite(pBBEP->iCSPin, HIGH);
+    if (pBBEP->cs_mode == CMD_CS1 || pBBEP->cs_mode == CMD_CS1_CS2) {
+        digitalWrite(pBBEP->iCSPin, HIGH);
+    }
+    if (pBBEP->cs_mode == CMD_CS2 || pBBEP->cs_mode == CMD_CS1_CS2) {
+        digitalWrite(pBBEP->iCS2Pin, HIGH);
+    }
     digitalWrite(pBBEP->iDCPin, HIGH); // leave data mode as the default
 } /* bbepWriteCmd() */
 //
@@ -296,9 +306,46 @@ void bbepWriteCmd(BBEPDISP *pBBEP, uint8_t cmd)
 //
 void bbepWriteData(BBEPDISP *pBBEP, uint8_t *pData, int iLen)
 {
-    digitalWrite(pBBEP->iCSPin, LOW);
+    if (pBBEP->cs_mode == CMD_CS1 || pBBEP->cs_mode == CMD_CS1_CS2) {
+        digitalWrite(pBBEP->iCSPin, LOW);
+    }
+    if (pBBEP->cs_mode == CMD_CS2 || pBBEP->cs_mode == CMD_CS1_CS2) {
+        digitalWrite(pBBEP->iCS2Pin, LOW);
+    }
     SPI_transfer(pBBEP, pData, iLen);
-    digitalWrite(pBBEP->iCSPin, HIGH);
+    if (pBBEP->cs_mode == CMD_CS1 || pBBEP->cs_mode == CMD_CS1_CS2) {
+        digitalWrite(pBBEP->iCSPin, HIGH);
+    }
+    if (pBBEP->cs_mode == CMD_CS2 || pBBEP->cs_mode == CMD_CS1_CS2) {
+        digitalWrite(pBBEP->iCS2Pin, HIGH);
+    }
 } /* bbepWriteData() */
+
+void bbepWriteCmdData(BBEPDISP *pBBEP, uint8_t cmd, uint8_t *pData, int iLen)
+{
+    if (!pBBEP->is_awake) {
+        // if it's asleep, it can't receive commands
+        bbepWakeUp(pBBEP);
+        pBBEP->is_awake = 1;
+    }
+    digitalWrite(pBBEP->iDCPin, LOW);
+    delay(1);
+    if (pBBEP->cs_mode == CMD_CS1 || pBBEP->cs_mode == CMD_CS1_CS2) {
+        digitalWrite(pBBEP->iCSPin, LOW);
+    }
+    if (pBBEP->cs_mode == CMD_CS2 || pBBEP->cs_mode == CMD_CS1_CS2) {
+        digitalWrite(pBBEP->iCS2Pin, LOW);
+    }    
+    SPI_transfer(pBBEP, &cmd, 1);
+    digitalWrite(pBBEP->iDCPin, HIGH); // set data mode
+    delay(1);
+    SPI_transfer(pBBEP, pData, iLen);
+    if (pBBEP->cs_mode == CMD_CS1 || pBBEP->cs_mode == CMD_CS1_CS2) {
+        digitalWrite(pBBEP->iCSPin, HIGH);
+    }
+    if (pBBEP->cs_mode == CMD_CS2 || pBBEP->cs_mode == CMD_CS1_CS2) {
+        digitalWrite(pBBEP->iCS2Pin, HIGH);
+    }
+} /* bbepWriteCmdData() */
 
 #endif // __BB_RPI_IO__
