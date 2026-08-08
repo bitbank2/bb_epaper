@@ -4154,7 +4154,7 @@ const EPD_PANEL panelDefs[] PROGMEM = {
     {176, 264, 0, badger2350g_init_full, badger2350g_init_fast, NULL, BBEP_NEEDS_EXTRA_INIT | BBEP_4GRAY, BBEP_CHIP_SSD16xx, u8Colors_4gray},// EP27_176x264_4GRAY
     {800, 480, 0, epd426b_init_full, epd426b_init_full, epd426b_init_part, BBEP_NEEDS_EXTRA_INIT, BBEP_CHIP_SSD16xx, u8Colors_2clr}, // EP426B_800x480
     {648, 480, 0, epd583g_init_full, NULL, NULL, BBEP_4GRAY | BBEP_NEEDS_EXTRA_INIT, BBEP_CHIP_UC81xx, u8Colors_4gray}, // EP583_648x480_4GRAY
-    {1200, 1600, 0, epd133_spectra_init, NULL, NULL, BBEP_7COLOR | BBEP_SPLIT_BUFFER, BBEP_CHIP_UC81xx, u8Colors_spectra}, // EP133_SPECTRA_1200x1600 Spectra6 13.3" 1200x1600
+    {1200, 1600, 0, epd133_spectra_init, NULL, NULL, BBEP_7COLOR | BBEP_SPLIT_BUFFER | BBEP_NEEDS_EXTRA_INIT, BBEP_CHIP_UC81xx, u8Colors_spectra}, // EP133_SPECTRA_1200x1600 Spectra6 13.3" 1200x1600
  };
 //
 // Set the e-paper panel type

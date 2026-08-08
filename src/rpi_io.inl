@@ -164,10 +164,11 @@ void pinMode(int iPin, int iMode)
    lines[iPin] = gpiod_chip_get_line(chip, iPin);
    if (iMode == OUTPUT) {
        gpiod_line_request_output(lines[iPin], CONSUMER, 0);
-   } else if (iMode == INPUT_PULLUP) {
-       gpiod_line_request_input_flags(lines[iPin], CONSUMER, GPIOD_LINE_REQUEST_FLAG_BIAS_PULL_UP);
-   } else { // plain input
+   } else if (iMode == INPUT_PULLUP || iMode == INPUT) {
        gpiod_line_request_input(lines[iPin], CONSUMER);
+       if (iMode == INPUT_PULLUP) {
+           gpiod_line_request_input_flags(lines[iPin], CONSUMER, GPIOD_LINE_REQUEST_FLAG_BIAS_PULL_UP);
+       }
    }
 #else // new 2.x API
    struct gpiod_line_settings *settings;
