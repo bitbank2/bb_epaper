@@ -597,6 +597,21 @@ const uint8_t epd42r_init_sequence_full[] PROGMEM = {
     0x00
 };
 
+// DEPG0420 / GDEY042Z98 (SSD1683) - looks like the Inky wHAT (EP42R_400x300), different controller
+const uint8_t epd42r3_init_sequence_full[] PROGMEM =
+{
+    1, SSD1608_SW_RESET,
+    BUSY_WAIT,
+    4, 0x01, 0x2b, 0x01, 0x00,
+    2, SSD1608_WRITE_BORDER, 0x05,
+    2, 0x18, 0x80,
+    SET_ORIENTATION,
+    2, SSD1608_DISP_CTRL2, 0xb1,
+    1, SSD1608_MASTER_ACTIVATE,
+    BUSY_WAIT,
+    0x00 // end of table
+};
+
 const uint8_t epd29r2_init_sequence_full[] PROGMEM = {
     6, UC8151_PWR, 0x03, 0x00, 0x2b, 0x2b, 0x09,
     4, UC8151_BTST, 0x17, 0x17, 0x17,
@@ -4312,6 +4327,7 @@ const EPD_PANEL panelDefs[] PROGMEM = {
     {122, 250, 0, epd213g_init_full, NULL, NULL, BBEP_4GRAY, BBEP_CHIP_SSD16xx, u8Colors_4gray}, // EP213B_122x250_4GRAY Waveshare v2
     {168, 384, 0, epd29h_init_full, epd29h_init_fast, epd29h_init_part, 0, BBEP_CHIP_SSD16xx, u8Colors_2clr}, // EP29_168x384
     {168, 384, 0, epd29h_init_full, NULL, NULL, BBEP_4GRAY, BBEP_CHIP_SSD16xx, u8Colors_4gray}, // EP29_168x384_4GRAY
+    {400, 300, 0, epd42r3_init_sequence_full, NULL, NULL, BBEP_3COLOR, BBEP_CHIP_SSD16xx, u8Colors_3clr}, // EP42R3_400x300 DEPG0420 / GDEY042Z98 4.2" B/W/R
  };
 //
 // Set the e-paper panel type
