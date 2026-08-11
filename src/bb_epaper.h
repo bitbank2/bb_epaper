@@ -50,6 +50,8 @@ void digitalWrite(int pin, int value);
 int digitalRead(int pin);
 #endif // __LINUX__
 
+#ifndef __BB_ERRORS__
+#define __BB_ERRORS__
 // error messages
 enum {
     BBEP_SUCCESS,
@@ -58,8 +60,10 @@ enum {
     BBEP_ERROR_NOT_SUPPORTED,
     BBEP_ERROR_NO_MEMORY,
     BBEP_ERROR_OUT_OF_BOUNDS,
+    BBEP_IO_ERROR,
     BBEP_ERROR_COUNT
 };
+#endif // __BB_ERRORS__
 
 #ifndef __BB_RECT__
 #define __BB_RECT__
