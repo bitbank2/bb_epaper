@@ -210,13 +210,12 @@ int rc = BBEP_ERROR_BAD_PARAMETER;
 
         case EPD_SEEED_STICKY: // DC:16 RST:17 BUSY:18 CS:15 MOSI:14 SCK:13 PWR:47
         case EPD_SEEED_STICKY_4GRAY:
+            pinMode(8, OUTPUT); // SD card CS (shared SPI with EPD)
+            digitalWrite(8, 1); // disable SD card
             pinMode(47, OUTPUT);
             digitalWrite(47, 1); // enable EPD power
             pinMode(10, OUTPUT); // SD card enable
             digitalWrite(10, 1);
-            pinMode(8, OUTPUT); // SD card CS (shared SPI with EPD)
-            digitalWrite(8, 1); // disable SD card
-            pinMode(11, INPUT_PULLUP); // SD card detect
             if (setPanelType((iProduct == EPD_SEEED_STICKY) ? EP397_800x480:EP397_800x480_4GRAY) == BBEP_SUCCESS) {
                 initIO(16, 17, 18, 15, 14, 13, 10000000);
                 return BBEP_SUCCESS;

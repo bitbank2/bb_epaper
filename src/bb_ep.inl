@@ -1175,6 +1175,34 @@ const uint8_t epd75yr_init_full[] PROGMEM =
    BUSY_WAIT,
    0
 };
+//
+// This is the 'fast' update of approx 11 seconds
+// The slow (18-25 second) update is not worth implementing
+//
+const uint8_t epd75yr_init_fast[] PROGMEM =
+{
+   EPD_RESET,
+   BUSY_WAIT,
+   0x03, 0x00, 0x0f, 0x29,
+   0x05, 0x06, 0x0f, 0x8b, 0x93, 0xa1, // BTST
+   0x02, 0x41, 0x00,
+   0x02, 0x50, 0x37,
+   0x03, 0x60, 0x02, 0x02,
+   0x05, UC8151_TRES, 0x03, 0x20, 0x01, 0xe0, // resolution (800x480)
+   0x09, 0x62, 0x98, 0x98, 0x98, 0x75, 0xca, 0xb2, 0x98, 0x7e,
+   0x05, 0x65, 0x00, 0x00, 0x00, 0x00,
+   0x02, 0xe7, 0x1c,
+   0x02, 0xe3, 0x00, 
+   0x02, 0xe9, 0x01, 
+   0x02, 0x30, 0x06, // 100Hz
+   0x01, 0x04, // power on
+   BUSY_WAIT,
+   0x02, 0xe0, 0x02,
+   0x02, 0xe6, 0x5a,
+   0x02, 0xa5, 0x00,
+   BUSY_WAIT,
+   0
+};  
 
 const uint8_t epd215yr_init_full[] PROGMEM =
 {
@@ -3961,9 +3989,35 @@ const uint8_t epd73_spectra_init[] PROGMEM = {
     BUSY_WAIT,
     0
 };
+// Spectra 6 (GDEP073E01) 800x480 7-color init sequence
+const uint8_t epd73_spectra_init_fast[] PROGMEM = {
+    7, 0xaa, 0x49, 0x55, 0x20, 0x08, 0x09, 0x18, // CMD H
+    7, UC8151_PWR, 0x3f, 0x00, 0x32, 0x2a, 0x0e, 0x2a, // power setting
+    3, UC8151_PSR, 0x5f, 0x69, // panel setting
+    5, UC8151_PFS, 0x00, 0x54, 0x00, 0x44,
+    5, 0x05, 0x40, 0x1f, 0x1f, 0x2c, // BTST1
+    5, 0x06, 0x6f, 0x1f, 0x16, 0x25, // BTST2
+    5, 0x08, 0x6f, 0x1f, 0x1f, 0x22, // BTST3
+    3, 0x13, 0x00, 0x04, // IPC
+    2, UC8151_PLL, 0x04, // faster PLL setting
+//    2, 0x30, 0x3c, 
+    2, UC8151_TSE, 0x00, 
+    2, UC8151_CDI, 0x3f,
+    3, UC8151_TCON, 0x02, 0x00,
+    5, UC8151_TRES, 0x03, 0x20, 0x01, 0xe0, // resolution 800x480
+    2, UC8151_VDCS, 0x1e,
+    2, 0x84, 0x01, // T_VCDS
+    2, 0x86, 0x00, // AGID
+    2, UC8151_PWS, 0x2f,
+    2, 0xe0, 0x00, // CCSET
+    2, 0xe6, 0x00, // TSSET
+    1, UC8151_PON, // power on
+    BUSY_WAIT,
+    0
+};
 // Spectra 6 (GDEP040E01) 400x600 7-color init sequence
 // GoodDisplay reference; normal (host-managed power cycling) mode
-const uint8_t epd40_spectra_init[] PROGMEM = {
+const uint8_t epd40_init_full[] PROGMEM = {
     7, 0xaa, 0x49, 0x55, 0x20, 0x08, 0x09, 0x18, // CMDH: Spectra 6 mode handshake
     2, UC8151_PWR, 0x3f, // PWR: internal DC-DC for VGH/VGL/VS, chip defaults for voltages
     3, UC8151_PSR, 0x5f, 0x69, // PSR: 2-byte panel setting, scan up, shift left
@@ -3973,6 +4027,27 @@ const uint8_t epd40_spectra_init[] PROGMEM = {
     5, UC8151_PFS, 0x00, 0x54, 0x00, 0x44, // POFS: power off timing + EPD discharge
     3, UC8151_TCON, 0x02, 0x00, // TCON: gate/source non-overlap timing
     2, UC8151_PLL, 0x08, // PLL: dynamic frame rate enabled (Dyna=1)
+    2, UC8151_CDI, 0x3f, // CDI: border floating, VCOM interval 2 Hsync
+    5, UC8151_TRES, 0x01, 0x90, 0x02, 0x58, // TRES: 400x600
+    2, UC8151_PWS, 0x2f, // PWS: VCOM/source power saving widths
+    2, 0x84, 0x01, // T_VDCS(undoc): temperature-related VCOM setting
+    1, UC8151_PON, // PON: power on
+    BUSY_WAIT,
+    5, 0x06, 0x6f, 0x1f, 0x17, 0x27, // BTST2: 2nd setting (longer GDR off before DRF)
+    0
+};
+// Spectra 6 (GDEP040E01) 400x600 7-color init sequence
+// GoodDisplay reference; normal (host-managed power cycling) mode
+const uint8_t epd40_init_fast[] PROGMEM = {
+    7, 0xaa, 0x49, 0x55, 0x20, 0x08, 0x09, 0x18, // CMDH: Spectra 6 mode handshake
+    2, UC8151_PWR, 0x3f, // PWR: internal DC-DC for VGH/VGL/VS, chip defaults for voltages
+    3, UC8151_PSR, 0x5f, 0x69, // PSR: 2-byte panel setting, scan up, shift left
+    5, 0x05, 0x40, 0x1f, 0x1f, 0x2c, // BTST1(undoc): booster phase A
+    5, 0x08, 0x6f, 0x1f, 0x1f, 0x22, // BTST3(undoc): booster phase C
+    5, 0x06, 0x6f, 0x1f, 0x17, 0x17, // BTST2: booster phase B (1st setting)
+    5, UC8151_PFS, 0x00, 0x54, 0x00, 0x44, // POFS: power off timing + EPD discharge 
+    3, UC8151_TCON, 0x02, 0x00, // TCON: gate/source non-overlap timing
+    2, UC8151_PLL, 5, // PLL: dynamic frame rate enabled (Dyna=1)
     2, UC8151_CDI, 0x3f, // CDI: border floating, VCOM interval 2 Hsync
     5, UC8151_TRES, 0x01, 0x90, 0x02, 0x58, // TRES: 400x600
     2, UC8151_PWS, 0x2f, // PWS: VCOM/source power saving widths
@@ -4110,7 +4185,7 @@ const EPD_PANEL panelDefs[] PROGMEM = {
     {152, 296, 0, epd26r_init_sequence_full, NULL, NULL, BBEP_3COLOR, BBEP_CHIP_SSD16xx, u8Colors_3clr}, // EP26R_152x296 Solum ESL harvested 2.6" panel B/W/R
 //    {540, 960, 0, (const uint8_t *)epd47_it8951_init, NULL, NULL, 0, BBEP_CHIP_IT8951}, // EP47_540x960 = M5Paper (original)
     {800, 480, 0, epd73_init, NULL, NULL,  BBEP_7COLOR, BBEP_CHIP_UC81xx, u8Colors_7clr}, // EP73_800x480 GEDY073D4 6 7-color 800x480
-    {800, 480, 0, epd73_spectra_init, NULL, NULL,  BBEP_7COLOR, BBEP_CHIP_UC81xx, u8Colors_spectra}, // EP73_800x480 Spectra 6 7-color 800x480
+    {800, 480, 0, epd73_spectra_init, epd73_spectra_init_fast, NULL,  BBEP_7COLOR, BBEP_CHIP_UC81xx, u8Colors_spectra}, // EP73_800x480 Spectra 6 7-color 800x480
     {640, 384, 0, epd74r_init, NULL, NULL,  BBEP_3COLOR | BBEP_4BPP_DATA, BBEP_CHIP_UC81xx, u8Colors_3clr}, // EP74R_640x384, 3-color 640x384
     {600, 448, 0, epd583r_init, NULL, NULL,  BBEP_3COLOR | BBEP_4BPP_DATA, BBEP_CHIP_UC81xx, u8Colors_3clr}, // EP583R_600x448, 3-color 600x448
 // 40
@@ -4141,7 +4216,7 @@ const EPD_PANEL panelDefs[] PROGMEM = {
     {160, 296, 0, epd215yr_init_full, epd215yr_init_full, NULL, BBEP_4COLOR, BBEP_CHIP_UC81xx, u8Colors_4clr_v2}, // EP215YR_160x296
     {680, 480, 0, epd1085_init_full, NULL, NULL, 0, BBEP_CHIP_UC81xx, u8Colors_2clr}, // EP1085_1360x480
     {240, 320, 0, epd31_init_full, epd31_init_fast, epd31_init_part, 0, BBEP_CHIP_UC81xx, u8Colors_2clr}, // EP31_240x320
-    {800, 480, 0, epd75yr_init_full, NULL, NULL, BBEP_NEEDS_EXTRA_INIT | BBEP_4COLOR, BBEP_CHIP_UC81xx, u8Colors_4clr_v2}, // EP75YR_800x480
+    {800, 480, 0, epd75yr_init_full, epd75yr_init_fast, NULL, BBEP_NEEDS_EXTRA_INIT | BBEP_4COLOR, BBEP_CHIP_UC81xx, u8Colors_4clr_v2}, // EP75YR_800x480
     {200, 200, 0, epd154g_init_full, epd154g_init_fast, NULL, BBEP_4GRAY, BBEP_CHIP_SSD16xx, u8Colors_4gray}, // EP154_200x200
     {400, 300, 0, epd42b_init_gray, epd42b_init_gray_fast, NULL, BBEP_4GRAY, BBEP_CHIP_SSD16xx, u8Colors_4gray}, // EP42B_400x300_4GRAY
     {800, 480, 0, epd397_init_full, epd397_init_fast, epd397_init_part, BBEP_NEEDS_EXTRA_INIT, BBEP_CHIP_SSD16xx, u8Colors_2clr}, // EP397_800x480
@@ -4149,7 +4224,7 @@ const EPD_PANEL panelDefs[] PROGMEM = {
     {792, 528, 0, epd368_init_full, epd368_init_fast, epd368_init_part, BBEP_NEEDS_EXTRA_INIT, BBEP_CHIP_UC81xx, u8Colors_2clr}, // EP368_792x528
     {792, 528, 0, epd368g_init, NULL, NULL, BBEP_4GRAY | BBEP_NEEDS_EXTRA_INIT, BBEP_CHIP_UC81xx, u8Colors_4gray_v2}, // EP368_792x528_4GRAY
     {122, 250, 1, epd213_122x250_init_sequence_full, NULL, epd213_122x250_init_sequence_part, 0, BBEP_CHIP_SSD16xx, u8Colors_2clr}, // EP213ZZ_122x250 LilyGo T3S3
-    {400, 600, 0, epd40_spectra_init, NULL, NULL, BBEP_7COLOR, BBEP_CHIP_UC81xx, u8Colors_spectra}, // EP40_SPECTRA_400x600 GDEP040E01 Spectra 6 4" 400x600
+    {400, 600, 0, epd40_init_full, epd40_init_fast, NULL, BBEP_7COLOR, BBEP_CHIP_UC81xx, u8Colors_spectra}, // EP40_SPECTRA_400x600 GDEP040E01 Spectra 6 4" 400x600
     {176, 264, 0, badger2350_init_full, badger2350_init_fast, badger2350_init_part, BBEP_NEEDS_EXTRA_INIT, BBEP_CHIP_SSD16xx, u8Colors_2clr}, // EP27_176x264
     {176, 264, 0, badger2350g_init_full, badger2350g_init_fast, NULL, BBEP_NEEDS_EXTRA_INIT | BBEP_4GRAY, BBEP_CHIP_SSD16xx, u8Colors_4gray},// EP27_176x264_4GRAY
     {800, 480, 0, epd426b_init_full, epd426b_init_full, epd426b_init_part, BBEP_NEEDS_EXTRA_INIT, BBEP_CHIP_SSD16xx, u8Colors_2clr}, // EP426B_800x480
