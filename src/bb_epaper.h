@@ -278,6 +278,7 @@ enum {
     EP426B_800x480, // TopWin 4.26" B/W 800x480
     EP583_648x480_4GRAY, // DEPG0583BN
     EP133_SPECTRA_1200x1600, // 13.3" Spectra6
+    EP213B_122x250_4GRAY, // 2.13" 122x250 Waveshare v2
     EP_PANEL_COUNT
 };
 #ifdef FUTURE

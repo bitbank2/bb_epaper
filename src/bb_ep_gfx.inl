@@ -940,7 +940,7 @@ int bbepLoadBMP(BBEPDISP *pBBEP, const uint8_t *pBMP, int dx, int dy, int iFG, i
         s = (uint8_t *)&pBMP[iOffBits + (y*iPitch)];
         if (!pBBEP->ucScreen) {
             if (dx & 7) { // need to shift it over by 1-7 bits
-                uint8_t *d = u8Cache, uc1, uc0 = 0; // last shifted byte
+                uint8_t *d = &u8Cache[0], uc1, uc0 = 0; // last shifted byte
                 uint8_t n = dx & 7; // shift amount
                 for (int j=0; j<cx+7; j+= 8) {
                     uc1 = pgm_read_byte(s++);
