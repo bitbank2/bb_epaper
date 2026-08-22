@@ -40,6 +40,7 @@
 #ifndef CONSUMER
 #define CONSUMER "Consumer"
 #endif
+static char szChipName[16];
 #define pgm_read_byte(a) (*(uint8_t *)a)
 #define pgm_read_word(a) (*(uint16_t *)a)
 #define pgm_read_dword(a) (*(uint32_t *)a)
@@ -137,17 +138,17 @@ struct spi_ioc_transfer spi;
 
 int digitalRead(int iPin)
 {
-	if (lines[iPin] == 0) return 0;
+   if (iPin == -1 || iPin == 0xff || lines[iPin] == 0) return 0;
 #ifdef GPIOD_API // 1.x (old) API
-  return gpiod_line_get_value(lines[iPin]);
+   return gpiod_line_get_value(lines[iPin]);
 #else // 2.x (new)
-  return gpiod_line_request_get_value(lines[iPin], iPin) == GPIOD_LINE_VALUE_ACTIVE;
+   return gpiod_line_request_get_value(lines[iPin], iPin) == GPIOD_LINE_VALUE_ACTIVE;
 #endif
 } /* digitalRead() */
 
 void digitalWrite(int iPin, int iState)
 {
-	if (lines[iPin] == 0) return;
+   if (iPin == -1 || iPin == 0xff || lines[iPin] == 0) return;
 #ifdef GPIOD_API // old 1.6 API
    gpiod_line_set_value(lines[iPin], iState);
 #else // new 2.x API
@@ -157,9 +158,11 @@ void digitalWrite(int iPin, int iState)
 
 void pinMode(int iPin, int iMode)
 {
+   if (iPin == -1 || iPin == 0xff) return; // invalid pin number
+					   //
 #ifdef GPIOD_API // old 1.6 API
    if (chip == NULL) {
-       chip = gpiod_chip_open_by_name("gpiochip0");
+       chip = gpiod_chip_open_by_name(szChipName);
    }
    lines[iPin] = gpiod_chip_get_line(chip, iPin);
    if (iMode == OUTPUT) {
@@ -174,7 +177,9 @@ void pinMode(int iPin, int iMode)
    struct gpiod_line_settings *settings;
    struct gpiod_line_config *line_cfg;
    struct gpiod_request_config *req_cfg;
-   chip = gpiod_chip_open("/dev/gpiochip0");
+   char szChip[16];
+   sprintf("/dev/%s", szChipName);
+   chip = gpiod_chip_open(szChip);
    if (!chip) {
 	printf("chip open failed\n");
 	   return;
@@ -228,6 +233,7 @@ void bbepInitIO(BBEPDISP *pBBEP, uint32_t u32Speed)
 {
 char szName[32];
 
+    sprintf(szChipName, "gpiochip%d", pBBEP->iCLKPin); // GPIO Chip number
     pinMode(pBBEP->iDCPin, OUTPUT);
     pinMode(pBBEP->iRSTPin, OUTPUT);
     digitalWrite(pBBEP->iRSTPin, LOW);

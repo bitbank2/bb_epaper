@@ -439,14 +439,14 @@ void BBEPAPER::initIO(int iDC, int iReset, int iBusy, int iCS, int iMOSI, int iS
     bbepInitIO(&_bbep, iDC, iReset, iBusy, iCS, iMOSI, iSCLK, u32Speed);
 } /* initIO() */
 #else // Linux
-void BBEPAPER::initIO(int iDC, int iReset, int iBusy, int iCS, int iSPIChannel, int iNotUsed, uint32_t u32Speed)
+void BBEPAPER::initIO(int iDC, int iReset, int iBusy, int iCS, int iSPIChannel, int iChipNumber, uint32_t u32Speed)
 {
-	(void)iNotUsed;
 	_bbep.iCSPin = iCS;
 	_bbep.iDCPin = iDC;
 	_bbep.iBUSYPin = iBusy;
 	_bbep.iRSTPin = iReset;
 	_bbep.iMOSIPin = iSPIChannel;
+	_bbep.iCLKPin = iChipNumber;
 	bbepInitIO(&_bbep, u32Speed);
 } /* initIO() */
 #endif
