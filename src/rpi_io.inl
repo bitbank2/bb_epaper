@@ -178,7 +178,7 @@ void pinMode(int iPin, int iMode)
    struct gpiod_line_config *line_cfg;
    struct gpiod_request_config *req_cfg;
    char szChip[16];
-   sprintf("/dev/%s", szChipName);
+   sprintf(szChip, "/dev/%s", szChipName);
    chip = gpiod_chip_open(szChip);
    if (!chip) {
 	printf("chip open failed\n");
