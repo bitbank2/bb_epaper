@@ -2039,6 +2039,51 @@ const uint8_t epd122_init_sequence_part[] PROGMEM =
     0x00 // end of table
 };
 
+// 2.9" high resolution B/W panel (168x384)
+const uint8_t epd29h_init_full[] PROGMEM = 
+{
+  1, 0x12, // soft reset
+  BUSY_WAIT,
+  2, 0x3c, 0x05, // border
+  4, 0x01, 0x7f, 0x01, 0x00, // driver output control (height)
+  SET_ORIENTATION,
+  2, 0x18, 0x80, // read built-in temp sensor
+  BUSY_WAIT,
+  0
+};
+
+// 2.9" high resolution B/W panel (168x384)
+const uint8_t epd29h_init_part[] PROGMEM =
+{
+  1, 0x12, // soft reset
+  BUSY_WAIT,
+  2, 0x3c, 0xc0, // border
+  4, 0x01, 0x7f, 0x01, 0x00, // driver output control (height)
+  SET_ORIENTATION,
+  2, 0x18, 0x80, // read built-in temp sensor
+  BUSY_WAIT,
+  0     
+};
+
+// 2.9" high resolution B/W panel (168x384)
+const uint8_t epd29h_init_fast[] PROGMEM = 
+{
+  1, 0x12, // soft reset
+  BUSY_WAIT,
+  2, 0x3c, 0x05, // border
+  4, 0x01, 0x7f, 0x01, 0x00, // driver output control (height)
+  SET_ORIENTATION,
+  2, 0x18, 0x80, // read built-in temp sensor
+  2, 0x22, 0xb1, // load temp value
+  1, 0x20, // execute
+  BUSY_WAIT,
+  3, 0x1a, 0x6e, 0x00, // write temp register
+  2, 0x22, 0x91, // load temp value
+  1, 0x20, // execute
+  BUSY_WAIT,
+  0
+};
+
 const uint8_t epd293_init_sequence_full[] PROGMEM =
 {
     0x01, SSD1608_SW_RESET,
@@ -4265,6 +4310,8 @@ const EPD_PANEL panelDefs[] PROGMEM = {
     {648, 480, 0, epd583g_init_full, NULL, NULL, BBEP_4GRAY | BBEP_NEEDS_EXTRA_INIT, BBEP_CHIP_UC81xx, u8Colors_4gray}, // EP583_648x480_4GRAY
     {1200, 1600, 0, epd133_spectra_init, NULL, NULL, BBEP_7COLOR | BBEP_SPLIT_BUFFER | BBEP_NEEDS_EXTRA_INIT, BBEP_CHIP_UC81xx, u8Colors_spectra}, // EP133_SPECTRA_1200x1600 Spectra6 13.3" 1200x1600
     {122, 250, 0, epd213g_init_full, NULL, NULL, BBEP_4GRAY, BBEP_CHIP_SSD16xx, u8Colors_4gray}, // EP213B_122x250_4GRAY Waveshare v2
+    {168, 384, 0, epd29h_init_full, epd29h_init_fast, epd29h_init_part, 0, BBEP_CHIP_SSD16xx, u8Colors_2clr}, // EP29_168x384
+    {168, 384, 0, epd29h_init_full, NULL, NULL, BBEP_4GRAY, BBEP_CHIP_SSD16xx, u8Colors_4gray}, // EP29_168x384_4GRAY
  };
 //
 // Set the e-paper panel type
@@ -4973,6 +5020,7 @@ int bbepRefresh(BBEPDISP *pBBEP, int iMode)
         const uint8_t u8CMDz[4] = {0xf4, 0xc7, 0xfc, 0}; // special set for SSD1680
         const uint8_t u8CMDz2[4] = {0xf4, 0xc7, 0xdc, 0}; // special set #2 for SSD1680
         const uint8_t u8CMDz3[4] = {0xf7, 0xd7, 0xfc, 0}; // special set #3
+        const uint8_t u8CMDz4[4] = {0xf4, 0xc7, 0xdf, 0}; // for SSD1683
         if (pBBEP->iFlags & (BBEP_4GRAY | BBEP_3COLOR | BBEP_4COLOR)) {
             iMode = REFRESH_FAST;
         } // 3/4-color = 0xc7
@@ -4981,11 +5029,13 @@ int bbepRefresh(BBEPDISP *pBBEP, int iMode)
         }
         if (pBBEP->type == EP29Z_128x296 || pBBEP->type == EP213Z_122x250) {
             bbepCMD2(pBBEP, SSD1608_DISP_CTRL2, u8CMDz[iMode]);
+        } else if (pBBEP->type == EP29_168x384) {
+            bbepCMD2(pBBEP, SSD1608_DISP_CTRL2, u8CMDz4[iMode]);
         } else if (pBBEP->type == EP154Z_152x152) {
             bbepCMD2(pBBEP, SSD1608_DISP_CTRL2, u8CMDz2[iMode]);
         } else if (pBBEP->type == EP397_800x480 || pBBEP->type == EP397_800x480_4GRAY) {
             bbepCMD2(pBBEP, SSD1608_DISP_CTRL2, u8CMDz3[iMode]);
-        } else if (pBBEP->type == EP42B_400x300_4GRAY) {
+        } else if (pBBEP->type == EP42B_400x300_4GRAY || pBBEP->type == EP29_168x384_4GRAY) {
             bbepCMD2(pBBEP, SSD1608_DISP_CTRL2, 0xcf); // SSD1683 does things differently :(
         } else {
             bbepCMD2(pBBEP, SSD1608_DISP_CTRL2, u8CMD[iMode]);
