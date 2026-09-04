@@ -3858,7 +3858,7 @@ const uint8_t epd397g_init_full[] PROGMEM = {
     2, 0x18, 0x80, // enable temp sensor
     6, 0x0c, 0xae, 0xc7, 0xc3, 0xc0, 0x80,
     4, 0x01, 0xdf, 0x01, 0x02, // driver output control (height-1)
-    2, 0x3c, 0x01, // border color
+    2, 0x3c, 0x00, // border color (white)
     SET_ORIENTATION,
     BUSY_WAIT,
 // Use custom LUT to get better grays than the built-in LUT
