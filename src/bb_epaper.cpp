@@ -393,7 +393,7 @@ int rc = BBEP_ERROR_BAD_PARAMETER;
         case EPD_CROWPANEL42_4GRAY:
             pinMode(7, OUTPUT); 
             digitalWrite(7, HIGH); // screen power on
-            if (setPanelType((iProduct == EPD_CROWPANEL42) ? EP42B_400x300:EP42B_400x300_4GRAY) == BBEP_SUCCESS) {
+            if (setPanelType((iProduct == EPD_CROWPANEL42) ? EP42Z_400x300:EP42B_400x300_4GRAY) == BBEP_SUCCESS) {
                 initIO(46, 47, 48, 45, 11, 12, 12000000);
                 return BBEP_SUCCESS;
             }

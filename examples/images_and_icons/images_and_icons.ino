@@ -10,7 +10,7 @@ BBEPAPER bbep;
 
 void setup()
 {
-  bbep.begin(EPD_BADGER2350); //EPD_XTEINK_X4);
+  bbep.begin(EPD_CROWPANEL42); //EPD_XTEINK_X4);
   bbep.allocBuffer();
   // Do everything with no local buffer
   bbep.fillScreen(BBEP_WHITE);
@@ -24,13 +24,13 @@ void setup()
       // draw 3x uncompressed icon at x,24
       bbep.drawSprite(ucBombMask, SPRITE_WIDTH, SPRITE_HEIGHT, SPRITE_PITCH, x, 24, BBEP_BLACK);
   }
-  bbep.writePlane();
+  bbep.writePlane(PLANE_DUPLICATE);
   bbep.refresh(REFRESH_FULL);
   delay(3000);
   bbep.fillScreen(BBEP_WHITE);
   for (int y=0; y<4; y++) {
       bbep.loadG5Image(bart, (y&1)*128, (y&2)*32, BBEP_WHITE, BBEP_BLACK); // draw 3x 128x64 compressed Bart image at 0,y
-      bbep.writePlane(PLANE_FALSE_DIFF); // force update of all pixels
+      bbep.writePlane();
       bbep.refresh(REFRESH_PARTIAL);
   }
   delay(3000);

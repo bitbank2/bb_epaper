@@ -281,6 +281,7 @@ enum {
     EP213B_122x250_4GRAY, // 2.13" 122x250 Waveshare v2
     EP29_168x384, // GDEY029T71H
     EP29_168x384_4GRAY, // GDEY029T71H
+    EP42Z_400x300, // Crowpanel 4.2" B/W 400x300
     EP_PANEL_COUNT
 };
 #ifdef FUTURE
