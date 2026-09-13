@@ -3945,6 +3945,23 @@ const uint8_t epd75_init_sequence_full[] PROGMEM = {
     0
 };
 
+// Full-refresh init for the newer 7.5" panels (GDEY075T7-D2 / Waveshare 7.5" V2).
+// Identical to the sequence above plus the booster soft-start settings used by
+// Waveshare's EPD_7IN5_V2_Init(). Without them these panels are driven too weakly
+// during a full refresh and the image fades to almost white within seconds.
+const uint8_t epd75_init_full_gen2[] PROGMEM = {
+    5, UC8151_PWR, 0x07, 0x07, 0x3f, 0x3f,
+    5, UC8151_BTST, 0x17, 0x17, 0x28, 0x17,
+    1, UC8151_PON,
+    BUSY_WAIT,
+    2, UC8151_PSR, 0x1f,
+    5, UC8151_TRES, 0x03, 0x20, 0x01, 0xe0,
+    2, 0x15, 0x00,
+    3, UC8151_CDI, 0x29, 0x07,
+    2, UC8151_TCON, 0x22,
+    0
+};
+
 const uint8_t epd74r_init[] PROGMEM = {
     0x02, 0x65, 0x01,
     0x01, 0xab,
@@ -4258,7 +4275,7 @@ const EPD_PANEL panelDefs[] PROGMEM = {
     {104, 212, 0, epd213_inky_init_sequence_full, NULL, NULL, 0, BBEP_CHIP_UC81xx, u8Colors_2clr}, // EP213_104x212, older InkyPHAT black and white
 // 20
     {800, 480, 0, epd75_init_sequence_full, epd75_init_sequence_fast, epd75_init_sequence_partial, 0, BBEP_CHIP_UC81xx, u8Colors_2clr}, // EP75_800x480 (old)
-    {800, 480, 0, epd75_init_sequence_full, epd75_init_fast_gen2, epd75_init_partial_gen2, 0, BBEP_CHIP_UC81xx, u8Colors_2clr}, // EP75_800x480_GEN2 (new)
+    {800, 480, 0, epd75_init_full_gen2, epd75_init_fast_gen2, epd75_init_partial_gen2, 0, BBEP_CHIP_UC81xx, u8Colors_2clr}, // EP75_800x480_GEN2 (new)
     {800, 480, 0, epd75_old_gray_init, epd75_old_gray_init_fast, NULL, BBEP_4GRAY, BBEP_CHIP_UC81xx, u8Colors_4gray}, // EP75_800x480_4GRAY
     {800, 480, 0, epd75_gray_init, NULL, NULL, BBEP_4GRAY, BBEP_CHIP_UC81xx, u8Colors_4gray}, // EP75_800x480_4GRAY_GEN2
     {800, 480, 0, epd75_old_gray_init2, NULL, NULL, BBEP_4GRAY, BBEP_CHIP_UC81xx, u8Colors_4gray}, // EP75_800x480_4GRAY_V2 (darker)
