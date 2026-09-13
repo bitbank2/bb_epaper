@@ -117,6 +117,51 @@ const uint8_t epd35r_init_sequence_full[] PROGMEM = {
     0x00
 };
 
+// init sequence for Zectrix B/W
+const uint8_t zectrix_init_full[] PROGMEM = {
+    EPD_RESET,
+    BUSY_WAIT,
+    3, 0x00, 0x2f, 0x0e,
+    2, 0xe9, 0x01, // internal OTP LUT
+    BUSY_WAIT,
+//    1, 0x40,
+//    BUSY_WAIT,
+    2, 0xe0, 0x2, // set temp
+    2, 0xe6, 241,
+    1, 0xa5,
+    BUSY_WAIT,
+    EPD_DELAY, 10, // 10ms delay
+    1, 0x04, // power on
+    BUSY_WAIT,
+    EPD_DELAY, 10,
+//    10, 0x83, 0,0, 1,0x8f, 0,0, 1,0x2b,0, // disable partial window
+    0
+};
+
+// init sequence for Zectrix B/W
+const uint8_t zectrix_init_part[] PROGMEM = {
+    EPD_RESET,
+    BUSY_WAIT,
+    3, 0x00, 0x2f, 0x0e, 
+    2, 0xe9, 0x01, // internal OTP LUT
+    BUSY_WAIT,
+    2, 0xe0, 0x2, // set temp
+    2, 0xe6, 241,
+    1, 0xa5,
+    BUSY_WAIT,
+    EPD_DELAY, 10, // 10ms delay 
+    1, 0x04, // power on
+    BUSY_WAIT,
+    EPD_DELAY, 10,
+    2, 0x50, 0x77,
+    2, 0xe0, 0x00,
+    1, 0xa5,
+    BUSY_WAIT,
+    EPD_DELAY, 10,
+//    10, 0x83, 0,0, 1,0x8f, 0,0, 1,0x2b,1, // partial window of whole screen
+    0
+};
+
 // init sequence for GDEM0097F51
 const uint8_t epd097r_init_sequence_full[] PROGMEM = {
     0x03, UC8151_PSR, 0xcf, 0x8d,
@@ -4325,6 +4370,7 @@ const EPD_PANEL panelDefs[] PROGMEM = {
     {168, 384, 0, epd29h_init_full, epd29h_init_fast, epd29h_init_part, 0, BBEP_CHIP_SSD16xx, u8Colors_2clr}, // EP29_168x384
     {168, 384, 0, epd29h_init_full, NULL, NULL, BBEP_4GRAY, BBEP_CHIP_SSD16xx, u8Colors_4gray}, // EP29_168x384_4GRAY
     {400, 300, 0, epd42b_init_sequence_full, epd42b_init_sequence_fast, epd42z_init_sequence_part, BBEP_NEEDS_EXTRA_INIT, BBEP_CHIP_SSD16xx, u8Colors_2clr}, // EP42Z_400x300
+    {400, 300, 0, zectrix_init_full, zectrix_init_full, NULL/*zectrix_init_part*/, BBEP_NEEDS_EXTRA_INIT | BBEP_2BIT_BW, BBEP_CHIP_UC81xx, u8Colors_2clr}, // EP42C_400x300
 };
 //
 // Set the e-paper panel type
@@ -4464,7 +4510,7 @@ void bbepWaitBusy(BBEPDISP *pBBEP)
 {
     int iTimeout = 0;
     int iMaxTime = 5000; // for B/W panels
-    //long l = millis();
+    long l = millis();
 
     if (!pBBEP) return;
     if (pBBEP->iBUSYPin == 0xff) return;
@@ -4480,7 +4526,9 @@ void bbepWaitBusy(BBEPDISP *pBBEP)
         bbepLightSleep(20, pBBEP->bLightSleep); // save battery power by checking every 20ms
         iTimeout += 20;
     }
-    //Serial0.printf("total wait time = %dms\n", (int)(millis() - l));
+    if (iTimeout >= iMaxTime) {
+        Serial.printf("timed out - total wait time: %dms\n", (int)(millis() - l));
+    }
 } /* bbepWaitBusy() */
 //
 // Return if panel is busy
@@ -4835,6 +4883,7 @@ void bbepSendCMDSequence(BBEPDISP *pBBEP, const uint8_t *pSeq)
         } else if (iLen == CMD_CS1 || iLen == CMD_CS2 || iLen == CMD_CS1_CS2) {
             pBBEP->cs_mode = iLen; // set cs mode 
         } else {
+//Serial.printf("Sending CMD:0x%02x, param len=%d\n", s[0], iLen-1);
             if (iLen > 1) {
                bbepWriteCmdData(pBBEP, s[0], &s[1], iLen-1);
             } else {
@@ -5025,7 +5074,7 @@ int bbepRefresh(BBEPDISP *pBBEP, int iMode)
             uint8_t u8Temp = (pBBEP->type == EP133_SPECTRA_1200x1600) ? 0x01 : 0x0;
             bbepWriteCmdData(pBBEP, UC8151_DRF, &u8Temp, 1);
         } else {
-            bbepWriteCmd(pBBEP, UC8151_PTOU); // partial out (update the entire panel, not just the last memory window)
+    //        bbepWriteCmd(pBBEP, UC8151_PTOU); // partial out (update the entire panel, not just the last memory window)
             bbepWriteCmd(pBBEP, UC8151_DRF);
         }
     } else {
@@ -5077,6 +5126,51 @@ void bbepSetRotation(BBEPDISP *pBBEP, int iRotation)
             break;
     }
 } /* bbepSetRotation() */
+
+//
+// The new SSD2683 controller has a single plane of 2-bit memory, so even 1-bit
+// output must be converted to 2-bit packed pixels
+//
+void bbepWriteImage2bppSpecial(BBEPDISP *pBBEP, uint8_t ucCMD)
+{
+    int tx, ty, bit, iPitch;
+    uint8_t uc1, uc2, *s, *d;
+    // Convert the bit direction and write the data to the EPD
+    // This particular controller has 4 bits per pixel where 0=black, 3=white, 4=red
+    // this wastes 50% of the time transmitting bloated info (only need 2 bits)
+    iPitch = ((pBBEP->native_width+7)/8);
+
+    if (ucCMD) {
+        bbepWriteCmd(pBBEP, ucCMD); // start write
+        bbepWaitBusy(pBBEP);
+    }
+    if (pBBEP->iOrientation == 0) {
+      for (ty=0; ty<pBBEP->height; ty++) {
+         d = u8Cache;
+         s = &pBBEP->ucScreen[ty * (pBBEP->width/8)];
+         for (tx=0; tx<pBBEP->width; tx+=8) {
+             uc1 = uc2 = 0; // start with black
+             for (bit=0; bit<4; bit++) {
+                 uc1 <<= 2; uc2 <<= 2;
+                 if (s[0] & (0x80 >> bit)) {// first byte
+                    uc1 |= 0x01;
+                 } else {
+                    uc1 |= 0x02;
+                 }
+                 if (s[0] & (0x8 >> bit)) {// second byte
+                    uc2 |= 0x01;
+                 } else {
+                    uc2 |= 0x02;
+                 }
+             } // for bit
+             *d++ = uc1; // store 2 bytes
+             *d++ = uc2;
+             s++;
+         } // for tx
+        bbepWriteData(pBBEP, u8Cache, pBBEP->width/4);
+      } // for ty
+    } //else if (pBBEP->iOrientation == 180) {
+} /* bbepWriteImage2bppSpecial() */
 
 void bbepWriteImage4bppSpecial(BBEPDISP *pBBEP, uint8_t ucCMD)
 {
@@ -5708,6 +5802,10 @@ int bbepWritePlane(BBEPDISP *pBBEP, int iPlane, int bInvert)
 // are ignored.
     if (pBBEP->iFlags & BBEP_NEEDS_EXTRA_INIT) {
         bbepSendCMDSequence(pBBEP, pBBEP->pInitFull);
+    }
+    if (pBBEP->iFlags & BBEP_2BIT_BW) { // special case for SSD2683 2-bit b/w
+        bbepWriteImage2bppSpecial(pBBEP, 0x10);
+        return BBEP_SUCCESS;
     }
 
     bbepSetAddrWindow(pBBEP, 0,0, pBBEP->native_width, pBBEP->native_height);
