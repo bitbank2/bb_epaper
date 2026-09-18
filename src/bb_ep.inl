@@ -4487,17 +4487,32 @@ int bbepCreateVirtual(BBEPDISP *pBBEP, int iWidth, int iHeight, int iFlags)
     }
 }
 // Put the ESP32 into light sleep for N milliseconds
-void bbepLightSleep(uint32_t u32Millis, uint8_t bLightSleep)
+void bbepLightSleep(BBEPDISP *pBBEP, uint32_t u32Millis)
 {
 #ifdef ARDUINO_ARCH_ESP32
-  if (bLightSleep) {
+  if (pBBEP->bLightSleep) {
+//
+// The user has selected to save power during each EPD update by
+// periodically putting the ESP32 into light sleep. This is especially
+// useful for 4 and 6-color panels with update times of 10-35 seconds.
+//
       esp_sleep_enable_timer_wakeup(u32Millis * 1000L);
+      if (pBBEP->u8SleepPin != 0xff) {
+//
+// Hold a GPIO in it's current state. This is useful for devices
+// such as those from Seeed Studio which have a GPIO connected to a
+// LDO regulator's enable pin and a pull-down resistor. When the ESP32
+// goes to sleep (as it should when waiting for an EPD update), the power
+// to the EPD will be cut unless the GPIO is held in its current state
+//
+          gpio_hold_en((gpio_num_t)pBBEP->u8SleepPin);
+      }
       esp_light_sleep_start();
   } else {
       delay(u32Millis);
   }
 #else
-  (void)bLightSleep;
+  (void)bBBEP;
   delay(u32Millis);
 #endif
 }
@@ -4523,7 +4538,7 @@ void bbepWaitBusy(BBEPDISP *pBBEP)
     while (iTimeout < iMaxTime) {
         if (digitalRead(pBBEP->iBUSYPin) == busy_idle) break;
         // delay(1);
-        bbepLightSleep(20, pBBEP->bLightSleep); // save battery power by checking every 20ms
+        bbepLightSleep(pBBEP, 20); // save battery power by checking every 20ms
         iTimeout += 20;
     }
     if (iTimeout >= iMaxTime) {
