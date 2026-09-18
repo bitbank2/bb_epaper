@@ -572,7 +572,7 @@ class BBEPAPER
 #endif // __LINUX__
 {
   public:
-    BBEPAPER(void) { memset(&_bbep, 0, sizeof(_bbep)); _bbep.cs_mode = CMD_CS1; }
+    BBEPAPER(void) { memset(&_bbep, 0, sizeof(_bbep)); _bbep.cs_mode = CMD_CS1; _bbep.u8SleepPin = 0xff; }
     BBEPAPER(int iPanel);
     BBEPDISP _bbep;
     int createVirtual(int iWidth, int iHeight, int iFlags);
