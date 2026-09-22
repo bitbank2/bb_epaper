@@ -249,6 +249,20 @@ const uint8_t epd213r2_init_sequence_fast[] PROGMEM = {
     0x00
 };
 
+// init sequence for DEPG0420 / GDEY042Z98
+const uint8_t epd42r3_init_full[] PROGMEM = {
+    1, SSD1608_SW_RESET,
+    BUSY_WAIT,
+    4, 0x01, 0x2b, 0x01, 0x00,
+    2, SSD1608_WRITE_BORDER, 0x05,
+    2, 0x18, 0x80,
+    SET_ORIENTATION,
+    2, SSD1608_DISP_CTRL2, 0xb1,
+    1, SSD1608_MASTER_ACTIVATE,
+    BUSY_WAIT,
+    0x00 // end of table
+};
+
 // init sequence for GDEW042Z15
 const uint8_t epd42r2_init_sequence_full[] PROGMEM = {
     0x02, UC8151_PSR, 0xcf,
@@ -4371,6 +4385,7 @@ const EPD_PANEL panelDefs[] PROGMEM = {
     {168, 384, 0, epd29h_init_full, NULL, NULL, BBEP_4GRAY, BBEP_CHIP_SSD16xx, u8Colors_4gray}, // EP29_168x384_4GRAY
     {400, 300, 0, epd42b_init_sequence_full, epd42b_init_sequence_fast, epd42z_init_sequence_part, BBEP_NEEDS_EXTRA_INIT, BBEP_CHIP_SSD16xx, u8Colors_2clr}, // EP42Z_400x300
     {400, 300, 0, zectrix_init_full, zectrix_init_full, NULL/*zectrix_init_part*/, BBEP_NEEDS_EXTRA_INIT | BBEP_2BIT_BW, BBEP_CHIP_UC81xx, u8Colors_2clr}, // EP42C_400x300
+    {400, 300, 0, epd42r3_init_full, NULL, NULL, BBEP_3COLOR, BBEP_CHIP_SSD16xx, u8Colors_3clr}, // EP42R3_400x300 DEPG0420 / GDEY042Z98 4.2" B/W/R
 };
 //
 // Set the e-paper panel type
