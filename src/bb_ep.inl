@@ -4527,7 +4527,7 @@ void bbepLightSleep(BBEPDISP *pBBEP, uint32_t u32Millis)
       delay(u32Millis);
   }
 #else
-  (void)bBBEP;
+  (void)pBBEP;
   delay(u32Millis);
 #endif
 }
