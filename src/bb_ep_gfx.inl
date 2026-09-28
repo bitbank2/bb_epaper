@@ -214,19 +214,19 @@ uint8_t szExtMsg[80];
         switch (pBBEP->iFont) {
             case FONT_6x8:
                 cx = 6;
-                maxy = 8;
+                maxy = 7;
                 break;
             case FONT_8x8:
                 cx = 8;
-                maxy = 8;
+                maxy = 7;
                 break;
             case FONT_12x16:
                 cx = 12;
-                maxy = 16;
+                maxy = 15;
                 break;
             case FONT_16x16:
                 cx = 16;
-                maxy = 16;
+                maxy = 15;
                 break;
         }
         cx *= strlen(szMsg);
@@ -1238,8 +1238,8 @@ int bbepWriteStringCustom(BBEPDISP *pBBEP, void *pFont, int x, int y, char *szMs
     int iSkew, yOffset;
     BB_FONT *pBBF;
     BB_FONT_SMALL *pBBFS;
-    BB_GLYPH *pGlyph;
-    BB_GLYPH_SMALL *pSmallGlyph;
+    BB_GLYPH *pGlyph=NULL;
+    BB_GLYPH_SMALL *pSmallGlyph=NULL;
     uint8_t *pBits, u8CMD1, u8CMD2, u8CMD, u8EndMask;
     uint8_t szExtMsg[256]; // translated extended ASCII message text
     uint8_t first, last;
@@ -1358,9 +1358,9 @@ int bbepWriteStringCustom(BBEPDISP *pBBEP, void *pFont, int x, int y, char *szMs
             }
             end_y = dy + h;
             if (pBBF) {
-                ty = (pgm_read_word(&pGlyph[1].bitmapOffset) - (intptr_t)(s - pBits)); // compressed size
+                ty = (pgm_read_word(&pGlyph[1].bitmapOffset) - (int)(intptr_t)(s - pBits)); // compressed size
             } else {
-                ty = (pgm_read_word(&pSmallGlyph[1].bitmapOffset) - (intptr_t)(s - pBits)); // compressed size
+                ty = (pgm_read_word(&pSmallGlyph[1].bitmapOffset) - (int)(intptr_t)(s - pBits)); // compressed size
             }
             if (ty < 0 || ty > 4096) ty = 4096; // DEBUG
             rc = g5_decode_init(&g5dec, w, h, s, ty);

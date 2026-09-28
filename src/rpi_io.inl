@@ -30,11 +30,13 @@
 #include <unistd.h>
 #include <stdio.h> 
 #include <string.h>
+#ifndef __MEM_ONLY__
 #include <fcntl.h>
 #include <sys/ioctl.h>
 #include <linux/i2c-dev.h>
 #include <linux/spi/spidev.h>
 #include <gpiod.h>
+#endif // !__MEM_ONLY__
 #include <math.h>
 #include <time.h>
 #ifndef CONSUMER

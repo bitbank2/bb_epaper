@@ -4527,7 +4527,7 @@ void bbepLightSleep(BBEPDISP *pBBEP, uint32_t u32Millis)
       delay(u32Millis);
   }
 #else
-  (void)bBBEP;
+  (void)pBBEP;
   delay(u32Millis);
 #endif
 }
@@ -4540,7 +4540,7 @@ void bbepWaitBusy(BBEPDISP *pBBEP)
 {
     int iTimeout = 0;
     int iMaxTime = 5000; // for B/W panels
-    long l = millis();
+//    long l = millis();
 
     if (!pBBEP) return;
     if (pBBEP->iBUSYPin == 0xff) return;
@@ -4557,7 +4557,7 @@ void bbepWaitBusy(BBEPDISP *pBBEP)
         iTimeout += 20;
     }
     if (iTimeout >= iMaxTime) {
-        Serial.printf("timed out - total wait time: %dms\n", (int)(millis() - l));
+     //   Serial.printf("timed out - total wait time: %dms\n", (int)(millis() - l));
     }
 } /* bbepWaitBusy() */
 //
@@ -4892,6 +4892,9 @@ void bbepSetFlip180(BBEPDISP *pBBEP)
 //
 void bbepSendCMDSequence(BBEPDISP *pBBEP, const uint8_t *pSeq)
 {
+#ifdef __MEM_ONLY__
+    (void)pBBEP; (void)pSeq;
+#else
     int iLen;
     uint8_t *s;
     
@@ -4922,6 +4925,7 @@ void bbepSendCMDSequence(BBEPDISP *pBBEP, const uint8_t *pSeq)
             s += iLen;
         }
     } // while more commands to send
+#endif // __MEM_ONLY__
 } /* bbepSendCMDSequence() */
 
 //
@@ -5062,7 +5066,7 @@ void bbepFill(BBEPDISP *pBBEP, unsigned char ucColor, int iPlane)
 
 int bbepRefresh(BBEPDISP *pBBEP, int iMode)
 {
-
+#ifndef __MEM_ONLY__
     if (iMode != REFRESH_FULL && iMode != REFRESH_FAST && iMode != REFRESH_PARTIAL)
         return BBEP_ERROR_BAD_PARAMETER;
     
@@ -5134,6 +5138,9 @@ int bbepRefresh(BBEPDISP *pBBEP, int iMode)
         }
         bbepWriteCmd(pBBEP, SSD1608_MASTER_ACTIVATE); // refresh
     }
+#else
+    (void)pBBEP; (void)iMode;
+#endif // !__MEM_ONLY__
     return BBEP_SUCCESS;
 } /* bbepRefresh() */
 

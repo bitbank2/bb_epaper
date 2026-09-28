@@ -97,7 +97,6 @@ void bbepCMD2(BBEPDISP *pBBEP, uint8_t cmd1, uint8_t cmd2)
 //
 void bbepSetCS2(BBEPDISP *pBBEP, uint8_t cs)
 {
-    pBBEP->iCS1Pin = pBBEP->iCSPin;
     pBBEP->iCS2Pin = cs;
 } /* bbepSetCS2() */
 

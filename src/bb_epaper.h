@@ -314,6 +314,7 @@ enum {
 };
 #endif // FUTURE
 // flag bits
+#define BBEP_FLAGS_NONE 0x0000
 #define BBEP_RED_SWAPPED 0x0001
 #define BBEP_BITBANG  0x0002
 #define BBEP_3COLOR   0x0004
@@ -619,6 +620,7 @@ class BBEPAPER
     int getRotation(void);
     void backupPlane(void);
     int getLastError(void);
+    void clearLastError(void) {_bbep.last_error = BBEP_SUCCESS;}
     void drawRoundRect(int x, int y, int w, int h,
                        int r, uint8_t color);
     void fillRoundRect(int x, int y, int w, int h,
@@ -633,8 +635,8 @@ class BBEPAPER
     int loadBMP(const uint8_t *pBMP, int x, int y, int iFG, int iBG);
     int loadBMP3(const uint8_t *pBMP, int x, int y);
     int loadG5Image(const uint8_t *pG5, int x, int y, int iFG, int iBG, float fScale = 1.0f);
-    void setFont(int iFont);
-    void setFont(const void *pFont);
+    int setFont(int iFont);
+    int setFont(const void *pFont);
     void drawLine(int x1, int y1, int x2, int y2, int iColor);
     void drawPixel(int16_t x, int16_t y, uint8_t color);
     int16_t getCursorX(void);

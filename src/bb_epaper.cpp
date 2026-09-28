@@ -37,7 +37,7 @@
 #include "mem_io.inl"
 #endif // __MEM_ONLY__
 
-#ifdef __LINUX__
+#if defined( __LINUX__ ) && !defined( __MEM_ONLY__ )
 #include "rpi_io.inl"
 #else
 #ifdef ESPHOME_LOG_LEVEL
@@ -460,7 +460,9 @@ void BBEPAPER::initIO(int iDC, int iReset, int iBusy, int iCS, int iSPIChannel, 
 	_bbep.iRSTPin = iReset;
 	_bbep.iMOSIPin = iSPIChannel;
 	_bbep.iCLKPin = iChipNumber;
+#ifndef __MEM_ONLY__
 	bbepInitIO(&_bbep, u32Speed);
+#endif
 } /* initIO() */
 #endif
 
@@ -631,16 +633,20 @@ int BBEPAPER::loadBMP3(const uint8_t *pBMP, int x, int y)
     return bbepLoadBMP3(&_bbep, pBMP, x, y);
 } /* loadBMP3() */
 
-void BBEPAPER::setFont(int iFont)
+int BBEPAPER::setFont(int iFont)
 {
+    if (iFont < FONT_6x8 || iFont >= FONT_COUNT) return BBEP_ERROR_BAD_PARAMETER;
     _bbep.iFont = iFont;
     _bbep.pFont = NULL;
+    return BBEP_SUCCESS;
 } /* setFont() */
 
-void BBEPAPER::setFont(const void *pFont)
+int BBEPAPER::setFont(const void *pFont)
 {
+    if (!pFont || (*(uint16_t *)pFont != BB_FONT_MARKER && *(uint16_t *)pFont != BB_FONT_MARKER_SMALL)) return BBEP_ERROR_BAD_PARAMETER;
     _bbep.iFont = -1;
     _bbep.pFont = (void *)pFont;
+    return BBEP_SUCCESS;
 } /* setFont() */
 
 //void BBEPAPER::setFreeFont(const GFXfont *pFont)
@@ -810,8 +816,8 @@ static uint8_t u8Unicode0, u8Unicode1;
   } else { // Custom font
       BB_FONT *pBBF;
       BB_FONT_SMALL *pBBFS;
-      BB_GLYPH *pGlyph;
-      BB_GLYPH_SMALL *pSmallGlyph;
+      BB_GLYPH *pGlyph=NULL;
+      BB_GLYPH_SMALL *pSmallGlyph=NULL;
       int first, last;
       if (pgm_read_word(_bbep.pFont) == BB_FONT_MARKER) {
           pBBF = (BB_FONT *)_bbep.pFont; pBBFS = NULL;
