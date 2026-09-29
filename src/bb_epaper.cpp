@@ -301,6 +301,15 @@ int rc = BBEP_ERROR_BAD_PARAMETER;
             }
             break;
 
+        case EPD_WAVESHARE_154_4COLOR:
+            pinMode(6, OUTPUT); // EPD power enable
+            digitalWrite(6, LOW);
+            if (setPanelType(EP154YR_200x200) == BBEP_SUCCESS) {
+                initIO(10, 9, 8, 11, 13, 12, 10000000);
+                return BBEP_SUCCESS;
+            }
+            break;
+
         case EPD_LILYGO_T_DECK_PRO: // DC:35 RST:-1 BUSY:37 CS:34 MOSI:33 SCK:36
 // make sure other devices' CS lines are inactive
             pinMode(3 /*BOARD_LORA_CS*/, OUTPUT); 
