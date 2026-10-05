@@ -65,8 +65,41 @@ BBEPAPER::BBEPAPER(int iPanel)
     memset(&_bbep, 0, sizeof(_bbep));
     _bbep.iFG = BBEP_BLACK;
     _bbep.cs_mode = CMD_CS1;
+    _bbep.mode = BB_MODE_NATIVE;
     bbepSetPanelType(&_bbep, iPanel);
 }
+
+int BBEPAPER::setMemoryMode(uint8_t u8Mode)
+{
+    if (u8Mode <= BB_MODE_INVALID || u8Mode >= BB_MODE_COUNT) return BBEP_ERROR_BAD_PARAMETER;
+    _bbep.mode = u8Mode;
+// Set up the pixel functions and color conversion tables correctly
+    if (u8Mode == BB_MODE_NATIVE) {
+        _bbep.pColorLookup = panelDefs[_bbep.type].pColorLookup;
+        // select the correct pixel drawing functions (2/3/4/7 color)
+        if (_bbep.iFlags & BBEP_4COLOR) {
+            _bbep.pfnSetPixel = bbepSetPixel4Clr;
+            _bbep.pfnSetPixelFast = bbepSetPixelFast4Clr;
+        } else if (_bbep.iFlags & BBEP_4GRAY) {
+            _bbep.pfnSetPixel = bbepSetPixel4Gray;
+            _bbep.pfnSetPixelFast = bbepSetPixelFast4Gray;
+        } else if (_bbep.iFlags & BBEP_3COLOR) {
+            _bbep.pfnSetPixel = bbepSetPixel3Clr;
+            _bbep.pfnSetPixelFast = bbepSetPixelFast3Clr;
+        } else if (_bbep.iFlags & BBEP_7COLOR) { 
+            _bbep.pfnSetPixel = bbepSetPixel16Clr;
+            _bbep.pfnSetPixelFast = bbepSetPixelFast16Clr;
+        } else { // must be B/W
+            _bbep.pfnSetPixel = bbepSetPixel2Clr;
+            _bbep.pfnSetPixelFast = bbepSetPixelFast2Clr;
+        }
+    } else if (u8Mode == BB_MODE_1BPP) {
+        _bbep.pColorLookup = u8Colors_2clr;
+        _bbep.pfnSetPixel = bbepSetPixel2Clr;
+        _bbep.pfnSetPixelFast = bbepSetPixelFast2Clr;
+    }
+    return BBEP_SUCCESS; 
+} /* setMemoryMode() */
 
 void BBEPAPER::setDitherPattern(uint8_t iPattern)
 {
@@ -447,6 +480,7 @@ int rc = BBEP_ERROR_BAD_PARAMETER;
 int BBEPAPER::setPanelType(int iPanel)
 {
     _panel_type = iPanel;
+    _bbep.mode = BB_MODE_NATIVE; // assume native pixel mode
     return bbepSetPanelType(&_bbep, iPanel);
 }
 // Special setup for dual-cable displays

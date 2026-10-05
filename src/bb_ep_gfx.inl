@@ -1952,7 +1952,7 @@ int bbepAllocBuffer(BBEPDISP *pBBEP, int bDoubleSize)
 {
 #ifndef NO_RAM
     int iSize;
-    if (pBBEP->iFlags & (BBEP_7COLOR | BBEP_16GRAY)) { // 4-bpp
+    if (pBBEP->mode == BB_MODE_NATIVE && pBBEP->iFlags & (BBEP_7COLOR | BBEP_16GRAY)) { // 4-bpp
         iSize = (pBBEP->native_width >> 1) * pBBEP->native_height;
     } else { // B/W or B/W/R or B/W/R/Y
         iSize = ((pBBEP->native_width+7)>>3) * pBBEP->native_height;

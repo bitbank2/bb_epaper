@@ -5003,6 +5003,12 @@ void bbepFill(BBEPDISP *pBBEP, unsigned char ucColor, int iPlane)
     pBBEP->iCursorX = pBBEP->iCursorY = 0;
     iPitch = ((pBBEP->native_width+7)/8);
     iSize = pBBEP->native_height * iPitch;
+    if (ucColor == BBEP_WHITE) { // default 1-bit pattern
+        uc1 = uc2 = 0xff;
+    } else {
+        uc1 = uc2 = 0x00;
+    }
+    if (pBBEP->mode == BB_MODE_NATIVE) {
     if (pBBEP->iFlags & BBEP_7COLOR) {
         uc1 = ucColor | (ucColor << 4);
         iPitch = pBBEP->native_width / 2;
@@ -5024,13 +5030,9 @@ void bbepFill(BBEPDISP *pBBEP, unsigned char ucColor, int iPlane)
     } else if (pBBEP->iFlags & BBEP_4GRAY) {
         uc1 = (ucColor & 1) ? 0xff : 0x00;
         uc2 = (ucColor & 2) ? 0xff : 0x00;
-    } else { // B/W
-        if (ucColor == BBEP_WHITE) {
-            uc1 = uc2 = 0xff;
-        } else {
-            uc1 = uc2 = 0x00;
-        }
     }
+    } // native pixel mode
+
     if (pBBEP->ucScreen) { // there's a local framebuffer, use it
         if (pBBEP->iFlags & BBEP_7COLOR) {
             memset(pBBEP->ucScreen, uc1, iSize);
@@ -5444,6 +5446,82 @@ void bbepWriteImage4bppDual(BBEPDISP *pBBEP)
     digitalWrite(pBBEP->iCS2Pin, HIGH);
     pBBEP->cs_mode = CMD_CS1;
 } /* bbepWriteImage4bppDual() */
+
+void bbepWriteImage1To2bpp(BBEPDISP *pBBEP, uint8_t ucCMD)
+{
+    int tx, ty, bit, iPitch;
+    uint8_t c, uc1, uc2, *s, *d;
+            
+    if (ucCMD) {
+        bbepWriteCmd(pBBEP, ucCMD); // start write
+    }           
+    if (pBBEP->iOrientation == 0) {
+        iPitch = (pBBEP->native_width+7) / 8;
+        for (ty=0; ty<pBBEP->height; ty++) {
+            s = pBBEP->ucScreen + (ty * iPitch);
+            d = u8Cache;
+            for (tx=0; tx<pBBEP->width; tx+=8) {
+                uc1 = uc2 = 0; // start with black
+                c = *s++;
+                for (bit=0; bit<4; bit++) {
+                    uc1 <<= 2; uc2 <<= 2;
+                    if (c & 0x80) {// first byte
+                        uc1 |= 0x01;
+                    }
+                    if (c & 0x08) {// second byte
+                        uc2 |= 0x01;
+                    }
+                    c <<= 1;
+                } // for bit
+                *d++ = uc1; // store 2 bytes
+                *d++ = uc2;
+            } // for tx
+            bbepWriteData(pBBEP, u8Cache, iPitch*2);
+        } // for ty
+    } else {
+    // future
+    }
+} /* bbepWriteImage1To2bpp() */
+
+void bbepWriteImage1To4bpp(BBEPDISP *pBBEP, uint8_t ucCMD)
+{
+    int tx, ty, bit, iPitch;
+    uint8_t c, uc, *s, *d;
+    uint8_t *pTemp;
+
+    // Temp buffer can be larger than the default cache size; allocate it
+    pTemp = (uint8_t *)malloc(pBBEP->native_width/2);
+    if (!pTemp) return;
+
+    if (ucCMD) {
+        bbepWriteCmd(pBBEP, ucCMD); // start write
+    }
+    if (pBBEP->iOrientation == 0) {
+        iPitch = (pBBEP->native_width+7) / 8;
+        for (ty=0; ty<pBBEP->height; ty++) {
+            s = pBBEP->ucScreen + (ty * iPitch);
+            d = pTemp;
+            for (tx=0; tx<pBBEP->width; tx+=8) {
+                c = *s++;
+                for (bit=0; bit<4; bit++) {
+                    uc = 0;
+                    if (c & 0x80) {
+                        uc |= 0x10;
+                    }
+                    if (c & 0x40) {
+                        uc |= 0x01;
+                    }
+                    *d++ = uc;
+                    c <<= 2;
+                } // for bit
+            } // for tx
+            bbepWriteData(pBBEP, pTemp, iPitch*4);
+        } // for ty
+    } else {
+    // future
+    }
+    free(pTemp);
+} /* bbepWriteImage1To4bpp() */
 
 void bbepWriteImage4bpp(BBEPDISP *pBBEP, uint8_t ucCMD)
 {
@@ -5896,15 +5974,23 @@ int bbepWritePlane(BBEPDISP *pBBEP, int iPlane, int bInvert)
         return BBEP_SUCCESS;
     }
     if (pBBEP->iFlags & BBEP_7COLOR) {
-        if (pBBEP->iFlags & BBEP_SPLIT_BUFFER) { // dual controller EPD
-           bbepWriteImage4bppDual(pBBEP);
+        if (pBBEP->mode == BB_MODE_1BPP) {
+            bbepWriteImage1To4bpp(pBBEP, 0x10);
         } else {
-           bbepWriteImage4bpp(pBBEP, 0x10);
+            if (pBBEP->iFlags & BBEP_SPLIT_BUFFER) { // dual controller EPD
+                bbepWriteImage4bppDual(pBBEP);
+            } else {
+                bbepWriteImage4bpp(pBBEP, 0x10);
+            }
         }
         return BBEP_SUCCESS;
     }
     if (pBBEP->iFlags & BBEP_4COLOR) { // 4-color only has 1 way to go
-        bbepWriteImage2bpp(pBBEP, 0x10);
+        if (pBBEP->mode == BB_MODE_1BPP) {
+            bbepWriteImage1To2bpp(pBBEP, 0x10);
+        } else {
+            bbepWriteImage2bpp(pBBEP, 0x10);
+        }
         return BBEP_SUCCESS;
     }
     if (pBBEP->chip_type == BBEP_CHIP_UC81xx) {

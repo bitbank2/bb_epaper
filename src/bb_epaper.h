@@ -87,6 +87,17 @@ typedef struct _tagbbi2c
 } BBI2C;
 #endif
 
+// Bits per pixel mode
+// Allows drawing in 1-bit mode on higher bit depth panels
+// to conserve memory.
+// Defaults to BB_MODE_NATIVE
+enum {
+   BB_MODE_INVALID = 0,
+   BB_MODE_1BPP,
+   BB_MODE_NATIVE,
+   BB_MODE_COUNT
+};
+
 #define LIGHT_SLEEP 0
 #define DEEP_SLEEP 1
 
@@ -548,7 +559,7 @@ int iDataTime, iOpTime; // time in milliseconds for data transmission and operat
 uint32_t iSpeed;
 uint32_t iTimeout; // for e-paper panels
 uint8_t iDCPin, iMOSIPin, iCLKPin, iRSTPin, iBUSYPin;
-uint8_t iCSPin, iCS2Pin;
+uint8_t iCSPin, iCS2Pin, mode;
 uint8_t x_offset, y_offset; // memory offsets
 uint8_t is_awake, iPlane, iDither, bLightSleep, u8SleepPin;
 const uint8_t *pColorLookup; // color translation table
@@ -576,12 +587,14 @@ class BBEPAPER
 #endif // __LINUX__
 {
   public:
-    BBEPAPER(void) { memset(&_bbep, 0, sizeof(_bbep)); _bbep.cs_mode = CMD_CS1; _bbep.u8SleepPin = 0xff; }
+    BBEPAPER(void) { memset(&_bbep, 0, sizeof(_bbep)); _bbep.cs_mode = CMD_CS1; _bbep.u8SleepPin = 0xff; _bbep.mode = BB_MODE_NATIVE; }
     BBEPAPER(int iPanel);
     BBEPDISP _bbep;
     int createVirtual(int iWidth, int iHeight, int iFlags);
     void setAddrWindow(int x, int y, int w, int h);
     int setPanelType(int iPanel);
+    int setMemoryMode(uint8_t u8Mode);
+    uint8_t getMemoryMode(void) { return _bbep.mode;}
     int begin(int iProduct, bool bSharedSPI = false);
     void setCS2(uint8_t cs);
     bool hasFastRefresh();
