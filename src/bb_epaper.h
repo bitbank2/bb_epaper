@@ -299,6 +299,8 @@ enum {
     EP42C_400x300, // Zectrix 4.2" B/W 400x300
     EP42R3_400x300, // DEPG0420 / GDEY042Z98 4.2" B/W/R
     EP74YR_480x800, // Pervasive Displays E2741QS0B3 (741-QS-0B) Spectra 4
+    EP368_792x528_UC8279, // Xteink X3 batches with the UC8279d controller
+    EP368_792x528_UC8279_4GRAY,
     EP_PANEL_COUNT
 };
 #ifdef FUTURE
