@@ -574,7 +574,9 @@ void BBEPAPER::backupPlane(void)
 }
 int BBEPAPER::allocBuffer(bool bSecondPlane)
 {
-    if (_bbep.iFlags & (BBEP_4COLOR | BBEP_3COLOR | BBEP_4GRAY)) bSecondPlane = 1;
+    if (_bbep.mode == BB_MODE_NATIVE && _bbep.iFlags & (BBEP_4COLOR | BBEP_3COLOR | BBEP_4GRAY)) {
+        bSecondPlane = 1;
+    }
     return bbepAllocBuffer(&_bbep, (int)bSecondPlane);
 } /* allocBuffer() */
 
