@@ -5150,7 +5150,9 @@ int bbepRefresh(BBEPDISP *pBBEP, int iMode)
             uint8_t u8Temp = (pBBEP->type == EP133_SPECTRA_1200x1600) ? 0x01 : 0x0;
             bbepWriteCmdData(pBBEP, UC8151_DRF, &u8Temp, 1);
         } else {
-    //        bbepWriteCmd(pBBEP, UC8151_PTOU); // partial out (update the entire panel, not just the last memory window)
+            if (!(pBBEP->iFlags & BBEP_2BIT_BW)) { // not the SSD2683
+                bbepWriteCmd(pBBEP, UC8151_PTOU); // partial out (update the entire panel, not just the last memory window)
+            }
             bbepWriteCmd(pBBEP, UC8151_DRF);
         }
     } else {
