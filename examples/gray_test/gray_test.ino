@@ -7,7 +7,9 @@ BBEPAPER bbep;
 
 void setup(void)
 {
-   bbep.begin(EPD_BADGER2350_4GRAY);
+ //  bbep.begin(EPD_BADGER2350_4GRAY);
+   bbep.begin(EPD_SEEED_E1001);
+   bbep.setPanelType(EP75_800x480_4GRAY_GEN2);
    bbep.allocBuffer();
    bbep.setFont(Roboto_Black_24);
    bbep.fillScreen(BBEP_GRAY3); // white

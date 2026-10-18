@@ -187,7 +187,6 @@ enum {
     EPD_CROWPANEL37,
     EPD_CROWPANEL154,
     EPD_CROWPANEL579,
-    EPD_RETERMINAL_SPECTRA,
     EPD_BBBADGE,
     EPD_LILYGO_T_DECK_PRO,
     EPD_WAVESHARE_154,
@@ -205,6 +204,8 @@ enum {
     EPD_SEEED_STICKY_4GRAY,
     EPD_M5_PAPER_MONO, // 3.97" 800x480 B/W
     EPD_M5_PAPER_MONO_4GRAY,
+    EPD_SEEED_E1001,
+    EPD_SEEED_E1002,
     EPD_SEEED_E1004,
     EPD_ZECTRIX_BW,
     EPD_ZECTRIX_BWYR,
@@ -299,6 +300,7 @@ enum {
     EP42C_400x300, // Zectrix 4.2" B/W 400x300
     EP42R3_400x300, // DEPG0420 / GDEY042Z98 4.2" B/W/R
     EP74YR_480x800, // Pervasive Displays E2741QS0B3 (741-QS-0B) Spectra 4
+    EP42YR_400x300_ST7306, // Sitronix 4-color reflective LCD
     EP_PANEL_COUNT
 };
 #ifdef FUTURE
@@ -342,6 +344,8 @@ enum {
 #define BBEP_HAS_SECOND_PLANE 0x0800
 #define BBEP_NEEDS_EXTRA_INIT 0x1000
 #define BBEP_2BIT_BW 0x2000
+#define BBEP_SITRONIX 0x4000
+#define BBEP_DONT_INIT 0x8000
 
 #define BBEP_BLACK 0
 #define BBEP_WHITE 1
@@ -617,6 +621,7 @@ class BBEPAPER
     void initIO(int iDC, int iReset, int iBusy, int iCS, int iSPIChannel, int iNotUsed = -1, uint32_t u32Speed = 8000000);
 #endif
     int writePlane(int iPlane = PLANE_BOTH, bool bInvert = false);
+    void sendInit(int iRefreshMode = REFRESH_FULL);
     void startWrite(int iPlane);
     void writeData(uint8_t *pData, int iLen);
     void writeCmd(uint8_t u8Cmd);

@@ -131,10 +131,10 @@ const uint8_t zectrix_init_full[] PROGMEM = {
     1, 0xa5,
     BUSY_WAIT,
     EPD_DELAY, 10, // 10ms delay
-    1, 0x04, // power on
-    BUSY_WAIT,
+//    1, 0x04, // power on
+//    BUSY_WAIT,
     EPD_DELAY, 10,
-//    10, 0x83, 0,0, 1,0x8f, 0,0, 1,0x2b,0, // disable partial window
+    10, 0x83, 0,0, 1,0x8f, 0,0, 1,0x2b,0, // disable partial window
     0
 };
 
@@ -150,15 +150,15 @@ const uint8_t zectrix_init_part[] PROGMEM = {
     1, 0xa5,
     BUSY_WAIT,
     EPD_DELAY, 10, // 10ms delay 
-    1, 0x04, // power on
-    BUSY_WAIT,
+ //   1, 0x04, // power on
+ //   BUSY_WAIT,
     EPD_DELAY, 10,
     2, 0x50, 0x77,
     2, 0xe0, 0x00,
     1, 0xa5,
     BUSY_WAIT,
     EPD_DELAY, 10,
-//    10, 0x83, 0,0, 1,0x8f, 0,0, 1,0x2b,1, // partial window of whole screen
+    10, 0x83, 0,0, 1,0x8f, 0,0, 1,0x2b,1, // partial window of whole screen
     0
 };
 
@@ -893,6 +893,7 @@ const uint8_t epd75_init_fast_gen2[] PROGMEM = {
     0
 };
 
+#ifdef FUTURE
 const uint8_t epd75_init_partial_gen2[] PROGMEM = {
     EPD_RESET,
     5, UC8151_PWR, 0x07, 0x07, 0x3f, 0x3f,
@@ -958,6 +959,26 @@ const uint8_t epd75_init_partial_gen2[] PROGMEM = {
     BUSY_WAIT,
     0x00 // end of table
     };
+#else
+const uint8_t epd75_init_partial_gen2[] PROGMEM = {
+   EPD_RESET,
+   2, 0x00, 0x1f, // panel setting
+   5, 0x01, 0x07, 0x07, 0x3f, 0x3f, // power setting
+   5, 0x06, 0x17, 0x17, 0x28, 0x17, // booster soft start
+   1, 0x04,
+   EPD_DELAY, 100,
+   BUSY_WAIT,
+   5, 0x61, 0x03, 0x20, 0x01, 0xe0, // TRES
+   2, 0x15, 0x00,
+   3, 0x50, 0x29, 0x07,
+   2, 0x60, 0x22,
+
+   2, 0xe0, 0x02,
+   2, 0xe5, 0x6e,
+   0
+};
+
+#endif // FUTURE
 // 1.54" 152x152
 const uint8_t epd154a_init_sequence_full[] PROGMEM =
 {
@@ -1262,6 +1283,45 @@ const uint8_t epd75yr_init_fast[] PROGMEM =
    BUSY_WAIT,
    0
 };  
+
+//
+// Sitronix ST7306 400x300 4-color reflective LCD
+//
+const uint8_t lcd42yr_init[] PROGMEM = 
+{
+   EPD_RESET,
+   3, 0xd6, 0x17, 0x02,
+   2, 0xd1, 0x01,
+   3, 0xc0, 0x12, 0x0a,
+   5, 0xc1, 115, 0x3e, 0x3c, 0x3c,
+   5, 0xc2, 0x00, 0x21, 0x23, 0x23,
+   5, 0xc4, 50, 0x5c, 0x5a, 0x5a,
+   3, 0xd8, 0xa6, 0xe9,
+   2, 0xb2, 0x12,
+   11, 0xb3, 0xe5, 0xf6, 0x17, 0x77, 0x77, 0x77, 0x77, 0x77, 0x77, 0x71,
+   9, 0xb4, 0x05, 0x46, 0x77, 0x77, 0x77, 0x77, 0x76, 0x45,
+   4, 0x62, 0x32, 0x03, 0x1f,
+   2, 0xb7, 0x13,
+   2, 0xb0, 0x64,
+   1, 0x11, // sleep out
+   EPD_DELAY, 120, // 120ms delay
+   2, 0xc9, 0x00,
+   2, 0x36, 0x48,
+   2, 0x3a, 0x31, //0x11, // 10:4write for 24-bit, 11: 3write for 24bit
+   2, 0xb9, 0x20,
+   2, 0xb8, 0x29,
+   3, 0x2a, 0x05, 0x36, // CASET
+   3, 0x2b, 0x00, 0xc7, // RASET
+   2, 0x35, 0x00,
+//   2, 0xd0, 0x7f, // auto power down OFF
+   2, 0xd0, 0xff, // auto power down ON
+//   1, 0x39, // low power mode on
+   1, 0x38, // high power mode on
+   1, 0x29, // display on
+   1, 0x20, // display invert off
+   2, 0xbb, 0x4f, // enable clear RAM, CLR=0
+   0
+};
 
 //
 // Pervasive Displays E2741QS0B3 (741-QS-0B) 7.4" 480x800 Spectra 4
@@ -2138,13 +2198,33 @@ const uint8_t epd122_init_sequence_part[] PROGMEM =
 };
 
 // 2.9" high resolution B/W panel (168x384)
+const uint8_t epd29h_init_4g[] PROGMEM = 
+{
+    EPD_RESET,
+    1, 0x12, // SW RESET
+    BUSY_WAIT,
+    2, 0x18, 0x80, // temp sensor
+    2, 0x22, 0xb1,
+    1, 0x20,
+    BUSY_WAIT,
+    3, 0x1a, 0x5a, 0x00,
+    2, 0x22, 0x91,
+    1, 0x20,
+    BUSY_WAIT,
+    SET_ORIENTATION,
+    BUSY_WAIT,
+0
+};
 const uint8_t epd29h_init_full[] PROGMEM = 
 {
+  EPD_RESET,
+  BUSY_WAIT,
   1, 0x12, // soft reset
   BUSY_WAIT,
-  2, 0x3c, 0x05, // border
+  2, 0x3c, 0x01,
   4, 0x01, 0x7f, 0x01, 0x00, // driver output control (height)
   SET_ORIENTATION,
+  2, 0x3c, 0x05,
   2, 0x18, 0x80, // read built-in temp sensor
   BUSY_WAIT,
   0
@@ -3017,16 +3097,18 @@ const uint8_t epd426b_init_full[] PROGMEM =
     1, SSD1608_SW_RESET,
     BUSY_WAIT,
     4, 0x01, 0xdf, 0x01, 0x02,
-    2, 0x11, 0x03,
-    5, 0x44, 0x00, 0x00, 0x1f, 0x03,
-    5, 0x45, 0x00, 0x00, 0xdf, 0x01,
-    3, 0x4e, 0x00, 0x00,
-    3, 0x4f, 0x00, 0x00,
+    SET_ORIENTATION,
+//    2, 0x11, 0x03,
+//    5, 0x44, 0x00, 0x00, 0x1f, 0x03,
+//    5, 0x45, 0x00, 0x00, 0xdf, 0x01,
+//    3, 0x4e, 0x00, 0x00,
+//    3, 0x4f, 0x00, 0x00,
     2, 0x3c, 0x01,
     2, 0x18, 0x80,
-    11, 0x37, 0x00, 0x00, 0x00, 0x00, 0x00, 0x40, 0x00, 0x00, 0x00, 0x00,
+//    11, 0x37, 0x00, 0x00, 0x00, 0x00, 0x00, 0x40, 0x00, 0x00, 0x00, 0x00,
     2, 0x22, 0xcf,
-    2, 0x21, 0x00,
+    0x02, 0x21, 0x40, // copy plane 0 to 1 after the update
+//    2, 0x21, 0x00,
     2, 0x3f, 0x07,
     2, 0x03, 0x17,
     4, 0x04, 0x41, 0xa8, 0x32,
@@ -3060,11 +3142,7 @@ const uint8_t epd426b_init_part[] PROGMEM =
     1, SSD1608_SW_RESET,
     BUSY_WAIT,
     4, 0x01, 0xdf, 0x01, 0x02,
-    2, 0x11, 0x03,
-    5, 0x44, 0x00, 0x00, 0x1f, 0x03,
-    5, 0x45, 0x00, 0x00, 0xdf, 0x01,
-    3, 0x4e, 0x00, 0x00,
-    3, 0x4f, 0x00, 0x00,
+    SET_ORIENTATION,
     2, 0x3c, 0x01,
     2, 0x18, 0x80,
     11, 0x37, 0x00, 0x00, 0x00, 0x00, 0x00, 0x40, 0x00, 0x00, 0x00, 0x00,
@@ -4032,6 +4110,8 @@ const uint8_t epd397_init_part[] PROGMEM = {
 };
 
 const uint8_t epd75_init_sequence_full[] PROGMEM = {
+    EPD_RESET,
+    BUSY_WAIT,
     5, UC8151_PWR, 0x07, 0x07, 0x3f, 0x3f,
     1, UC8151_PON,
     BUSY_WAIT,
@@ -4421,11 +4501,12 @@ const EPD_PANEL panelDefs[] PROGMEM = {
     {1200, 1600, 0, epd133_spectra_init, NULL, NULL, BBEP_7COLOR | BBEP_SPLIT_BUFFER | BBEP_NEEDS_EXTRA_INIT, BBEP_CHIP_UC81xx, u8Colors_spectra}, // EP133_SPECTRA_1200x1600 Spectra6 13.3" 1200x1600
     {122, 250, 0, epd213g_init_full, NULL, NULL, BBEP_4GRAY, BBEP_CHIP_SSD16xx, u8Colors_4gray}, // EP213B_122x250_4GRAY Waveshare v2
     {168, 384, 0, epd29h_init_full, epd29h_init_fast, epd29h_init_part, 0, BBEP_CHIP_SSD16xx, u8Colors_2clr}, // EP29_168x384
-    {168, 384, 0, epd29h_init_full, NULL, NULL, BBEP_4GRAY, BBEP_CHIP_SSD16xx, u8Colors_4gray}, // EP29_168x384_4GRAY
+    {168, 384, 0, epd29h_init_4g, NULL, NULL, BBEP_4GRAY, BBEP_CHIP_SSD16xx, u8Colors_4gray}, // EP29_168x384_4GRAY
     {400, 300, 0, epd42b_init_sequence_full, epd42b_init_sequence_fast, epd42z_init_sequence_part, BBEP_NEEDS_EXTRA_INIT, BBEP_CHIP_SSD16xx, u8Colors_2clr}, // EP42Z_400x300
-    {400, 300, 0, zectrix_init_full, zectrix_init_full, NULL/*zectrix_init_part*/, BBEP_NEEDS_EXTRA_INIT | BBEP_2BIT_BW, BBEP_CHIP_UC81xx, u8Colors_2clr}, // EP42C_400x300
+    {400, 300, 0, zectrix_init_full, zectrix_init_full, zectrix_init_part, BBEP_DONT_INIT | BBEP_2BIT_BW, BBEP_CHIP_UC81xx, u8Colors_2clr}, // EP42C_400x300
     {400, 300, 0, epd42r3_init_full, NULL, NULL, BBEP_3COLOR, BBEP_CHIP_SSD16xx, u8Colors_3clr}, // EP42R3_400x300 DEPG0420 / GDEY042Z98 4.2" B/W/R
     {480, 800, 0, epd74yr_init_full, NULL, NULL, BBEP_NEEDS_EXTRA_INIT | BBEP_4COLOR, BBEP_CHIP_UC81xx, u8Colors_4clr_v2}, // EP74YR_480x800 Pervasive Displays E2741QS0B3
+    {400, 300, 0, lcd42yr_init, NULL, NULL, BBEP_NEEDS_EXTRA_INIT | BBEP_4COLOR | BBEP_SITRONIX, BBEP_CHIP_SSD16xx, u8Colors_4clr_v2}, // EP42YR_400x300_ST7306
 };
 //
 // Set the e-paper panel type
@@ -5112,6 +5193,7 @@ int bbepRefresh(BBEPDISP *pBBEP, int iMode)
     if (iMode != REFRESH_FULL && iMode != REFRESH_FAST && iMode != REFRESH_PARTIAL)
         return BBEP_ERROR_BAD_PARAMETER;
     
+    if (!(pBBEP->iFlags & BBEP_DONT_INIT)) {
     switch (iMode) {
         case REFRESH_FULL:
             if (!(pBBEP->iFlags & BBEP_NEEDS_EXTRA_INIT)) { // already sent?
@@ -5140,6 +5222,7 @@ int bbepRefresh(BBEPDISP *pBBEP, int iMode)
         default:
             return BBEP_ERROR_BAD_PARAMETER;
     } // switch on mode
+    } // don't send init sequence before the refresh
     if (pBBEP->chip_type == BBEP_CHIP_UC81xx) {
         if (pBBEP->iFlags & (BBEP_4GRAY | BBEP_4COLOR | BBEP_7COLOR)) {
             if (pBBEP->iFlags & BBEP_SPLIT_BUFFER) {
@@ -5151,7 +5234,8 @@ int bbepRefresh(BBEPDISP *pBBEP, int iMode)
             bbepWriteCmdData(pBBEP, UC8151_DRF, &u8Temp, 1);
         } else {
     //        bbepWriteCmd(pBBEP, UC8151_PTOU); // partial out (update the entire panel, not just the last memory window)
-            bbepWriteCmd(pBBEP, UC8151_DRF);
+            bbepCMD2(pBBEP, UC8151_DRF, 0);
+            //bbepWriteCmd(pBBEP, UC8151_DRF);
         }
     } else {
         const uint8_t u8CMD[4] = {0xf7, 0xc7, 0xff, 0xc0}; // normal, fast, partial, partial2
@@ -5249,6 +5333,8 @@ void bbepWriteImage2bppSpecial(BBEPDISP *pBBEP, uint8_t ucCMD)
         bbepWriteData(pBBEP, u8Cache, pBBEP->width/4);
       } // for ty
     } //else if (pBBEP->iOrientation == 180) {
+    bbepWriteCmd(pBBEP, UC8151_PON); // turn the power on AFTER writing the data
+    bbepWaitBusy(pBBEP);
 } /* bbepWriteImage2bppSpecial() */
 
 void bbepWriteImage4bppSpecial(BBEPDISP *pBBEP, uint8_t ucCMD)
@@ -5940,6 +6026,50 @@ int ty, iPitch;
         s += iPitch; 
     }
 } /* bbepWriteRegion() */
+//
+// Write pixels to a Sitronix reflective LCD
+//
+int bbepWriteSitronix(BBEPDISP *pBBEP)
+{
+uint8_t uc, *s, *d, ucTemp[4];
+int x, y, iPitch;
+uint8_t *pTemp;
+
+const uint8_t u8Expand[16] = {
+0x00, 0x80, 0x20, 0xa0, 0x08, 0x88, 0xa0, 0xa8,
+0x02, 0x82, 0x22, 0xa2, 0x0a, 0x8a, 0x2a, 0xaa 
+}; 
+
+    if (!pBBEP->ucScreen) return BBEP_ERROR_NO_MEMORY;
+    pTemp = (uint8_t *)malloc(1024);
+
+    // Set starting address
+    ucTemp[0] = 0x05;
+    ucTemp[1] = 0x36;
+    bbepWriteCmdData(pBBEP, 0x2a, ucTemp, 2); // CASET
+    ucTemp[0] = 0x00;
+    ucTemp[1] = 0xc7;
+    bbepWriteCmdData(pBBEP, 0x2b, ucTemp, 2); // RASET
+    bbepWriteCmd(pBBEP, 0x2c); // memory write
+    iPitch = pBBEP->native_width/4; // 2 bits per pixel
+    for (x=0; x<pBBEP->native_width; x+=4) {
+        d = pTemp;
+        s = pBBEP->ucScreen + (x/4);
+        for (y=0; y<pBBEP->native_height; y+=2) {
+            uc = u8Expand[s[0] & 0xf];
+            uc |= (u8Expand[s[1] & 0xf] >> 1);
+            *d++ = uc;
+            uc = u8Expand[s[0] >> 4];
+            uc |= (u8Expand[s[1] >> 4] >> 1);
+            *d++ = uc;
+            
+
+        } // for y
+        bbepWriteData(pBBEP, pTemp, (int)(d - pTemp));
+    } // for x
+    free(pTemp);
+    return BBEP_SUCCESS;
+} /* bbepWriteSitronix() */
 
 //
 // Write the local copy of the memory plane(s) to the eink's internal framebuffer
@@ -5951,6 +6081,9 @@ int bbepWritePlane(BBEPDISP *pBBEP, int iPlane, int bInvert)
     
     if (pBBEP == NULL || pBBEP->ucScreen == NULL || iPlane < PLANE_0 || iPlane > PLANE_FALSE_DIFF) {
         return BBEP_ERROR_BAD_PARAMETER;
+    }
+    if (pBBEP->iFlags & BBEP_SITRONIX) { // special case for Sitronix RLCDs
+        return bbepWriteSitronix(pBBEP);
     }
 // Some panels need to be told their resolution before you can write data
 // to the internal framebuffer (e.g. 4.26" 800x480), otherwise the writes

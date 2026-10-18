@@ -230,6 +230,14 @@ int rc = BBEP_ERROR_BAD_PARAMETER;
             }
             break;
 
+        case EPD_SEEED_E1001: // 7.5" B/W 800x480
+// DC:11 RST:12 BUSY:13 CS:10 MOSI:9 SCK:7 
+           if (setPanelType(EP75_800x480_GEN2) == BBEP_SUCCESS) {
+               initIO(11, 12, 13, 10, 9, 7, 10000000);
+               return BBEP_SUCCESS;
+           }
+           break;
+
         case EPD_SEEED_E1004: // 13.3" Spectra6 1200x1600
 // DC:11 RST:38 BUSY:13 CS:10 MOSI:9 SCK:7 PWR:12, CS2:2
            pinMode(12, OUTPUT);
@@ -253,7 +261,7 @@ int rc = BBEP_ERROR_BAD_PARAMETER;
                 initIO(16, 17, 18, 15, 14, 13, 10000000);
                 return BBEP_SUCCESS;
             }
-           break;
+            break;
 
         case EPD_M5_PAPER_COLOR: // DC:43 RST:12 BUSY:11 CS:44 MOSI:13 SCK:15
            if (setPanelType(EP40_SPECTRA_400x600) == BBEP_SUCCESS) {
@@ -391,7 +399,7 @@ int rc = BBEP_ERROR_BAD_PARAMETER;
             }
             break;
 
-        case EPD_RETERMINAL_SPECTRA: // Seeed Studio 7.3" color E1002
+        case EPD_SEEED_E1002: // Seeed Studio 7.3" 800x480
             // DC:11 RST:12 BUSY:13 CS:10 MOSI:9 SCK:7
             if (setPanelType(EP73_SPECTRA_800x480) == BBEP_SUCCESS) {
                 initIO(11, 12, 13, 10, 9, 7, 10000000);
@@ -488,6 +496,23 @@ void BBEPAPER::setCS2(uint8_t cs)
 {
     bbepSetCS2(&_bbep, cs);
 }
+//
+// Send the panel init sequence for a specific refresh type
+//
+void BBEPAPER::sendInit(int iRefreshMode)
+{
+uint8_t *pCMDs = NULL;
+
+   if (iRefreshMode == REFRESH_FULL) {
+       pCMDs = (uint8_t *)_bbep.pInitFull;
+   } else if (iRefreshMode == REFRESH_FAST) {
+       pCMDs = (uint8_t *)_bbep.pInitFast;
+   } else if (iRefreshMode == REFRESH_PARTIAL) {
+       pCMDs = (uint8_t *)_bbep.pInitPart;
+   }
+   if (!pCMDs) return; // invalid mode
+   bbepSendCMDSequence(&_bbep, pCMDs);
+} /* sendInit() */
 
 #ifndef __LINUX__
 void BBEPAPER::initIO(int iDC, int iReset, int iBusy, int iCS, int iMOSI, int iSCLK, uint32_t u32Speed)
@@ -533,7 +558,8 @@ int BBEPAPER::refresh(int iMode, bool bWait)
         if (_bbep.chip_type == BBEP_CHIP_UC81xx) {
             // Send a POFF (power off) command after each update
             // This is needed by Spectra6 and some other panels
-            bbepWriteCmd(&_bbep, UC8151_POFF); 
+            bbepCMD2(&_bbep, UC8151_POFF, 0);
+            //bbepWriteCmd(&_bbep, UC8151_POFF); 
         }
     }
     _bbep.iOpTime = (int)(millis() - l);
