@@ -392,6 +392,14 @@ int rc = BBEP_ERROR_BAD_PARAMETER;
                 return BBEP_SUCCESS;
             }
             break;
+
+        case EPD_TRMNL_OG_GEN2: // DC:5 CS:4 RST:2 BUSY:0 MOSI:1 SCK:6
+            if (setPanelType(EP75_800x480) == BBEP_SUCCESS) {
+                initIO(5, 2, 0, 4, 1, 6, 10000000);
+                return BBEP_SUCCESS;
+            }
+            break;
+
         case EPD_TRMNL_OG: // DC:5 CS:6 RST:10 BUSY:4 MOSI:8 SCK:7
             if (setPanelType(EP75_800x480) == BBEP_SUCCESS) {
                 initIO(5, 10, 4, 6, 8, 7, 10000000);
@@ -559,7 +567,7 @@ int BBEPAPER::refresh(int iMode, bool bWait)
             // Send a POFF (power off) command after each update
             // This is needed by Spectra6 and some other panels
             bbepCMD2(&_bbep, UC8151_POFF, 0);
-            //bbepWriteCmd(&_bbep, UC8151_POFF); 
+            bbepWaitBusy(&_bbep);
         }
     }
     _bbep.iOpTime = (int)(millis() - l);
