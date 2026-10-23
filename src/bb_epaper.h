@@ -90,12 +90,12 @@ typedef struct _tagbbi2c
 // Bits per pixel mode
 // Allows drawing in 1-bit mode on higher bit depth panels
 // to conserve memory.
-// Defaults to BB_MODE_NATIVE
+// Defaults to BBEP_MODE_NATIVE
 enum {
-   BB_MODE_INVALID = 0,
-   BB_MODE_1BPP,
-   BB_MODE_NATIVE,
-   BB_MODE_COUNT
+   BBEP_MODE_INVALID = 0,
+   BBEP_MODE_1BPP,
+   BBEP_MODE_NATIVE,
+   BBEP_MODE_COUNT
 };
 
 #define LIGHT_SLEEP 0
@@ -593,7 +593,7 @@ class BBEPAPER
 #endif // __LINUX__
 {
   public:
-    BBEPAPER(void) { memset(&_bbep, 0, sizeof(_bbep)); _bbep.cs_mode = CMD_CS1; _bbep.u8SleepPin = 0xff; _bbep.mode = BB_MODE_NATIVE; }
+    BBEPAPER(void) { memset(&_bbep, 0, sizeof(_bbep)); _bbep.cs_mode = CMD_CS1; _bbep.u8SleepPin = 0xff; _bbep.mode = BBEP_MODE_NATIVE; }
     BBEPAPER(int iPanel);
     BBEPDISP _bbep;
     int createVirtual(int iWidth, int iHeight, int iFlags);

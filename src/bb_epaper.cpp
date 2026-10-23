@@ -65,16 +65,16 @@ BBEPAPER::BBEPAPER(int iPanel)
     memset(&_bbep, 0, sizeof(_bbep));
     _bbep.iFG = BBEP_BLACK;
     _bbep.cs_mode = CMD_CS1;
-    _bbep.mode = BB_MODE_NATIVE;
+    _bbep.mode = BBEP_MODE_NATIVE;
     bbepSetPanelType(&_bbep, iPanel);
 }
 
 int BBEPAPER::setMemoryMode(uint8_t u8Mode)
 {
-    if (u8Mode <= BB_MODE_INVALID || u8Mode >= BB_MODE_COUNT) return BBEP_ERROR_BAD_PARAMETER;
+    if (u8Mode <= BBEP_MODE_INVALID || u8Mode >= BBEP_MODE_COUNT) return BBEP_ERROR_BAD_PARAMETER;
     _bbep.mode = u8Mode;
 // Set up the pixel functions and color conversion tables correctly
-    if (u8Mode == BB_MODE_NATIVE) {
+    if (u8Mode == BBEP_MODE_NATIVE) {
         _bbep.pColorLookup = panelDefs[_bbep.type].pColorLookup;
         // select the correct pixel drawing functions (2/3/4/7 color)
         if (_bbep.iFlags & BBEP_4COLOR) {
@@ -93,7 +93,7 @@ int BBEPAPER::setMemoryMode(uint8_t u8Mode)
             _bbep.pfnSetPixel = bbepSetPixel2Clr;
             _bbep.pfnSetPixelFast = bbepSetPixelFast2Clr;
         }
-    } else if (u8Mode == BB_MODE_1BPP) {
+    } else if (u8Mode == BBEP_MODE_1BPP) {
         _bbep.pColorLookup = u8Colors_2clr;
         _bbep.pfnSetPixel = bbepSetPixel2Clr;
         _bbep.pfnSetPixelFast = bbepSetPixelFast2Clr;
@@ -496,7 +496,7 @@ int rc = BBEP_ERROR_BAD_PARAMETER;
 int BBEPAPER::setPanelType(int iPanel)
 {
     _panel_type = iPanel;
-    _bbep.mode = BB_MODE_NATIVE; // assume native pixel mode
+    _bbep.mode = BBEP_MODE_NATIVE; // assume native pixel mode
     return bbepSetPanelType(&_bbep, iPanel);
 }
 // Special setup for dual-cable displays
@@ -608,7 +608,7 @@ void BBEPAPER::backupPlane(void)
 }
 int BBEPAPER::allocBuffer(bool bSecondPlane)
 {
-    if (_bbep.mode == BB_MODE_NATIVE && _bbep.iFlags & (BBEP_4COLOR | BBEP_3COLOR | BBEP_4GRAY)) {
+    if (_bbep.mode == BBEP_MODE_NATIVE && _bbep.iFlags & (BBEP_4COLOR | BBEP_3COLOR | BBEP_4GRAY)) {
         bSecondPlane = 1;
     }
     return bbepAllocBuffer(&_bbep, (int)bSecondPlane);

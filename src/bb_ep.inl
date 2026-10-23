@@ -5113,7 +5113,7 @@ void bbepFill(BBEPDISP *pBBEP, unsigned char ucColor, int iPlane)
     } else {
         uc1 = uc2 = 0x00;
     }
-    if (pBBEP->mode == BB_MODE_NATIVE) {
+    if (pBBEP->mode == BBEP_MODE_NATIVE) {
     if (pBBEP->iFlags & BBEP_7COLOR) {
         uc1 = ucColor | (ucColor << 4);
         iPitch = pBBEP->native_width / 2;
@@ -5320,12 +5320,11 @@ void bbepSetRotation(BBEPDISP *pBBEP, int iRotation)
 //
 void bbepWriteImage2bppSpecial(BBEPDISP *pBBEP, uint8_t ucCMD)
 {
-    int tx, ty, bit, iPitch;
+    int tx, ty, bit;
     uint8_t uc1, uc2, *s, *d;
     // Convert the bit direction and write the data to the EPD
     // This particular controller has 4 bits per pixel where 0=black, 3=white, 4=red
     // this wastes 50% of the time transmitting bloated info (only need 2 bits)
-    iPitch = ((pBBEP->native_width+7)/8);
 
     if (ucCMD) {
         bbepWriteCmd(pBBEP, ucCMD); // start write
@@ -6056,7 +6055,7 @@ int ty, iPitch;
 int bbepWriteSitronix(BBEPDISP *pBBEP)
 {
 uint8_t uc, *s, *d, ucTemp[4];
-int x, y, iPitch;
+int x, y;
 uint8_t *pTemp;
 
 const uint8_t u8Expand[16] = {
@@ -6075,7 +6074,6 @@ const uint8_t u8Expand[16] = {
     ucTemp[1] = 0xc7;
     bbepWriteCmdData(pBBEP, 0x2b, ucTemp, 2); // RASET
     bbepWriteCmd(pBBEP, 0x2c); // memory write
-    iPitch = pBBEP->native_width/4; // 2 bits per pixel
     for (x=0; x<pBBEP->native_width; x+=4) {
         d = pTemp;
         s = pBBEP->ucScreen + (x/4);
@@ -6131,7 +6129,7 @@ int bbepWritePlane(BBEPDISP *pBBEP, int iPlane, int bInvert)
         return BBEP_SUCCESS;
     }
     if (pBBEP->iFlags & BBEP_7COLOR) {
-        if (pBBEP->mode == BB_MODE_1BPP) {
+        if (pBBEP->mode == BBEP_MODE_1BPP) {
             bbepWriteImage1To4bpp(pBBEP, 0x10);
         } else {
             if (pBBEP->iFlags & BBEP_SPLIT_BUFFER) { // dual controller EPD
@@ -6143,7 +6141,7 @@ int bbepWritePlane(BBEPDISP *pBBEP, int iPlane, int bInvert)
         return BBEP_SUCCESS;
     }
     if (pBBEP->iFlags & BBEP_4COLOR) { // 4-color only has 1 way to go
-        if (pBBEP->mode == BB_MODE_1BPP) {
+        if (pBBEP->mode == BBEP_MODE_1BPP) {
             bbepWriteImage1To2bpp(pBBEP, 0x10);
         } else {
             bbepWriteImage2bpp(pBBEP, 0x10);
