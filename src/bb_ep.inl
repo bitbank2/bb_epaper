@@ -4619,6 +4619,7 @@ int bbepCreateVirtual(BBEPDISP *pBBEP, int iWidth, int iHeight, int iFlags)
         pBBEP->native_height = pBBEP->height = iHeight;
         pBBEP->iFlags = iFlags;
         pBBEP->chip_type = BBEP_CHIP_NONE;
+        pBBEP->mode = BBEP_MODE_NATIVE;
     // select the correct pixel drawing functions (2/3/4 color)
         if (iFlags & BBEP_4COLOR) {
             pBBEP->pColorLookup = u8Colors_4clr;
