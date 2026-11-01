@@ -1961,7 +1961,7 @@ int bbepAllocBuffer(BBEPDISP *pBBEP, int bDoubleSize)
             pBBEP->iFlags |= BBEP_HAS_SECOND_PLANE;
         }
     }
-#if defined (HAL_ESP32_HAL_H_) && !defined(__riscv)
+#if defined (HAL_ESP32_HAL_H_)
     if (iSize > 98000) { // need to use PSRAM
 //#ifndef BOARD_HAS_PSRAM
 //#error "Please enable PSRAM!"

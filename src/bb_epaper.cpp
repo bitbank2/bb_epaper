@@ -511,6 +511,9 @@ void BBEPAPER::sendInit(int iRefreshMode)
 {
 uint8_t *pCMDs = NULL;
 
+    if (_panel_type <= EP_PANEL_UNDEFINED || _panel_type >= EP_PANEL_COUNT) {
+        return;  // uninitialized or virtual panel
+    }
    if (iRefreshMode == REFRESH_FULL) {
        pCMDs = (uint8_t *)_bbep.pInitFull;
    } else if (iRefreshMode == REFRESH_FAST) {
@@ -551,6 +554,9 @@ int BBEPAPER::writePlane(int iPlane, bool bInvert)
 {
     long l = millis();
     int rc;
+    if (_panel_type <= EP_PANEL_UNDEFINED || _panel_type >= EP_PANEL_COUNT) {
+        return BBEP_ERROR_BAD_PARAMETER;  // uninitialized or virtual panel
+    }
     rc = bbepWritePlane(&_bbep, iPlane, (int)bInvert);
     _bbep.iDataTime = (int)(millis() - l);
     return rc;
@@ -560,6 +566,9 @@ int BBEPAPER::refresh(int iMode, bool bWait)
 {
     int rc;
     long l = millis();
+    if (_panel_type <= EP_PANEL_UNDEFINED || _panel_type >= EP_PANEL_COUNT) {
+        return BBEP_ERROR_BAD_PARAMETER;  // uninitialized or virtual panel
+    }
     rc = bbepRefresh(&_bbep, iMode);
     if (rc == BBEP_SUCCESS && bWait) {
         bbepWaitBusy(&_bbep);
@@ -588,6 +597,7 @@ int BBEPAPER::refresh(int iMode, bool bWait)
 //
 int BBEPAPER::createVirtual(int iWidth, int iHeight, int iFlags)
 {
+    _panel_type = EP_PANEL_UNDEFINED;
     return bbepCreateVirtual(&_bbep, iWidth, iHeight, iFlags);
 }
 void BBEPAPER::setBuffer(uint8_t *pBuffer)
@@ -602,7 +612,7 @@ void BBEPAPER::stretchAndSmooth(uint8_t *pSrc, uint8_t *pDest, int w, int h, int
 void BBEPAPER::backupPlane(void)
 {
     int iSize = ((_bbep.native_width+7)>>3) * _bbep.native_height;
-    if (!(_bbep.iFlags & (BBEP_3COLOR | BBEP_4COLOR)) && _bbep.ucScreen) {
+    if (!(_bbep.iFlags & (BBEP_3COLOR | BBEP_4COLOR | BBEP_7COLOR)) && _bbep.ucScreen) {
         memcpy(&_bbep.ucScreen[iSize], _bbep.ucScreen, iSize);
     }
 }
