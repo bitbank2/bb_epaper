@@ -113,6 +113,9 @@ void BBEPAPER::setPasses(int iPasses)
 
 void BBEPAPER::setAddrWindow(int x, int y, int w, int h)
 {
+    if (_panel_type <= EP_PANEL_UNDEFINED || _panel_type >= EP_PANEL_COUNT) {
+        return;  // uninitialized or virtual panel
+    }
     bbepSetAddrWindow(&_bbep, x, y, w, h);
 }
 
@@ -547,6 +550,9 @@ void BBEPAPER::initIO(int iDC, int iReset, int iBusy, int iCS, int iSPIChannel, 
 
 void BBEPAPER::writeRegion(int16_t x, int16_t y, int16_t w, int16_t h, int plane)
 {
+    if (_panel_type <= EP_PANEL_UNDEFINED || _panel_type >= EP_PANEL_COUNT) {
+        return;  // uninitialized or virtual panel
+    }
    bbepWriteRegion(&_bbep, x, y, w, h, plane);
 } /* writeRegion() */
 
@@ -1015,6 +1021,9 @@ int BBEPAPER::testPanelType(void)
 }
 void BBEPAPER::wake(void)
 {
+    if (_panel_type <= EP_PANEL_UNDEFINED || _panel_type >= EP_PANEL_COUNT) {
+        return;  // uninitialized or virtual panel
+    }
     bbepWakeUp(&_bbep);
     if (_bbep.iFlags & (BBEP_7COLOR | BBEP_4COLOR)) { // need to send before you can send it data
         bbepSendCMDSequence(&_bbep, _bbep.pInitFull);
@@ -1023,14 +1032,23 @@ void BBEPAPER::wake(void)
 
 void BBEPAPER::sleep(int bDeep)
 {
+    if (_panel_type <= EP_PANEL_UNDEFINED || _panel_type >= EP_PANEL_COUNT) {
+        return;  // uninitialized or virtual panel
+    }    
     bbepSleep(&_bbep, bDeep);
 }
 void BBEPAPER::wait(bool bQuick)
 {
+    if (_panel_type <= EP_PANEL_UNDEFINED || _panel_type >= EP_PANEL_COUNT) {
+        return;  // uninitialized or virtual panel
+    }
     bbepWaitBusy(&_bbep);
 }
 bool BBEPAPER::isBusy(void)
 {
+    if (_panel_type <= EP_PANEL_UNDEFINED || _panel_type >= EP_PANEL_COUNT) {
+        return false;  // uninitialized or virtual panel
+    }
     return bbepIsBusy(&_bbep);
 }
 void BBEPAPER::drawString(const char *pText, int x, int y)
@@ -1063,21 +1081,33 @@ void BBEPAPER::drawSprite(const uint8_t *pSprite, int cx, int cy, int iPitch, in
 }
 void BBEPAPER::startWrite(int iPlane)
 {
+    if (_panel_type <= EP_PANEL_UNDEFINED || _panel_type >= EP_PANEL_COUNT) {
+        return;  // uninitialized or virtual panel
+    }
     bbepStartWrite(&_bbep, iPlane);
 } /* startWrite() */
 
 void BBEPAPER::writeData(uint8_t *pData, int iLen)
 {
+    if (_panel_type <= EP_PANEL_UNDEFINED || _panel_type >= EP_PANEL_COUNT) {
+        return;  // uninitialized or virtual panel
+    }
    bbepWriteData(&_bbep, pData, iLen);
 } /* writeData() */
 
 void BBEPAPER::writeCmd2(uint8_t u8Cmd, uint8_t u8Param)
 {
+    if (_panel_type <= EP_PANEL_UNDEFINED || _panel_type >= EP_PANEL_COUNT) {
+        return;  // uninitialized or virtual panel
+    }
     bbepCMD2(&_bbep, u8Cmd, u8Param);
 } /* writeCmd2() */
 
 void BBEPAPER::writeCmd(uint8_t u8Cmd)
 {
+    if (_panel_type <= EP_PANEL_UNDEFINED || _panel_type >= EP_PANEL_COUNT) {
+        return;  // uninitialized or virtual panel
+    }
     bbepWriteCmd(&_bbep, u8Cmd);
 } /* writeCmd() */
 
