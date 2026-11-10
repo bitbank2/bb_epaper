@@ -760,7 +760,7 @@ const uint8_t epd154r_init_sequence_full[] PROGMEM = {
 };
 const uint8_t epd75_init_sequence_partial[] PROGMEM = {
     0x05, UC8151_PWR, 0x07, 0x07, 0x3f, 0x3f, 
-//    0x02, 0x82, 0x1c, // VCOM DC
+    0x02, 0x82, 0x1e, // VCOM DC (-1.60V)
     0x01, UC8151_PON, // power on
     BUSY_WAIT,
     0x02, UC8151_PSR, 0x3f, // from register 
@@ -821,7 +821,7 @@ const uint8_t epd75_init_sequence_partial[] PROGMEM = {
 };
 const uint8_t epd75_init_sequence_fast[] PROGMEM = {
     0x05, UC8151_PWR, 0x07, 0x07, 0x3f, 0x3f,
-//    0x02, 0x82, 0x26, // VCOM DC
+    0x02, 0x82, 0x1e, // VCOM DC (-1.60V)
     0x01, UC8151_PON, // power on
     BUSY_WAIT,
     0x02, UC8151_PSR, 0x3f, // from register
@@ -3542,7 +3542,7 @@ const uint8_t epd583_init_full[] PROGMEM = {
 
 const uint8_t epd583_init_fast[] PROGMEM = {
     0x05, UC8151_PWR, 0x07, 0x07, 0x3f, 0x3f,
-//    0x02, 0x82, 0x26, // VCOM DC
+    0x02, 0x82, 0x1e, // VCOM DC (-1.60V)
     0x01, UC8151_PON, // power on
     BUSY_WAIT,
     0x02, UC8151_PSR, 0x3f, // from register
@@ -3605,7 +3605,7 @@ const uint8_t epd583_init_fast[] PROGMEM = {
 
 const uint8_t epd583_init_part[] PROGMEM = {
     0x05, UC8151_PWR, 0x07, 0x07, 0x3f, 0x3f,
-//    0x02, 0x82, 0x26, // VCOM DC
+    0x02, 0x82, 0x1e, // VCOM DC (-1.60V)
     0x01, UC8151_PON, // power on
     BUSY_WAIT,
     0x02, UC8151_PSR, 0x3f, // from register
