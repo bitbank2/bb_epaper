@@ -40,9 +40,9 @@
 #include <math.h>
 #include <time.h>
 #ifndef CONSUMER
-#define CONSUMER "Consumer"
+#define CONSUMER "bb_epaper"
 #endif
-static char szChipName[16];
+static char szChipName[16] = "gpiochip0";
 #define pgm_read_byte(a) (*(uint8_t *)a)
 #define pgm_read_word(a) (*(uint16_t *)a)
 #define pgm_read_dword(a) (*(uint32_t *)a)
@@ -183,7 +183,7 @@ void pinMode(int iPin, int iMode)
    snprintf(szChip, sizeof(szChip)-1, "/dev/%s", szChipName);
    chip = gpiod_chip_open(szChip);
    if (!chip) {
-	printf("chip open failed\n");
+	printf("chip open failed: %s\n", szChip);
 	   return;
    }
    settings = gpiod_line_settings_new();
