@@ -3745,19 +3745,18 @@ const uint8_t epd75_gray_init[] PROGMEM = {
 }; // 2-bit grayscale mode
 
 const uint8_t epd397g_init_full[] PROGMEM = {
-    1, 0x12, // soft reset
-    BUSY_WAIT, 
-    2, 0x18, 0x80, // enable temp sensor
-    6, 0x0c, 0xae, 0xc7, 0xc3, 0xc0, 0x80,
-    4, 0x01, 0xdf, 0x01, 0x02, // driver output control (height-1)
-    2, 0x3c, 0x01, // border color
-    2, 0x11, 0x01, // data entry mode
-    5, 0x44, 0x00, 0x00, 0x1f, 0x03, // set RAM x start/end
-    5, 0x45, 0xdf, 0x01, 0x00, 0x00, // set RAM y start/end
-    3, 0x4e, 0x00, 0x00, // RAM x address
-    3, 0x4f, 0x00, 0x00, // RAM y address
+    3, 0x00, 0x2f, 0x0e, // panel setting
     BUSY_WAIT,
-    2, 0x1a, 0x5a, // 4-gray mode
+    5, 0x06, 0x0f, 0x8b, 0x93, 0xc1, // booster
+    2, 0xe7, 0xc1,
+    2, 0x30, 0x08, // PLL
+    2, 0x50, 0x77, // CDI
+    9, 0x62, 0x76, 0x76, 0x76, 0x5a, 0x9d, 0x8a, 0x76, 0x62, // timing
+    5, 0x61, 0x03, 0x20, 0x02, 0xa8, // resolution (800 x 680, Seeed's value)
+    2, 0xe0, 0x10, // waveform mode: init
+    5, 0x65, 0x00, 0x00, 0x00, 0x00, // GSST
+    2, 0xe9, 0x01,
+    BUSY_WAIT,
     0 // end
 };
 
@@ -4299,11 +4298,14 @@ void bbepWaitBusy(BBEPDISP *pBBEP)
     if (!pBBEP) return;
     if (pBBEP->iBUSYPin == 0xff) return;
     delay(10); // give time for the busy status to be valid
-    uint8_t busy_idle =  (pBBEP->chip_type == BBEP_CHIP_UC81xx) ? HIGH : LOW;
+    // The SSD2677 in the reTerminal Sticky (Nov 2026 units) rests BUSY HIGH,
+    // like the UC81xx parts (the SSD1677 rests LOW)
+    uint8_t busy_idle =  (pBBEP->chip_type == BBEP_CHIP_UC81xx || pBBEP->type == EP397_800x480_4GRAY) ? HIGH : LOW;
     delay(1); // some panels need a short delay before testing the BUSY line
     if (pBBEP->iFlags & (BBEP_3COLOR | BBEP_4COLOR | BBEP_7COLOR)) {
         iMaxTime = 35000; // multi-color panels can take a long time
     }
+    if (pBBEP->type == EP397_800x480_4GRAY) iMaxTime = 45000; // SSD2677 full refresh runs ~1.3 s
     while (iTimeout < iMaxTime) {
         if (digitalRead(pBBEP->iBUSYPin) == busy_idle) break;
         // delay(1);
@@ -4320,7 +4322,9 @@ bool bbepIsBusy(BBEPDISP *pBBEP)
     if (!pBBEP) return false;
     if (pBBEP->iBUSYPin == 0xff) return false;
     delay(10); // give time for the busy status to be valid
-    uint8_t busy_idle =  (pBBEP->chip_type == BBEP_CHIP_UC81xx) ? HIGH : LOW;
+    // The SSD2677 in the reTerminal Sticky (Nov 2026 units) rests BUSY HIGH,
+    // like the UC81xx parts (the SSD1677 rests LOW)
+    uint8_t busy_idle =  (pBBEP->chip_type == BBEP_CHIP_UC81xx || pBBEP->type == EP397_800x480_4GRAY) ? HIGH : LOW;
     delay(1); // some panels need a short delay before testing the BUSY line
     return (digitalRead(pBBEP->iBUSYPin) != busy_idle);
 } /* bbepWaitBusy() */
@@ -4872,7 +4876,17 @@ int bbepRefresh(BBEPDISP *pBBEP, int iMode)
             bbepCMD2(pBBEP, SSD1608_DISP_CTRL2, u8CMDz[iMode]);
         } else if (pBBEP->type == EP154Z_152x152) {
             bbepCMD2(pBBEP, SSD1608_DISP_CTRL2, u8CMDz2[iMode]);
-        } else if (pBBEP->type == EP397_800x480 || pBBEP->type == EP397_800x480_4GRAY) {
+        } else if (pBBEP->type == EP397_800x480_4GRAY) {
+        // SSD2677: power up, refresh (0x12 + 0x00), wait, power down. Stock
+        // sequence, same source as the init table in bbepWritePlane().
+        // BUSY polarity handled by bbepWaitBusy() (HIGH-idle for this panel).
+        bbepWriteCmd(pBBEP, 0x04); // power on
+        bbepWaitBusy(pBBEP);
+        bbepCMD2(pBBEP, 0x12, 0x00); // refresh
+        bbepWaitBusy(pBBEP);
+        bbepWriteCmd(pBBEP, 0x02); // power off
+        bbepWaitBusy(pBBEP);
+    } else if (pBBEP->type == EP397_800x480) {
             bbepCMD2(pBBEP, SSD1608_DISP_CTRL2, u8CMDz3[iMode]);
         } else if (pBBEP->type == EP42B_400x300_4GRAY) {
             bbepCMD2(pBBEP, SSD1608_DISP_CTRL2, 0xcf); // SSD1683 does things differently :(
@@ -5528,6 +5542,24 @@ int bbepWritePlane(BBEPDISP *pBBEP, int iPlane, int bInvert)
     
     if (pBBEP == NULL || pBBEP->ucScreen == NULL || iPlane < PLANE_0 || iPlane > PLANE_FALSE_DIFF) {
         return BBEP_ERROR_BAD_PARAMETER;
+    }
+    if (pBBEP->type == EP397_800x480_4GRAY) {
+        // SSD2677 (Sticky Nov 2026): the init table, the OTP waveform codes and
+        // the PON/DRF/POF refresh below are the Sticky stock values (Seeed
+        // v1.2.0 init table), as published in the MIT-licensed FreeInk SDK
+        // (Ssd2677Driver.cpp). Written for bb_epaper and validated on hardware
+        // by this port on 2026-11-12.
+        // Config, latch the room-temperature gray waveform, then stream the
+        // 2bpp framebuffer to command 0x10. bbepRefresh() powers up, issues
+        // the refresh (0x12 + 0x00) and powers down; BUSY idles HIGH here.
+        bbepSendCMDSequence(pBBEP, pBBEP->pInitFull);
+        bbepCMD2(pBBEP, 0xe0, 0x12); // waveform mode: select
+        bbepCMD2(pBBEP, 0xe6, 0xfa); // OTP absolute gray, room temperature
+        bbepWriteCmd(pBBEP, 0xa5); // latch it
+        bbepWaitBusy(pBBEP);
+        delay(10);
+        bbepWriteImage2bpp(pBBEP, 0x10); // stream the framebuffer
+        return BBEP_SUCCESS;
     }
 // Some panels need to be told their resolution before you can write data
 // to the internal framebuffer (e.g. 4.26" 800x480), otherwise the writes
