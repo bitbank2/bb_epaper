@@ -61,6 +61,11 @@ BBEP_GRAY3, BBEP_GRAY2, BBEP_GRAY1, BBEP_GRAY0, BBEP_GRAY3, BBEP_GRAY2, BBEP_GRA
 BBEP_GRAY3, BBEP_GRAY2, BBEP_GRAY1, BBEP_GRAY0, BBEP_GRAY3, BBEP_GRAY2, BBEP_GRAY1, BBEP_GRAY0
 };
 
+const uint8_t u8Colors_4gray_v3[16] = {
+BBEP_GRAY0, BBEP_GRAY1, BBEP_GRAY2, BBEP_GRAY3, BBEP_GRAY0, BBEP_GRAY1, BBEP_GRAY2, BBEP_GRAY3,       
+BBEP_GRAY0, BBEP_GRAY1, BBEP_GRAY2, BBEP_GRAY3, BBEP_GRAY0, BBEP_GRAY1, BBEP_GRAY2, BBEP_GRAY3    
+};  
+
 // the 4-color mode
 const uint8_t u8Colors_4clr[16] = {  // black white red yellow
     BBEP_BLACK, BBEP_WHITE, BBEP_RED, BBEP_YELLOW, BBEP_BLACK, BBEP_WHITE, BBEP_RED, BBEP_YELLOW,
@@ -115,6 +120,52 @@ const uint8_t epd35r_init_sequence_full[] PROGMEM = {
     0x02, 0x4e, 0x00, // ram counter start
     0x03, 0x4f, 0x7f, 0x01,
     0x00
+};
+
+// init sequence for the Seeed Sticky (new) SSD2677 3.97" 800x480 panel
+const uint8_t epd397c_init_4gray[] PROGMEM = {
+    EPD_RESET,
+    BUSY_WAIT,
+    3, 0x00, 0x2b, 0x0e,  // PSR
+    BUSY_WAIT,
+    5, 0x06, 0x0f, 0x8b, 0x93, 0xc1, // booster
+    2, 0xe7, 0xc1, // E7?
+    2, 0x30, 0x08, // PLL
+    2, 0x50, 0x77, // CDI
+    9, 0x62, 0x76, 0x76, 0x76, 0x5A, 0x9D, 0x8A, 0x76, 0x62, // timing
+    5, 0x61, 0x03, 0x20, 0x02, 0xa8, // resolution 800x680? 
+    2, 0xe0, 0x10, // temp?
+    5, 0x65, 0x00, 0x00, 0x00, 0x00, // GSST
+    2, 0xe9, 0x01, // internal OTP LUT
+    BUSY_WAIT,
+    2, 0xe0, 0x12, // prepare temperature 
+    2, 0xe6, 0xfa, // use 4 gray waveform for temp 20C
+    1, 0xa5, // execute
+    BUSY_WAIT,
+    0
+}; 
+
+// init sequence for the Seeed Sticky (new) SSD2677 3.97" 800x480 panel
+const uint8_t epd397c_init[] PROGMEM = {
+    EPD_RESET,
+    BUSY_WAIT, 
+    3, 0x00, 0x2b, 0x0e,  // PSR
+    BUSY_WAIT,
+    5, 0x06, 0x0f, 0x8b, 0x93, 0xc1, // booster
+    2, 0xe7, 0xc1, // E7?
+    2, 0x30, 0x08, // PLL
+    2, 0x50, 0x77, // CDI
+    9, 0x62, 0x76, 0x76, 0x76, 0x5A, 0x9D, 0x8A, 0x76, 0x62, // timing
+    5, 0x61, 0x03, 0x20, 0x02, 0xa8, // resolution 800x680?
+    2, 0xe0, 0x10, // temp?
+    5, 0x65, 0x00, 0x00, 0x00, 0x00, // GSST
+    2, 0xe9, 0x01, // internal OTP LUT
+    BUSY_WAIT,
+    2, 0xe0, 0x12, // prepare temperature
+    2, 0xe6, 0xeb, // use full refresh waveform for temp 20C
+    1, 0xa5, // execute
+    BUSY_WAIT,
+    0
 };
 
 // init sequence for Zectrix B/W
@@ -4531,6 +4582,8 @@ const EPD_PANEL panelDefs[] PROGMEM = {
     {480, 800, 0, epd74yr_init_full, NULL, NULL, BBEP_NEEDS_EXTRA_INIT | BBEP_4COLOR, BBEP_CHIP_UC81xx, u8Colors_4clr_v2}, // EP74YR_480x800 Pervasive Displays E2741QS0B3
     {400, 300, 0, lcd42yr_init, NULL, NULL, BBEP_NEEDS_EXTRA_INIT | BBEP_4COLOR | BBEP_SITRONIX, BBEP_CHIP_SSD16xx, u8Colors_4clr_v2}, // EP42YR_400x300_ST7306
     {800, 480, 0, epd426b_init_gray, NULL, NULL, BBEP_4GRAY | BBEP_NEEDS_EXTRA_INIT, BBEP_CHIP_SSD16xx, u8Colors_4gray}, // EP426B_800x480_4GRAY
+    {800, 480, 0, epd397c_init, epd397c_init, NULL, BBEP_DONT_INIT | BBEP_2BIT_BW, BBEP_CHIP_UC81xx, u8Colors_2clr}, // EP397C_800x480
+    {800, 480, 0, epd397c_init_4gray, NULL, NULL, BBEP_DONT_INIT | BBEP_2BIT_BW | BBEP_4COLOR, BBEP_CHIP_UC81xx, u8Colors_4gray_v3}, // EP397C_800x480_4GRAY
 };
 //
 // Set the e-paper panel type
@@ -5333,32 +5386,30 @@ void bbepWriteImage2bppSpecial(BBEPDISP *pBBEP, uint8_t ucCMD)
     }
     if (pBBEP->iOrientation == 0) {
       for (ty=0; ty<pBBEP->height; ty++) {
-         d = u8Cache;
-         s = &pBBEP->ucScreen[ty * (pBBEP->width/8)];
-         for (tx=0; tx<pBBEP->width; tx+=8) {
-             uc1 = uc2 = 0; // start with black
-             for (bit=0; bit<4; bit++) {
-                 uc1 <<= 2; uc2 <<= 2;
-                 if (s[0] & (0x80 >> bit)) {// first byte
-                    uc1 |= 0x01;
-                 } else {
-                    uc1 |= 0x02;
-                 }
-                 if (s[0] & (0x8 >> bit)) {// second byte
-                    uc2 |= 0x01;
-                 } else {
-                    uc2 |= 0x02;
-                 }
-             } // for bit
-             *d++ = uc1; // store 2 bytes
-             *d++ = uc2;
-             s++;
-         } // for tx
-        bbepWriteData(pBBEP, u8Cache, pBBEP->width/4);
+          d = u8Cache; 
+          s = &pBBEP->ucScreen[ty * (pBBEP->width/8)];
+          for (tx=0; tx<pBBEP->width; tx+=8) {
+              uc1 = uc2 = 0; // start with black
+              for (bit=0; bit<4; bit++) {
+                  uc1 <<= 2; uc2 <<= 2;
+                  if (s[0] & (0x80 >> bit)) {// first byte
+                      uc1 |= 0x01;
+                  } else {
+                      uc1 |= 0x02;
+                  }
+                  if (s[0] & (0x8 >> bit)) {// second byte
+                      uc2 |= 0x01;
+                  } else {
+                      uc2 |= 0x02;
+                  }
+              } // for bit
+              *d++ = uc1; // store 2 bytes
+              *d++ = uc2;
+              s++;
+          } // for tx
+          bbepWriteData(pBBEP, u8Cache, pBBEP->width/4);
       } // for ty
     } //else if (pBBEP->iOrientation == 180) {
-    bbepWriteCmd(pBBEP, UC8151_PON); // turn the power on AFTER writing the data
-    bbepWaitBusy(pBBEP);
 } /* bbepWriteImage2bppSpecial() */
 
 void bbepWriteImage4bppSpecial(BBEPDISP *pBBEP, uint8_t ucCMD)
@@ -6115,7 +6166,13 @@ int bbepWritePlane(BBEPDISP *pBBEP, int iPlane, int bInvert)
         bbepSendCMDSequence(pBBEP, pBBEP->pInitFull);
     }
     if (pBBEP->iFlags & BBEP_2BIT_BW) { // special case for SSD2683 2-bit b/w
-        bbepWriteImage2bppSpecial(pBBEP, 0x10);
+        if (pBBEP->iFlags & BBEP_4COLOR) {
+            bbepWriteImage2bpp(pBBEP, 0x10);
+        } else {
+            bbepWriteImage2bppSpecial(pBBEP, 0x10);
+        }
+        bbepWriteCmd(pBBEP, UC8151_PON); // turn the power on AFTER writing the data
+        bbepWaitBusy(pBBEP);
         return BBEP_SUCCESS;
     }
 
