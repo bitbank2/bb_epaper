@@ -812,6 +812,7 @@ const uint8_t epd154r_init_sequence_full[] PROGMEM = {
 const uint8_t epd75_init_sequence_partial[] PROGMEM = {
     0x05, UC8151_PWR, 0x07, 0x07, 0x3f, 0x3f, 
     0x02, 0x82, 0x1e, // VCOM DC (-1.60V)
+    0x02, 0x30, 0x3c, // PLL (frame rate)
     0x01, UC8151_PON, // power on
     BUSY_WAIT,
     0x02, UC8151_PSR, 0x3f, // from register 
@@ -879,7 +880,7 @@ const uint8_t epd75_init_sequence_fast[] PROGMEM = {
     0x05, UC8151_TRES, 0x03, 0x20, 0x01, 0xe0,
     0x03, UC8151_CDI, 0x29, 0x07, // VCOM Data interval
     0x02, 0x15, 0x00,
-//    0x02, 0x30, 0x3c, // PLL (frame rate)
+    0x02, 0x30, 0x3c, // PLL (frame rate)
     0x02, UC8151_TCON, 0x22,
     0x2b, UC8151_LUT_VCOM, // VCOM LUT
     0x00, 34, 1, 34, 1, 0x01,
@@ -3907,7 +3908,8 @@ const uint8_t epd75_old_gray_init[] PROGMEM = {
     3, UC8151_CDI, 0x00, 0x07,
     2, UC8151_TCON, 0x22,
     3, 0x50, 0x00, 0x07, // VCOM LUTBD (00=white border, 30=black border)
-    2, UC8151_VDCS, 0x12, // VCOM DC
+    0x02, 0x82, 0x1e, // VCOM DC (-1.60V)
+    0x02, 0x30, 0x3c, // PLL (frame rate)
     43, 0x20, // LUT 0~3 gray
       0x00, 0x0A, 0x00, 0x00, 0x00, 0x01,
       0x00, 0x14, 0x14, 0x0a, 0x00, 0x01,
@@ -3973,6 +3975,8 @@ const uint8_t epd75_old_gray_init_fast[] PROGMEM = {
     2, 0x15, 0x00,
     3, UC8151_CDI, 0x00, 0x07,
     2, UC8151_TCON, 0x22,
+    0x02, 0x82, 0x1e, // VCOM DC (-1.60V)
+    0x02, 0x30, 0x3c, // PLL (frame rate)
 //    3, 0x50, 0x00, 0x07, // VCOM LUTBD (00=white border, 30=black border)
 //    2, UC8151_VDCS, 0x1c, // VCOM DC
 // Each row of the LUT has 6 bytes with the following meanings:
