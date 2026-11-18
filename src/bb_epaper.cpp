@@ -205,6 +205,58 @@ uint16_t u16;
 //Serial.printf("gpio state setting = 0x%04x\n", u16);
 } /* M5IOE1_SetGPIO() */
 
+//
+// Read the controller ID of the Seeed reTerminal Sticky panel
+// Older boards have a SSD1677, newer ones a SSD2677 (which answers 0x07)
+// The panel shares MOSI for reads (3-wire SPI), so it's bit-banged here
+// before the SPI peripheral owns the pins (the same probe as Seeed's MIT
+// licensed driver, components/seeed_epaper/epaper_panel.c:
+// https://github.com/Seeed-Projects/sticky-esp-idf-peripherals)
+// DC:16 RST:17 CS:15 MOSI:14 SCK:13
+//
+static uint8_t StickyReadID(void)
+{
+uint8_t u8ID = 0, u8CMD = 0x70;
+int i;
+
+    pinMode(15, OUTPUT);
+    digitalWrite(15, HIGH); // CS
+    pinMode(16, OUTPUT);
+    pinMode(13, OUTPUT);
+    digitalWrite(13, LOW); // SPI mode 0
+    pinMode(14, OUTPUT);
+    pinMode(17, OUTPUT);
+    digitalWrite(17, LOW); // reset the controller (don't wait on BUSY, the polarity is not known yet)
+    delay(20);
+    digitalWrite(17, HIGH);
+    delay(10);
+    digitalWrite(16, LOW); // command
+    digitalWrite(15, LOW);
+    for (i=0; i<8; i++) {
+        digitalWrite(14, (u8CMD & 0x80) ? HIGH : LOW);
+        delayMicroseconds(1);
+        digitalWrite(13, HIGH);
+        delayMicroseconds(1);
+        digitalWrite(13, LOW);
+        u8CMD <<= 1;
+    }
+    digitalWrite(15, HIGH);
+    digitalWrite(16, HIGH); // data
+    pinMode(14, INPUT_PULLUP); // the panel drives MOSI now (pull-up = 0xff if it doesn't)
+    digitalWrite(15, LOW);
+    for (i=0; i<8; i++) {
+        delayMicroseconds(1);
+        digitalWrite(13, HIGH);
+        delayMicroseconds(1);
+        u8ID <<= 1;
+        if (digitalRead(14)) u8ID |= 1;
+        digitalWrite(13, LOW);
+    }
+    digitalWrite(15, HIGH);
+    pinMode(14, OUTPUT);
+    return u8ID;
+} /* StickyReadID() */
+
 #endif // ARDUINO_ARCH_ESP32
 
 int BBEPAPER::begin(int iProduct, bool bSharedSPI)
@@ -254,16 +306,26 @@ int rc = BBEP_ERROR_BAD_PARAMETER;
 
         case EPD_SEEED_STICKY: // DC:16 RST:17 BUSY:18 CS:15 MOSI:14 SCK:13 PWR:47
         case EPD_SEEED_STICKY_4GRAY:
+        {
+            int iPanel;
             pinMode(8, OUTPUT); // SD card CS (shared SPI with EPD)
             digitalWrite(8, 1); // disable SD card
             pinMode(47, OUTPUT);
             digitalWrite(47, 1); // enable EPD power
             pinMode(10, OUTPUT); // SD card enable
             digitalWrite(10, 1);
-            if (setPanelType((iProduct == EPD_SEEED_STICKY) ? EP397_800x480:EP397_800x480_4GRAY) == BBEP_SUCCESS) {
+            delay(100); // let the panel power settle before reading its ID
+            // Two board revisions: SSD1677 (original) or SSD2677 (ID = 0x07)
+            if (StickyReadID() == 0x07) {
+                iPanel = (iProduct == EPD_SEEED_STICKY) ? EP397C_800x480 : EP397C_800x480_4GRAY;
+            } else {
+                iPanel = (iProduct == EPD_SEEED_STICKY) ? EP397_800x480 : EP397_800x480_4GRAY;
+            }
+            if (setPanelType(iPanel) == BBEP_SUCCESS) {
                 initIO(16, 17, 18, 15, 14, 13, 10000000);
                 return BBEP_SUCCESS;
             }
+        }
             break;
 
         case EPD_M5_PAPER_COLOR: // DC:43 RST:12 BUSY:11 CS:44 MOSI:13 SCK:15
