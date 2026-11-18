@@ -139,7 +139,7 @@ const uint8_t epd397c_init_4gray[] PROGMEM = {
     2, 0xe9, 0x01, // internal OTP LUT
     BUSY_WAIT,
     2, 0xe0, 0x12, // prepare temperature 
-    2, 0xe6, 0xfa, // use 4 gray waveform for temp 20C
+    SSD2677_WAVEFORM, 2, // 4 gray waveform for the panel temperature (20C unless set)
     1, 0xa5, // execute
     BUSY_WAIT,
     0
@@ -162,7 +162,33 @@ const uint8_t epd397c_init[] PROGMEM = {
     2, 0xe9, 0x01, // internal OTP LUT
     BUSY_WAIT,
     2, 0xe0, 0x12, // prepare temperature
-    2, 0xe6, 0xeb, // use full refresh waveform for temp 20C
+    SSD2677_WAVEFORM, 0, // full refresh waveform for the panel temperature (20C unless set)
+    1, 0xa5, // execute
+    BUSY_WAIT,
+    0
+};
+
+// Partial update init sequence for the Seeed Sticky (new) SSD2677 panel
+// The waveform temperature buckets (0xE6 values) come from Seeed's MIT licensed
+// reTerminal Sticky driver (components/seeed_epaper/driver/ssd2677.c):
+// https://github.com/Seeed-Projects/sticky-esp-idf-peripherals
+const uint8_t epd397c_init_part[] PROGMEM = {
+    EPD_RESET,
+    BUSY_WAIT,
+    3, 0x00, 0x2b, 0x0e,  // PSR
+    BUSY_WAIT,
+    5, 0x06, 0x0f, 0x8b, 0x93, 0xc1, // booster
+    2, 0xe7, 0xc1, // E7?
+    2, 0x30, 0x08, // PLL
+    2, 0x50, 0x77, // CDI
+    9, 0x62, 0x76, 0x76, 0x76, 0x5A, 0x9D, 0x8A, 0x76, 0x62, // timing
+    5, 0x61, 0x03, 0x20, 0x02, 0xa8, // resolution 800x680?
+    2, 0xe0, 0x10, // temp?
+    5, 0x65, 0x00, 0x00, 0x00, 0x00, // GSST
+    2, 0xe9, 0x01, // internal OTP LUT
+    BUSY_WAIT,
+    2, 0xe0, 0x12, // prepare temperature
+    SSD2677_WAVEFORM, 1, // partial (differential) waveform for the panel temperature
     1, 0xa5, // execute
     BUSY_WAIT,
     0
@@ -4582,7 +4608,7 @@ const EPD_PANEL panelDefs[] PROGMEM = {
     {480, 800, 0, epd74yr_init_full, NULL, NULL, BBEP_NEEDS_EXTRA_INIT | BBEP_4COLOR, BBEP_CHIP_UC81xx, u8Colors_4clr_v2}, // EP74YR_480x800 Pervasive Displays E2741QS0B3
     {400, 300, 0, lcd42yr_init, NULL, NULL, BBEP_NEEDS_EXTRA_INIT | BBEP_4COLOR | BBEP_SITRONIX, BBEP_CHIP_SSD16xx, u8Colors_4clr_v2}, // EP42YR_400x300_ST7306
     {800, 480, 0, epd426b_init_gray, NULL, NULL, BBEP_4GRAY | BBEP_NEEDS_EXTRA_INIT, BBEP_CHIP_SSD16xx, u8Colors_4gray}, // EP426B_800x480_4GRAY
-    {800, 480, 0, epd397c_init, epd397c_init, NULL, BBEP_DONT_INIT | BBEP_2BIT_BW, BBEP_CHIP_UC81xx, u8Colors_2clr}, // EP397C_800x480
+    {800, 480, 0, epd397c_init, epd397c_init, epd397c_init_part, BBEP_DONT_INIT | BBEP_2BIT_BW, BBEP_CHIP_UC81xx, u8Colors_2clr}, // EP397C_800x480
     {800, 480, 0, epd397c_init_4gray, NULL, NULL, BBEP_DONT_INIT | BBEP_2BIT_BW | BBEP_4COLOR, BBEP_CHIP_UC81xx, u8Colors_4gray_v3}, // EP397C_800x480_4GRAY
 };
 //
@@ -5087,6 +5113,32 @@ void bbepSetFlip180(BBEPDISP *pBBEP)
     } // SSD16xx
 } /* bbepSetFlip180() */
 //
+// Select the SSD2677 OTP waveform (register 0xE6) for the panel temperature
+// iType: 0 = full, 1 = partial, 2 = 4-gray
+// Without a temperature from setTemperature(), 20C is assumed
+// The buckets come from Seeed's MIT licensed reTerminal Sticky driver
+// (components/seeed_epaper/driver/ssd2677.c):
+// https://github.com/Seeed-Projects/sticky-esp-idf-peripherals
+//
+uint8_t bbepSSD2677Waveform(BBEPDISP *pBBEP, int iType)
+{
+    int iTemp = (pBBEP->bHasTemp) ? pBBEP->iTemp : 20;
+
+    if (iType == 2) { // 4-gray
+        return (iTemp <= 15) ? 0xf1 : 0xfa;
+    } else if (iType == 1) { // partial
+        if (iTemp <= 10) return 0x08;
+        if (iTemp <= 20) return 0x0f;
+        if (iTemp <= 30) return 0x19;
+        return 0x23;
+    }
+    // full
+    if (iTemp <= 10) return 0xe8;
+    if (iTemp <= 20) return 0xeb;
+    if (iTemp <= 30) return 0xee;
+    return 0xf1;
+} /* bbepSSD2677Waveform() */
+//
 // More efficient means of sending commands, data and busy-pauses
 //
 void bbepSendCMDSequence(BBEPDISP *pBBEP, const uint8_t *pSeq)
@@ -5112,6 +5164,8 @@ void bbepSendCMDSequence(BBEPDISP *pBBEP, const uint8_t *pSeq)
             bbepWakeUp(pBBEP);
         } else if (iLen == SET_ORIENTATION) {
             bbepSetFlip180(pBBEP);
+        } else if (iLen == SSD2677_WAVEFORM) {
+            bbepCMD2(pBBEP, 0xe6, bbepSSD2677Waveform(pBBEP, *s++));
         } else if (iLen == CMD_CS1 || iLen == CMD_CS2 || iLen == CMD_CS1_CS2) {
             pBBEP->cs_mode = iLen; // set cs mode 
         } else {
@@ -5411,6 +5465,44 @@ void bbepWriteImage2bppSpecial(BBEPDISP *pBBEP, uint8_t ucCMD)
       } // for ty
     } //else if (pBBEP->iOrientation == 180) {
 } /* bbepWriteImage2bppSpecial() */
+//
+// SSD2677 partial (differential) update data
+// Each 2-bit pixel holds the old (plane 1) and new (plane 0) value: (old << 1) | new
+// (the same packing as Seeed's MIT licensed reTerminal Sticky driver,
+// https://github.com/Seeed-Projects/sticky-esp-idf-peripherals)
+//
+void bbepWriteImage2bppDiff(BBEPDISP *pBBEP, uint8_t ucCMD)
+{
+    int tx, ty, bit, iSize;
+    uint8_t uc1, uc2, *s, *o, *d;
+
+    iSize = (pBBEP->native_width/8) * pBBEP->native_height;
+    if (ucCMD) {
+        bbepWriteCmd(pBBEP, ucCMD); // start write
+        bbepWaitBusy(pBBEP);
+    }
+    if (pBBEP->iOrientation == 0) {
+      for (ty=0; ty<pBBEP->height; ty++) {
+          d = u8Cache;
+          s = &pBBEP->ucScreen[ty * (pBBEP->width/8)]; // new pixels
+          o = &s[iSize]; // old pixels
+          for (tx=0; tx<pBBEP->width; tx+=8) {
+              uc1 = uc2 = 0;
+              for (bit=0; bit<4; bit++) {
+                  uc1 <<= 2; uc2 <<= 2;
+                  if (o[0] & (0x80 >> bit)) uc1 |= 0x02;
+                  if (s[0] & (0x80 >> bit)) uc1 |= 0x01;
+                  if (o[0] & (0x8 >> bit)) uc2 |= 0x02;
+                  if (s[0] & (0x8 >> bit)) uc2 |= 0x01;
+              } // for bit
+              *d++ = uc1; // store 2 bytes
+              *d++ = uc2;
+              s++; o++;
+          } // for tx
+          bbepWriteData(pBBEP, u8Cache, pBBEP->width/4);
+      } // for ty
+    }
+} /* bbepWriteImage2bppDiff() */
 
 void bbepWriteImage4bppSpecial(BBEPDISP *pBBEP, uint8_t ucCMD)
 {
@@ -6168,6 +6260,9 @@ int bbepWritePlane(BBEPDISP *pBBEP, int iPlane, int bInvert)
     if (pBBEP->iFlags & BBEP_2BIT_BW) { // special case for SSD2683 2-bit b/w
         if (pBBEP->iFlags & BBEP_4COLOR) {
             bbepWriteImage2bpp(pBBEP, 0x10);
+        } else if (pBBEP->type == EP397C_800x480 && iPlane == PLANE_BOTH && (pBBEP->iFlags & BBEP_HAS_SECOND_PLANE)) {
+            // old + new pixels for a partial update (after sendInit(REFRESH_PARTIAL))
+            bbepWriteImage2bppDiff(pBBEP, 0x10);
         } else {
             bbepWriteImage2bppSpecial(pBBEP, 0x10);
         }

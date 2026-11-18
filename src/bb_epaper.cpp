@@ -110,6 +110,19 @@ void BBEPAPER::setPasses(int iPasses)
 {
    _bbep.iPasses = iPasses;
 } /* setPasses() */
+//
+// Tell the library the panel temperature (Celsius) for controllers
+// which need the host to select the waveform (e.g. SSD2677).
+// Without it, 20C is assumed. It takes effect at the next init sequence
+// (begin() or sendInit())
+//
+void BBEPAPER::setTemperature(int iTemp)
+{
+   if (iTemp < -40) iTemp = -40;
+   else if (iTemp > 127) iTemp = 127;
+   _bbep.iTemp = (int8_t)iTemp;
+   _bbep.bHasTemp = 1;
+} /* setTemperature() */
 
 void BBEPAPER::setAddrWindow(int x, int y, int w, int h)
 {

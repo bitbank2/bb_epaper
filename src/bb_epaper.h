@@ -542,6 +542,9 @@ enum {
 #define CMD_CS1_CS2 0xf9
 #define CMD_CS_NONE 0xf8
 #define EPD_DELAY 0xf7
+// SSD2677: send the OTP waveform (0xE6) for the panel temperature
+// followed by one byte: 0 = full, 1 = partial, 2 = 4-gray
+#define SSD2677_WAVEFORM 0xf6
 
 // Normal pixel drawing function pointer
 typedef int (BB_SET_PIXEL)(void *pBBEP, int x, int y, unsigned char color);
@@ -570,6 +573,8 @@ uint8_t iDCPin, iMOSIPin, iCLKPin, iRSTPin, iBUSYPin;
 uint8_t iCSPin, iCS2Pin, mode;
 uint8_t x_offset, y_offset; // memory offsets
 uint8_t is_awake, iPlane, iDither, bLightSleep, u8SleepPin;
+uint8_t bHasTemp; // 0 = use the default temperature (20C)
+int8_t iTemp; // panel temperature in Celsius (selects the SSD2677 waveform)
 const uint8_t *pColorLookup; // color translation table
 const uint8_t *pInitFull; // full update init sequence
 const uint8_t *pInitFast; // fast update init sequence
@@ -632,6 +637,7 @@ class BBEPAPER
     void writeCmd2(uint8_t u8Cmd, uint8_t u8Param);
     int refresh(int iMode, bool bWait = true);
     void setPasses(int iPasses);
+    void setTemperature(int iTemp);
     void setBuffer(uint8_t *pBuffer);
     void setLightSleep(uint8_t bEnable, uint8_t u8Pin = 0xff) {_bbep.bLightSleep = bEnable; _bbep.u8SleepPin = u8Pin; }
     int allocBuffer(bool bSecondPlane = false);
