@@ -460,16 +460,19 @@ int rc = BBEP_ERROR_BAD_PARAMETER;
             }
             break;
         case EPD_ZECTRIX_BW: // DC:10 RST:9 BUSY:8 CS:11 MOSI:13 SCK:12
+        case EPD_ZECTRIX_4GRAY:
         case EPD_ZECTRIX_BWYR:
             pinMode(6, OUTPUT);
             pinMode(17, OUTPUT);
             digitalWrite(17, HIGH); // battery hold enable
             digitalWrite(6, HIGH); // screen power on
-            //if (setPanelType((iProduct == EPD_ZECTRIX_BW) ? EP42C_400x300:EP42YR_400x300) == BBEP_SUCCESS) {
-            setPanelType(EP42C_400x300);
+            if (iProduct == EPD_ZECTRIX_BW) rc = EP42C_400x300;
+            else if (iProduct == EPD_ZECTRIX_4GRAY) rc = EP42C_400x300_4GRAY;
+            else rc = EP42YR_400x300;
+            if (setPanelType(rc) == BBEP_SUCCESS) {
                 initIO(10, 9, 8, 11, 13, 12, 8000000);
                 return BBEP_SUCCESS;
-            //}
+            }
             break;
 
         case EPD_CROWPANEL29: // DC:46 CS:45 RST:47 BUSY:48 MOSI:11 SCK:12

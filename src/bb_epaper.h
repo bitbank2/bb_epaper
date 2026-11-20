@@ -209,6 +209,7 @@ enum {
     EPD_SEEED_E1002,
     EPD_SEEED_E1004,
     EPD_ZECTRIX_BW,
+    EPD_ZECTRIX_4GRAY,
     EPD_ZECTRIX_BWYR,
     EPD_PRODUCT_COUNT
 };
@@ -299,6 +300,7 @@ enum {
     EP29_168x384_4GRAY, // GDEY029T71H
     EP42Z_400x300, // Crowpanel 4.2" B/W 400x300
     EP42C_400x300, // Zectrix 4.2" B/W 400x300
+    EP42C_400x300_4GRAY, // Zectrix 4.2" B/W 400x300 2-bit grayscale mode
     EP42R3_400x300, // DEPG0420 / GDEY042Z98 4.2" B/W/R
     EP74YR_480x800, // Pervasive Displays E2741QS0B3 (741-QS-0B) Spectra 4
     EP42YR_400x300_ST7306, // Sitronix 4-color reflective LCD
