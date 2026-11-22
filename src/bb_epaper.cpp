@@ -227,7 +227,7 @@ int rc = BBEP_ERROR_BAD_PARAMETER;
             M5IOE1_SetGPIO(0x4f, 5, 1);
            // M5IOE1_SetGPIO(0x4f, 6, 1);
             delay(20);
-            if (setPanelType((iProduct == EPD_M5_PAPER_MONO) ? EP426_800x480:EP426_800x480_4GRAY) == BBEP_SUCCESS) {
+            if (setPanelType((iProduct == EPD_M5_PAPER_MONO) ? EP397_800x480:EP397_800x480_4GRAY) == BBEP_SUCCESS) {
                 initIO(17, -1, 18, 16, 14, 15, 1000000);
                 return BBEP_SUCCESS;
             }
