@@ -213,24 +213,34 @@ int rc = BBEP_ERROR_BAD_PARAMETER;
 
     switch (iProduct) {
 #ifdef ARDUINO_ARCH_ESP32
+#define M5IOE1_ADDR 0x4f
+#define M5_PMIC_ADDR 0x6e
+
         case EPD_M5_PAPER_MONO: // DC:17 RST:-1 BUSY:18 CS:16 MOSI:14 SCK:15
         case EPD_M5_PAPER_MONO_4GRAY:
+        {
+            uint16_t r16;
             Wire.end();
             Wire.begin(47, 48); // SDA=47, SCL=48
-            M5IOE1_SetGPIO(0x4f, 3, 1); // turn on EPD 3.3V LDO
-          //  M5IOE1_SetGPIO(0x4f, 13, 1); // touch controller enable
-          //  M5IOE1_SetGPIO(0x4f, 14, 1); // uSD card enable
+            M5IOE1_SetGPIO(M5IOE1_ADDR, 3, 1); // turn on EPD 3.3V LDO
+            M5IOE1_SetGPIO(M5IOE1_ADDR, 13, 0); // touch controller power disabled
+            M5IOE1_SetGPIO(M5IOE1_ADDR, 14, 0); // uSD card power disabled
             delay(50);
-            M5IOE1_SetGPIO(0x4f, 5, 0); // Toggle the EPD reset (M5Stack IO Expander chip)
-            //M5IOE1_SetGPIO(0x4f, 6, 0); // toggle touch reset
+            M5IOE1_SetGPIO(M5IOE1_ADDR, 5, 0); // Toggle the EPD reset (M5Stack IO Expander chip)
+            //M5IOE1_SetGPIO(M5IOE1_ADDR, 6, 0); // toggle touch reset
             delay(20);
-            M5IOE1_SetGPIO(0x4f, 5, 1);
-           // M5IOE1_SetGPIO(0x4f, 6, 1);
+            M5IOE1_SetGPIO(M5IOE1_ADDR, 5, 1);
+           // M5IOE1_SetGPIO(M5IOE1_ADDR, 6, 1);
+           // M5IOE1_SetGPIO(M5IOE1_ADDR, 8, 1); // green = IO 8, blue = IO 9
+            r16 = M5ReadReg16(M5_PMIC_ADDR, 0x6); // PWR_CTRL_REG
+            r16 &= ~0x10; // turn off red LED (bit 4)
+            M5WriteReg16(M5_PMIC_ADDR, 0x6, r16);
             delay(20);
             if (setPanelType((iProduct == EPD_M5_PAPER_MONO) ? EP397_800x480:EP397_800x480_4GRAY) == BBEP_SUCCESS) {
                 initIO(17, -1, 18, 16, 14, 15, 1000000);
                 return BBEP_SUCCESS;
             }
+        }
             break;
 
         case EPD_SEEED_E1001: // 7.5" B/W 800x480
